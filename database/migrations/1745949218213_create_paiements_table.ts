@@ -6,6 +6,19 @@ export default class extends BaseSchema {
   async up() {
     this.schema.createTable(this.tableName, (table) => {
       table.increments('id')
+      table
+        .integer('commande_id')
+        .unsigned()
+        .references('id')
+        .inTable('commandes')
+        .onDelete('CASCADE')
+      table.integer('montant').notNullable()
+      table
+        .enu('mode_paiement', ['orange_money', 'master_card'], {
+          useNative: true,
+          enumName: 'mode_paiement',
+        })
+        .notNullable()
 
       table.timestamp('created_at')
       table.timestamp('updated_at')
