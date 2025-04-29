@@ -1,9 +1,13 @@
 import { DateTime } from 'luxon'
 import hash from '@adonisjs/core/services/hash'
 import { compose } from '@adonisjs/core/helpers'
-import { BaseModel, column } from '@adonisjs/lucid/orm'
+import { BaseModel, column, hasOne, manyToMany } from '@adonisjs/lucid/orm'
 import { withAuthFinder } from '@adonisjs/auth/mixins/lucid'
 import { DbAccessTokensProvider } from '@adonisjs/auth/access_tokens'
+import { UserRole } from '../Enum/user_role.js'
+import Profil from './profil.js'
+import type { HasOne, ManyToMany } from '@adonisjs/lucid/types/relations'
+import Adresse from './adresse.js'
 
 const AuthFinder = withAuthFinder(() => hash.use('scrypt'), {
   uids: ['email'],
@@ -15,7 +19,16 @@ export default class User extends compose(BaseModel, AuthFinder) {
   declare id: number
 
   @column()
-  declare fullName: string | null
+  declare firstName: string | null
+
+  @column()
+  declare lastName: string | null
+
+  @column()
+  declare phone: number | null
+
+  @column()
+  declare role: UserRole
 
   @column()
   declare email: string
@@ -30,4 +43,20 @@ export default class User extends compose(BaseModel, AuthFinder) {
   declare updatedAt: DateTime | null
 
   static accessTokens = DbAccessTokensProvider.forModel(User)
+
+  @hasOne(() => Profil, {
+    foreignKey: 'userId',
+    localKey: 'id',
+  })
+  declare profil: HasOne<typeof Profil>
+
+  @manyToMany(() => Adresse, {
+    pivotTable: 'user_adresse',
+    localKey: 'id',
+    relatedKey: 'id',
+    pivotForeignKey: 'user_id',
+    pivotRelatedForeignKey: 'adresse_id',
+    pivotColumns: ['type'],
+  })
+  declare adresses: ManyToMany<typeof Adresse>
 }
