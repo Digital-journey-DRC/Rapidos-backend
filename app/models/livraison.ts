@@ -5,6 +5,7 @@ import Commande from './commande.js'
 import type { BelongsTo } from '@adonisjs/lucid/types/relations'
 import User from './user.js'
 import Evaluation from './evaluation.js'
+import Adresse from './adresse.js'
 
 export default class Livraison extends BaseModel {
   @column({ isPrimary: true })
@@ -18,7 +19,7 @@ export default class Livraison extends BaseModel {
   @column()
   declare livreurId: number
   @column()
-  declare statut: StatusCommande
+  declare status: StatusCommande
 
   @column()
   declare commentaireId: number | null
@@ -44,4 +45,7 @@ export default class Livraison extends BaseModel {
   declare livreur: BelongsTo<typeof User>
   @belongsTo(() => Evaluation)
   declare evaluation: BelongsTo<typeof Evaluation>
+
+  @belongsTo(() => Adresse)
+  declare adresse: BelongsTo<typeof Adresse>
 }

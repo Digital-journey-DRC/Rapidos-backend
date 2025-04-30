@@ -1,4 +1,5 @@
 import { BaseSchema } from '@adonisjs/lucid/schema'
+import { Modepaiement } from '../../app/Enum/mode_paiement.js'
 
 export default class extends BaseSchema {
   protected tableName = 'paiements'
@@ -14,12 +15,11 @@ export default class extends BaseSchema {
         .onDelete('CASCADE')
       table.integer('montant').notNullable()
       table
-        .enu('mode_paiement', ['orange_money', 'master_card'], {
-          useNative: true,
-          enumName: 'mode_paiement',
-        })
+        .enum('mode_paiement', Object.values(Modepaiement))
         .notNullable()
+        .defaultTo(Modepaiement.ORANGEMONEY)
 
+      table.index(['commande_id'])
       table.timestamp('created_at')
       table.timestamp('updated_at')
     })

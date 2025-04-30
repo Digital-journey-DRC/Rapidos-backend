@@ -1,28 +1,22 @@
 import { BaseSchema } from '@adonisjs/lucid/schema'
-import { ProductCategory } from '../../app/Enum/product_category.js'
 
 export default class extends BaseSchema {
-  protected tableName = 'products'
+  protected tableName = 'wallets'
 
   async up() {
     this.schema.createTable(this.tableName, (table) => {
       table.increments('id')
-
-      table.string('name').notNullable()
-      table.text('description').notNullable()
-      table.float('price').notNullable()
-      table.integer('stock').notNullable()
       table
-        .enum('category', Object.values(ProductCategory))
-        .notNullable()
-        .defaultTo(ProductCategory.ART)
-      table
-        .integer('vendeur_id')
+        .integer('user_id')
         .notNullable()
         .unsigned()
         .references('id')
         .inTable('users')
         .onDelete('CASCADE')
+      table.float('balance', 12, 2).notNullable().defaultTo(0)
+      table.enum('currency', Object.values('devise')).notNullable().defaultTo('USD')
+      table.enum('status', Object.values('status_wallet')).notNullable().defaultTo('active')
+      table.enum('type', Object.values('type_operation')).notNullable().defaultTo('credit')
 
       table.timestamp('created_at')
       table.timestamp('updated_at')

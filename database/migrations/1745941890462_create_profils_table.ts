@@ -21,8 +21,8 @@ export default class extends BaseSchema {
         .inTable('media')
         .onDelete('CASCADE')
 
-      table.timestamp('created_at')
-      table.timestamp('updated_at')
+      table.timestamp('created_at', { useTz: true }).notNullable().defaultTo(this.now())
+      table.timestamp('updated_at', { useTz: true }).nullable().defaultTo(this.now())
     })
   }
 

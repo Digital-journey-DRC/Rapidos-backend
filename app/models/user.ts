@@ -1,13 +1,15 @@
 import { DateTime } from 'luxon'
 import hash from '@adonisjs/core/services/hash'
 import { compose } from '@adonisjs/core/helpers'
-import { BaseModel, column, hasOne, manyToMany } from '@adonisjs/lucid/orm'
+import { BaseModel, column, hasMany, hasOne } from '@adonisjs/lucid/orm'
 import { withAuthFinder } from '@adonisjs/auth/mixins/lucid'
 import { DbAccessTokensProvider } from '@adonisjs/auth/access_tokens'
 import { UserRole } from '../Enum/user_role.js'
 import Profil from './profil.js'
-import type { HasOne, ManyToMany } from '@adonisjs/lucid/types/relations'
+import type { HasMany, HasOne } from '@adonisjs/lucid/types/relations'
 import Adresse from './adresse.js'
+import Wallet from './wallet.js'
+import AccessToken from './access_token.js'
 
 const AuthFinder = withAuthFinder(() => hash.use('scrypt'), {
   uids: ['email'],
@@ -50,13 +52,12 @@ export default class User extends compose(BaseModel, AuthFinder) {
   })
   declare profil: HasOne<typeof Profil>
 
-  @manyToMany(() => Adresse, {
-    pivotTable: 'user_adresse',
-    localKey: 'id',
-    relatedKey: 'id',
-    pivotForeignKey: 'user_id',
-    pivotRelatedForeignKey: 'adresse_id',
-    pivotColumns: ['type'],
-  })
-  declare adresses: ManyToMany<typeof Adresse>
+  @hasMany(() => Adresse)
+  declare adresses: HasMany<typeof Adresse>
+
+  @hasOne(() => Wallet)
+  declare wallet: HasOne<typeof Wallet>
+
+  @hasMany(() => AccessToken)
+  declare accessTokens: HasMany<typeof AccessToken>
 }

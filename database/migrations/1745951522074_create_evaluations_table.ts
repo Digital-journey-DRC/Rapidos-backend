@@ -16,7 +16,10 @@ export default class extends BaseSchema {
         .onDelete('CASCADE')
       table.integer('acheteur_id').unsigned().references('id').inTable('users').onDelete('CASCADE')
 
-      table.timestamp('created_at')
+      table.index(['livraison_id', 'acheteur_id'])
+      table.unique(['livraison_id', 'acheteur_id'])
+
+      table.timestamp('created_at', { useTz: true }).notNullable().defaultTo(this.now())
       table.timestamp('updated_at')
     })
   }

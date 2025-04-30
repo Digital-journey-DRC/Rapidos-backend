@@ -1,4 +1,5 @@
 import { BaseSchema } from '@adonisjs/lucid/schema'
+import { TypeAdresse } from '../../app/Enum/type_adresse.js'
 
 export default class extends BaseSchema {
   protected tableName = 'adresses'
@@ -10,6 +11,16 @@ export default class extends BaseSchema {
       table.string('ville').notNullable()
       table.string('pays').notNullable()
       table.string('code_postal').nullable()
+      table.boolean('is_principal').notNullable().defaultTo(false)
+      table
+        .integer('user_id')
+        .notNullable()
+        .unsigned()
+        .references('id')
+        .inTable('users')
+        .onDelete('CASCADE')
+
+      table.enum('type', Object.values(TypeAdresse)).notNullable().defaultTo(TypeAdresse.DOMICILE)
 
       table.timestamp('created_at')
       table.timestamp('updated_at')

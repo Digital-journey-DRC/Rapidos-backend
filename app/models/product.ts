@@ -25,9 +25,6 @@ export default class Product extends BaseModel {
   declare category: string
 
   @column()
-  declare mediaId: number
-
-  @column()
   declare vendeurId: number
 
   @column.dateTime({ autoCreate: true })
@@ -35,9 +32,6 @@ export default class Product extends BaseModel {
 
   @column.dateTime({ autoCreate: true, autoUpdate: true })
   declare updatedAt: DateTime
-
-  @belongsTo(() => Media)
-  declare media: BelongsTo<typeof Media>
 
   @belongsTo(() => User)
   declare vendeur: BelongsTo<typeof User>
@@ -51,4 +45,13 @@ export default class Product extends BaseModel {
     pivotColumns: ['quantity', 'price'],
   })
   declare commandes: ManyToMany<typeof Commande>
+
+  @manyToMany(() => Media, {
+    pivotTable: 'product_media',
+    localKey: 'id',
+    relatedKey: 'id',
+    pivotForeignKey: 'product_id',
+    pivotRelatedForeignKey: 'media_id',
+  })
+  declare media: ManyToMany<typeof Media>
 }

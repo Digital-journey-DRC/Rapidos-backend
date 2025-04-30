@@ -20,6 +20,12 @@ export default class extends BaseSchema {
         .references('id')
         .inTable('products')
         .onDelete('CASCADE')
+      // Empêche d’avoir deux fois le même produit dans la même commande
+      table.unique(['commande_id', 'product_id'])
+
+      // Optimise les requêtes (ex. : WHERE commande_id = ... AND product_id = ...)
+      table.index(['commande_id', 'product_id'])
+
       table.integer('quantity').notNullable()
       table.float('price').notNullable()
 

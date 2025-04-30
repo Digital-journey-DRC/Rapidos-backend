@@ -1,4 +1,5 @@
 import { BaseSchema } from '@adonisjs/lucid/schema'
+import { StatusCommande } from '../../app/Enum/status_commande.js'
 
 export default class extends BaseSchema {
   protected tableName = 'livraisons'
@@ -20,11 +21,9 @@ export default class extends BaseSchema {
         .onDelete('CASCADE')
       table.integer('livreur_id').unsigned().references('id').inTable('users').onDelete('CASCADE')
       table
-        .enu('statut', ['en_attente', 'en_cours', 'livree'], {
-          useNative: true,
-          enumName: 'status_commande',
-        })
-        .defaultTo('en_attente')
+        .enum('status', Object.values(StatusCommande))
+        .defaultTo(StatusCommande.EN_COURS)
+        .notNullable()
       table
         .integer('commentaire_id')
         .unsigned()
@@ -34,6 +33,8 @@ export default class extends BaseSchema {
       table.string('code_livraison').nullable()
       table.string('numero_suivi').nullable()
       table.float('frais_livraison').nullable()
+
+      table.index(['commande_id', 'livreur_id', 'adresse_id'])
 
       table.timestamp('created_at')
       table.timestamp('updated_at')

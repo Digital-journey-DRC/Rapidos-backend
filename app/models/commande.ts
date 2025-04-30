@@ -1,7 +1,7 @@
 import { DateTime } from 'luxon'
-import { BaseModel, belongsTo, column, hasMany, hasOne, manyToMany } from '@adonisjs/lucid/orm'
+import { BaseModel, belongsTo, column, hasOne, manyToMany } from '@adonisjs/lucid/orm'
 
-import type { BelongsTo, HasMany, HasOne, ManyToMany } from '@adonisjs/lucid/types/relations'
+import type { BelongsTo, HasOne, ManyToMany } from '@adonisjs/lucid/types/relations'
 import User from './user.js'
 import Product from './product.js'
 import Paiement from './paiement.js'
@@ -29,7 +29,7 @@ export default class Commande extends BaseModel {
     foreignKey: 'commandeId',
     localKey: 'id',
   })
-  declare paiements: HasOne<typeof Paiement>
+  declare paiement: HasOne<typeof Paiement>
 
   @manyToMany(() => Product, {
     pivotTable: 'commande_products',
