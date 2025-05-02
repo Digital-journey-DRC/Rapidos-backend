@@ -1,8 +1,8 @@
 import { DateTime } from 'luxon'
-import { BaseModel, belongsTo, column } from '@adonisjs/lucid/orm'
+import { BaseModel, belongsTo, column, hasMany } from '@adonisjs/lucid/orm'
 import { StatusCommande } from '../Enum/status_commande.js'
 import Commande from './commande.js'
-import type { BelongsTo } from '@adonisjs/lucid/types/relations'
+import type { BelongsTo, HasMany } from '@adonisjs/lucid/types/relations'
 import User from './user.js'
 import Evaluation from './evaluation.js'
 import Adresse from './adresse.js'
@@ -43,8 +43,8 @@ export default class Livraison extends BaseModel {
 
   @belongsTo(() => User)
   declare livreur: BelongsTo<typeof User>
-  @belongsTo(() => Evaluation)
-  declare evaluation: BelongsTo<typeof Evaluation>
+  @hasMany(() => Evaluation)
+  declare evaluations: HasMany<typeof Evaluation>
 
   @belongsTo(() => Adresse)
   declare adresse: BelongsTo<typeof Adresse>

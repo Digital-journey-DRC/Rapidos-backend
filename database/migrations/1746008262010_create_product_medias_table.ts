@@ -18,7 +18,7 @@ export default class extends BaseSchema {
         .notNullable()
         .unsigned()
         .references('id')
-        .inTable('medias')
+        .inTable('media')
         .onDelete('CASCADE')
 
       table.unique(['product_id', 'media_id'])

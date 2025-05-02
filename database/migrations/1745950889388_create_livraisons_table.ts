@@ -24,12 +24,7 @@ export default class extends BaseSchema {
         .enum('status', Object.values(StatusCommande))
         .defaultTo(StatusCommande.EN_COURS)
         .notNullable()
-      table
-        .integer('commentaire_id')
-        .unsigned()
-        .references('id')
-        .inTable('evaluations')
-        .onDelete('SET NULL')
+
       table.string('code_livraison').nullable()
       table.string('numero_suivi').nullable()
       table.float('frais_livraison').nullable()
