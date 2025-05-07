@@ -45,10 +45,10 @@ export default class User extends compose(BaseModel, AuthFinder) {
   declare updatedAt: DateTime | null
 
   @column()
-  declare secureOtp: number
+  declare secureOtp: number | null
 
   @column()
-  declare otpExpiredAt: DateTime
+  declare otpExpiredAt: DateTime | null
 
   static accessTokens = DbAccessTokensProvider.forModel(User)
 

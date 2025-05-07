@@ -1,8 +1,10 @@
 import User from '#models/user'
+import { generateAccessToken } from '#services/generateaccesstoken'
 import { generateOtp } from '#services/generateotp'
 import { Mailservice } from '#services/mailservice'
 import { createUser } from '#services/setuserotp'
-import { registerUserValidator } from '#validators/user'
+import { validateDataService } from '#services/validatedataservice'
+import { validateAndActivateUserOtp } from '#services/validateuserotp'
 import type { HttpContext } from '@adonisjs/core/http'
 import logger from '@adonisjs/core/services/logger'
 
@@ -10,15 +12,8 @@ export default class RegistersController {
   async register({ request, response }: HttpContext) {
     const data = request.all()
     try {
-      const payload = await registerUserValidator.validate(data)
-      const exisingUser = await User.query().where('email', payload.email).first()
-      if (exisingUser) {
-        return response.conflict({
-          message: 'utilisateur existe déjà',
-          status: 409,
-        })
-      }
       // Create user
+      const payload = await validateDataService(data)
       const user = await User.create(payload)
       // Generate OTP code
       // Set OTP code and expiration time
@@ -56,6 +51,40 @@ export default class RegistersController {
       logger.error('Erreur lors de la création :', err)
 
       response.internalServerError('erreur interne du serveur')
+    }
+  }
+
+  async verifyOtp({ request, response, params, auth }: HttpContext) {
+    const otp = request.input('otp')
+    const userId = params.userId
+
+    try {
+      const { user } = await validateAndActivateUserOtp(userId, otp)
+
+      const accessToken = await generateAccessToken(user as User)
+
+      // athenticate user
+      await auth.authenticate()
+      // Send response
+      return response.send({
+        type: 'bearer',
+        value: accessToken?.value!.release(),
+      })
+    } catch (err) {
+      if (err.code === 'E_ROW_NOT_FOUND') {
+        return response.notFound({
+          message: 'Utilisateur introuvable',
+          status: 404,
+        })
+      }
+
+      // Autres erreurs inattendues
+      logger.error('Erreur lors de la vérification de l’OTP :', err)
+
+      return response.internalServerError({
+        message: 'Une erreur interne est survenue lors de la vérification de l’OTP',
+        status: 500,
+      })
     }
   }
 }
