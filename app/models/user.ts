@@ -21,13 +21,13 @@ export default class User extends compose(BaseModel, AuthFinder) {
   declare id: number
 
   @column()
-  declare firstName: string | null
+  declare firstName: string
 
   @column()
-  declare lastName: string | null
+  declare lastName: string
 
   @column()
-  declare phone: number | null
+  declare phone: string
 
   @column()
   declare role: UserRole
@@ -43,6 +43,12 @@ export default class User extends compose(BaseModel, AuthFinder) {
 
   @column.dateTime({ autoCreate: true, autoUpdate: true })
   declare updatedAt: DateTime | null
+
+  @column()
+  declare secureOtp: number
+
+  @column()
+  declare otpExpiredAt: DateTime
 
   static accessTokens = DbAccessTokensProvider.forModel(User)
 
