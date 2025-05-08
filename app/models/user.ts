@@ -48,9 +48,14 @@ export default class User extends compose(BaseModel, AuthFinder) {
   declare secureOtp: number | null
 
   @column()
-  declare otpExpiredAt: DateTime | null
+  declare otpExpiredAt: Date | null
 
-  static accessTokens = DbAccessTokensProvider.forModel(User)
+  @column()
+  declare termsAccepted: boolean
+
+  static accessTokens = DbAccessTokensProvider.forModel(User, {
+    expiresIn: '30 days',
+  })
 
   @hasOne(() => Profil, {
     foreignKey: 'userId',

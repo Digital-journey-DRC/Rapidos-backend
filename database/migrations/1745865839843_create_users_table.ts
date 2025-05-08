@@ -14,6 +14,7 @@ export default class extends BaseSchema {
       table.string('phone', 20).nullable().unique()
       table.float('secure_otp', 6).nullable()
       table.timestamp('otp_expired_at', { useTz: true }).nullable()
+      table.boolean('terms_accepted').notNullable().defaultTo(false)
       table.enum('role', Object.values(UserRole)).notNullable().defaultTo(UserRole.Acheteur)
       table.timestamp('created_at', { useTz: true }).notNullable().defaultTo(this.now())
       table.timestamp('updated_at', { useTz: true }).nullable()

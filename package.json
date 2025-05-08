@@ -61,7 +61,8 @@
     "luxon": "^3.6.1",
     "nodemailer": "^7.0.2",
     "pg": "^8.15.6",
-    "reflect-metadata": "^0.2.2"
+    "reflect-metadata": "^0.2.2",
+    "uuid": "^11.1.0"
   },
   "hotHook": {
     "boundaries": [
