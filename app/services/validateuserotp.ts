@@ -1,5 +1,9 @@
+import { AppError } from '#exceptions/apperror'
 import User from '#models/user'
+
 import { ValidationOtpResult } from '../types/usertype.js'
+
+import { v4 as uuidv4 } from 'uuid'
 
 export async function validateAndActivateUserOtp(
   userId: any,
@@ -7,41 +11,24 @@ export async function validateAndActivateUserOtp(
 ): Promise<ValidationOtpResult> {
   try {
     if (!otp) {
-      return {
-        error: {
-          message: 'otp requis',
-          status: 400,
-        },
-      }
+      throw new AppError('Le code OTP est requis.', 400)
     }
-    const user = await User.findByOrFail(userId)
+
+    const user = await User.findByOrFail('id', userId)
+
     if (!user) {
-      return {
-        error: {
-          message: 'Utilisateur introuvable',
-          status: 404,
-        },
-      }
+      throw new AppError('Utilisateur introuvable.', 404)
     }
+
     if (user.secureOtp !== otp) {
-      return {
-        error: {
-          message: 'otp invalide',
-          status: 400,
-        },
-      }
+      throw new AppError('Code OTP invalide.', 400)
     }
 
     const currentTime = Date.now()
-    const otpExpiration = user.otpExpiredAt?.toMillis?.() ?? 0
+    const otpExpiration = user.otpExpiredAt?.getTime()
 
-    if (currentTime > otpExpiration) {
-      return {
-        error: {
-          message: 'otp expiré',
-          status: 400,
-        },
-      }
+    if (!otpExpiration || currentTime > otpExpiration) {
+      throw new AppError('Le code OTP a expiré.', 400)
     }
 
     user.secureOtp = null
@@ -49,10 +36,33 @@ export async function validateAndActivateUserOtp(
     await user.save()
 
     return { user }
-  } catch (error) {
+  } catch (error: any) {
+    if (error instanceof AppError) {
+      // 🟢 Message clair pour l'utilisateur
+      return {
+        error: {
+          message: error.message,
+          status: error.status,
+        },
+      }
+    }
+
+    const errorId = uuidv4()
+
+    // 🔴 Log pour le développeur
+    console.error({
+      errorId,
+      message: error.message,
+      stack: error.stack,
+      context: {
+        userId,
+        otp,
+      },
+    })
+
     return {
       error: {
-        message: "erreur lors de la validation de l'otp",
+        message: `Une erreur inattendue est survenue. Référence: ${errorId}`,
         status: 500,
       },
     }
