@@ -1,14 +1,11 @@
 import User from '#models/user'
-import { generateOtp } from './generateotp.js'
 
 export const createUser = {
-  async setUserOtp(user: User) {
+  async setUserOtp(user: User, otp: number, expireDate: Date) {
     // SET user otp code
 
-    const { otpCode } = generateOtp()
-    const { otpExpiredAt } = generateOtp()
-    user.secureOtp = otpCode
-    user.otpExpiredAt = otpExpiredAt
+    user.secureOtp = otp
+    user.otpExpiredAt = expireDate
     await user.save()
     return user
   },
