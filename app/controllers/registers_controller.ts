@@ -1,3 +1,4 @@
+import { WhatsappService } from '#exceptions/whatssapotpservice'
 import User from '#models/user'
 import { generateAccessToken } from '#services/generateaccesstoken'
 import { generateOtp } from '#services/generateotp'
@@ -34,6 +35,7 @@ export default class RegistersController {
       // Configure nodemailer and send mail to user's email
       try {
         await Mailservice.sendMail(user.email, otpCode)
+        await WhatsappService.sendOtp(user.phone, otpCode)
       } catch (mailError) {
         // Delete user if email sending fails
         await user.delete()
