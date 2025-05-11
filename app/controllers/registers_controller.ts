@@ -111,4 +111,29 @@ export default class RegistersController {
       })
     }
   }
+
+  async login({ request, auth, response }: HttpContext) {
+    const { email, password } = request.only(['email', 'password'])
+    try {
+      const user = await User.verifyCredentials(email, password)
+      return await auth.use('api').createToken(user)
+    } catch (error) {
+      if (error.code === 'E_INVALID_AUTH_UID') {
+        return response.unauthorized({
+          message: 'Identifiants invalides',
+          status: 401,
+        })
+      } else if (error.code === 'E_INVALID_AUTH_PASSWORD') {
+        return response.unauthorized({
+          message: 'Mot de passe incorrect',
+          status: 401,
+        })
+      } else {
+        return response.internalServerError({
+          message: 'Erreur interne lors de la connexion',
+          status: 500,
+        })
+      }
+    }
+  }
 }

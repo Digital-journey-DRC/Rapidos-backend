@@ -132,3 +132,56 @@ router.post('/register', [RegistersController, 'register'])
  *         description: Erreur interne
  */
 router.post('/verify-otp/:userId', [RegistersController, 'verifyOtp'])
+
+/**
+ * @swagger
+ * /login:
+ *   post:
+ *     summary: Authentification d’un utilisateur
+ *     tags:
+ *       - Authentification
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - email
+ *               - password
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 example: utilisateur@example.com
+ *               password:
+ *                 type: string
+ *                 example: MonMotDePasse123!
+ *     responses:
+ *       200:
+ *         description: Connexion réussie
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 type:
+ *                   type: string
+ *                   example: bearer
+ *                 value:
+ *                   type: string
+ *                   description: Jeton JWT
+ *                 expiresIn:
+ *                   type: string
+ *                   example: 2025-12-31T23:59:59.000Z
+ *                 userId:
+ *                   type: string
+ *                   example: "abc123"
+ *       400:
+ *         description: Identifiants invalides
+ *       404:
+ *         description: Utilisateur introuvable
+ *       500:
+ *         description: Erreur interne
+ */
+
+router.post('/login', [RegistersController, 'login'])
