@@ -1,4 +1,5 @@
 import router from '@adonisjs/core/services/router'
+import { middleware } from './kernel.js'
 const RegistersController = () => import('#controllers/registers_controller')
 
 /**
@@ -185,3 +186,18 @@ router.post('/verify-otp/:userId', [RegistersController, 'verifyOtp'])
  */
 
 router.post('/login', [RegistersController, 'login'])
+
+/**
+ * @swagger
+ * /logout:
+ *   get:
+ *     summary: Déconnexion d’un utilisateur
+ *     tags:
+ *       - Authentification
+ *     responses:
+ *       200:
+ *         description: Déconnexion réussie
+ *       401:
+ *         description: Non autorisé
+ */
+router.get('/logout', [RegistersController]).use(middleware.auth({ guards: ['api'] }))
