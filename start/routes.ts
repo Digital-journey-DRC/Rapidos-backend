@@ -1,23 +1,134 @@
-/*
-|--------------------------------------------------------------------------
-| Routes file
-|--------------------------------------------------------------------------
-|
-| The routes file is used for defining the HTTP routes.
-|
-*/
-
 import router from '@adonisjs/core/services/router'
+const RegistersController = () => import('#controllers/registers_controller')
 
-const authController = () => import('#controllers/registers_controller')
-const swagger = () => import('#controllers/swaggers_controller')
-
+/**
+ * @swagger
+ * /:
+ *   get:
+ *     summary: Vérifie que l’API fonctionne
+ *     responses:
+ *       200:
+ *         description: API opérationnelle
+ */
 router.get('/', async () => {
   return {
     hello: 'world',
   }
 })
 
-router.post('/register', [authController, 'register'])
-router.post('/verify-otp/:userId', [authController, 'verifyOtp'])
-router.get('/docs', [swagger, 'show'])
+/**
+ * @swagger
+ * /register:
+ *   post:
+ *     summary: Enregistrement d’un utilisateur
+ *     tags:
+ *       - Authentification
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - email
+ *               - password
+ *               - firstName
+ *               - lastName
+ *               - phone
+ *               - role
+ *               - termsAccepted
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 example: utilisateur@example.com
+ *               password:
+ *                 type: string
+ *                 example: monMotDePasse123
+ *               firstName:
+ *                 type: string
+ *                 example: Jean
+ *               lastName:
+ *                 type: string
+ *                 example: Dupont
+ *               phone:
+ *                 type: string
+ *                 example: "+2250700000000"
+ *               role:
+ *                 type: string
+ *                 example: client
+ *               termsAccepted:
+ *                 type: boolean
+ *                 example: true
+ *     responses:
+ *       201:
+ *         description: Utilisateur enregistré avec succès
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                 status:
+ *                   type: integer
+ *                 id:
+ *                   type: string
+ *       400:
+ *         description: Données invalides
+ *       500:
+ *         description: Erreur interne
+ */
+router.post('/register', [RegistersController, 'register'])
+
+/**
+ * @swagger
+ * /verify-otp/{userId}:
+ *   post:
+ *     summary: Vérifie le code OTP d’un utilisateur
+ *     tags:
+ *       - Authentification
+ *     parameters:
+ *       - in: path
+ *         name: userId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: ID de l’utilisateur
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - otp
+ *             properties:
+ *               otp:
+ *                 type: string
+ *                 example: "123456"
+ *     responses:
+ *       200:
+ *         description: Authentification réussie
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 type:
+ *                   type: string
+ *                   example: bearer
+ *                 value:
+ *                   type: string
+ *                   description: Jeton JWT
+ *                 expiresIn:
+ *                   type: string
+ *                 userId:
+ *                   type: string
+ *       400:
+ *         description: Code OTP invalide
+ *       404:
+ *         description: Utilisateur introuvable
+ *       500:
+ *         description: Erreur interne
+ */
+router.post('/verify-otp/:userId', [RegistersController, 'verifyOtp'])
