@@ -5,6 +5,7 @@ import { generateOtp } from '#services/generateotp'
 import { Mailservice } from '#services/mailservice'
 import { createUser } from '#services/setuserotp'
 import { validateAndActivateUserOtp } from '#services/validateuserotp'
+import abilities from '#start/abilities'
 import { registerUserValidator } from '#validators/user'
 import type { HttpContext } from '@adonisjs/core/http'
 import logger from '@adonisjs/core/services/logger'
@@ -86,7 +87,9 @@ export default class RegistersController {
         })
       }
 
-      const accessToken = await generateAccessToken(result.user as User)
+      const accessToken = await generateAccessToken(result.user as User, {
+        abilities: abilities['vendeur'],
+      })
 
       // Send response
       return response.send({
@@ -134,6 +137,17 @@ export default class RegistersController {
           status: 500,
         })
       }
+    }
+  }
+
+  async logout({ auth, response }: HttpContext) {
+    try {
+      await auth.use('api').invalidateToken()
+    } catch (error) {
+      return response.internalServerError({
+        message: 'Erreur interne lors de la déconnexion',
+        status: 500,
+      })
     }
   }
 }
