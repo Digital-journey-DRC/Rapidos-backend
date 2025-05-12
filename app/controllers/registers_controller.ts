@@ -1,12 +1,13 @@
 import { WhatsappService } from '#exceptions/whatssapotpservice'
 import User from '#models/user'
+import { getUpdatableFields } from '#services/datatoupdate'
 import { generateAccessToken } from '#services/generateaccesstoken'
 import { generateOtp } from '#services/generateotp'
 import { Mailservice } from '#services/mailservice'
 import { createUser } from '#services/setuserotp'
 import { validateAndActivateUserOtp } from '#services/validateuserotp'
 import abilities from '#start/abilities'
-import { registerUserValidator } from '#validators/user'
+import { registerUserValidator, UpdateUserValidator } from '#validators/user'
 import type { HttpContext } from '@adonisjs/core/http'
 import logger from '@adonisjs/core/services/logger'
 
@@ -146,6 +147,90 @@ export default class RegistersController {
     } catch (error) {
       return response.internalServerError({
         message: 'Erreur interne lors de la déconnexion',
+        status: 500,
+      })
+    }
+  }
+
+  async sendDataForUpdate({ response, auth, params }: HttpContext) {
+    try {
+      const targetUser = await User.findOrFail(params.userId)
+      const user = auth.user!
+      console.log('getUpdatableFields', user.id, targetUser.id)
+      const dataForUpdate = getUpdatableFields(user, targetUser)
+      if ('error' in dataForUpdate) {
+        return response.unauthorized({
+          message: dataForUpdate.error.message,
+          status: 401,
+        })
+      }
+      return response.ok({
+        message: 'Données récupérées avec succès',
+        status: 200,
+        data: dataForUpdate,
+      })
+    } catch (error) {
+      if (error.code === 'E_ROW_NOT_FOUND') {
+        return response.notFound({
+          message: 'Utilisateur introuvable',
+          status: 404,
+        })
+      }
+      return response.internalServerError({
+        message: 'Erreur interne lors de la récupération des données de l’utilisateur',
+        status: 500,
+      })
+    }
+  }
+
+  async updateUser({ request, response, auth, params }: HttpContext) {
+    const currentUser = auth.user!
+
+    try {
+      const targetUser = await User.findOrFail(params.userId)
+
+      const isAdmin = ['admin', 'superadmin'].includes(currentUser.role)
+
+      let validatedPayload
+
+      if (isAdmin) {
+        validatedPayload = await request.validateUsing(UpdateUserValidator)
+      } else {
+        const requestData = request.only(['firstName', 'lastName', 'phone'])
+        validatedPayload = await UpdateUserValidator.validate({
+          ...targetUser.serialize(), //conserve default values of user
+          ...requestData,
+        })
+      }
+      targetUser.merge(validatedPayload)
+      await targetUser.save()
+      return response.ok({
+        message: 'Utilisateur mis à jour avec succès',
+        status: 200,
+        data: targetUser,
+      })
+    } catch (error) {
+      if (error.code === 'E_ROW_NOT_FOUND') {
+        return response.notFound({
+          message: 'Utilisateur introuvable',
+          status: 404,
+        })
+      }
+      if (error.code === 'E_VALIDATION_ERROR') {
+        return response.badRequest({
+          message: 'Données invalides',
+          errors: error.messages,
+          status: 400,
+        })
+      }
+      if (error.code === 'E_AUTHORIZATION_FAILURE') {
+        return response.forbidden({
+          message: "Vous n'êtes pas autorisé à mettre à jour cet utilisateur",
+          status: 403,
+        })
+      }
+      return response.internalServerError({
+        message: 'Erreur interne lors de la mise à jour de l’utilisateur',
         status: 500,
       })
     }

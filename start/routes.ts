@@ -201,3 +201,125 @@ router.post('/login', [RegistersController, 'login'])
  *         description: Non autorisé
  */
 router.get('/logout', [RegistersController]).use(middleware.auth({ guards: ['api'] }))
+
+/**
+ * @swagger
+ * /users/editable-fields/{userId}:
+ *   get:
+ *     tags:
+ *       - Users
+ *     summary: Récupérer les champs modifiables pour la mise à jour
+ *     operationId: getUserEditableFields
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - name: userId
+ *         in: path
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: ID de l'utilisateur cible
+ *     responses:
+ *       200:
+ *         description: Champs récupérés avec succès
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                 status:
+ *                   type: integer
+ *                 data:
+ *                   type: object
+ *                   description: Champs modifiables selon le rôle
+ *       401:
+ *         description: Non autorisé
+ *       404:
+ *         description: Utilisateur introuvable
+ *       500:
+ *         description: Erreur interne
+ */
+
+router
+  .get('/users/editables-fields/:userId', [RegistersController, 'sendDataForUpdate'])
+  .use(middleware.auth({ guards: ['api'] }))
+
+/**
+ * @swagger
+ * /users/update/{userId}:
+ *   post:
+ *     tags:
+ *       - Users
+ *     summary: Mettre à jour un utilisateur
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - name: userId
+ *         in: path
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: ID de l'utilisateur cible
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - firstName
+ *               - lastName
+ *               - phone
+ *               - password
+ *             properties:
+ *               firstName:
+ *                 type: string
+ *                 example: Jean
+ *               lastName:
+ *                 type: string
+ *                 example: Dupont
+ *               phone:
+ *                 type: string
+ *                 example: "0612345678"
+ *               password:
+ *                 type: string
+ *                 example: MonMotDePasse123!
+ *               email:
+ *                 type: string
+ *                 example: utilisateur@example.com
+ *               role:
+ *                 type: string
+ *                 example: client
+ *               termsAccepted:
+ *                 type: boolean
+ *                 example: true
+ *     responses:
+ *       200:
+ *         description: Utilisateur mis à jour avec succès
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Utilisateur mis à jour avec succès"
+ *                 status:
+ *                   type: integer
+ *                   example: 200
+ *                 data:
+ *                   type: object
+ *       400:
+ *         description: Données invalides
+ *       403:
+ *         description: Non autorisé à modifier cet utilisateur
+ *       404:
+ *         description: Utilisateur introuvable
+ *       500:
+ *         description: Erreur interne
+ */
+router
+  .post('/users/update/:userId', [RegistersController, 'updateUser'])
+  .use(middleware.auth({ guards: ['api'] }))

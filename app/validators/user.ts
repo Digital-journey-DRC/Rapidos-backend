@@ -38,3 +38,13 @@ export const registerUserValidator = vine.compile(
     termsAccepted: vine.boolean({ strict: true }),
   })
 )
+
+export const UpdateUserValidator = vine.compile(
+  vine.object({
+    firstName: vine.string().trim().escape().minLength(2).maxLength(50),
+    lastName: vine.string().trim().escape().minLength(2).maxLength(50),
+
+    //, 'invalid international phone number format'
+    phone: vine.string().regex(/^\+[1-9]\d{1,14}$/),
+  })
+)

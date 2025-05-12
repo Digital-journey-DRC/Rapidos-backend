@@ -12,12 +12,36 @@
 |
 */
 
+import User from '#models/user'
 import { Bouncer } from '@adonisjs/bouncer'
 
 /**
  * Delete the following ability to start from
  * scratch
  */
-export const editUser = Bouncer.ability(() => {
-  return true
+export const editUser = Bouncer.ability((user: User, targetUser: User, fields: string[]) => {
+  if (user.role === 'admin' || user.role === 'superadmin') {
+    return true
+  }
+
+  // Allow user to edit their own profile with certain fields
+
+  const allowFields = ['firstName', 'lastName', 'phone', 'password']
+  const isTryingToEditOnlyAllowedFields = fields.every((field: string) =>
+    allowFields.includes(field)
+  )
+
+  // Allow user to edit their own profile
+  if (user.id === targetUser.id && isTryingToEditOnlyAllowedFields) {
+    return true
+  }
+
+  return false
+})
+
+export const deleteUser = Bouncer.ability((user: User) => {
+  if (user.role === 'admin') {
+    return true
+  }
+  return false
 })
