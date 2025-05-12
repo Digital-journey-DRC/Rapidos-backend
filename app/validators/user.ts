@@ -48,3 +48,15 @@ export const UpdateUserValidator = vine.compile(
     phone: vine.string().regex(/^\+[1-9]\d{1,14}$/),
   })
 )
+
+export const UpdateUserValidatorForAdmin = vine.compile(
+  vine.object({
+    email: vine.string().trim().toLowerCase().email().nullable(),
+    role: vine.enum(UserRole),
+    firstName: vine.string().trim().escape().minLength(2).maxLength(50),
+    lastName: vine.string().trim().escape().minLength(2).maxLength(50),
+
+    //, 'invalid international phone number format'
+    phone: vine.string().regex(/^\+[1-9]\d{1,14}$/),
+  })
+)

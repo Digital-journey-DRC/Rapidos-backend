@@ -7,7 +7,11 @@ import { Mailservice } from '#services/mailservice'
 import { createUser } from '#services/setuserotp'
 import { validateAndActivateUserOtp } from '#services/validateuserotp'
 import abilities from '#start/abilities'
-import { registerUserValidator, UpdateUserValidator } from '#validators/user'
+import {
+  registerUserValidator,
+  UpdateUserValidator,
+  UpdateUserValidatorForAdmin,
+} from '#validators/user'
 import type { HttpContext } from '@adonisjs/core/http'
 import logger from '@adonisjs/core/services/logger'
 
@@ -194,7 +198,7 @@ export default class RegistersController {
       let validatedPayload
 
       if (isAdmin) {
-        validatedPayload = await request.validateUsing(UpdateUserValidator)
+        validatedPayload = await request.validateUsing(UpdateUserValidatorForAdmin)
       } else {
         const requestData = request.only(['firstName', 'lastName', 'phone'])
         validatedPayload = await UpdateUserValidator.validate({
