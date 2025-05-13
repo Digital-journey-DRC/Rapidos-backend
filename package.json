@@ -70,7 +70,7 @@
     "express": "^5.1.0",
     "luxon": "^3.6.1",
     "nodemailer": "^7.0.2",
-    "pg": "^8.15.6",
+    "pg": "^8.16.0",
     "reflect-metadata": "^0.2.2",
     "swagger-jsdoc": "^6.2.8",
     "swagger-ui-express": "^5.0.1",
