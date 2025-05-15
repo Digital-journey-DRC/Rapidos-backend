@@ -40,7 +40,6 @@ export default class RegistersController {
 
       // Configure nodemailer and send mail to user's email
       try {
-        await WhatsappService.sendOtp(user.phone, otpCode)
         await Mailservice.sendMail(user.email, otpCode)
       } catch (mailError) {
         // Delete user if email sending fails
@@ -50,6 +49,15 @@ export default class RegistersController {
           stack: mailError.stack,
           code: mailError.code,
         })
+      }
+
+      try {
+        console.log('Envoi de l’OTP par WhatsApp', user.phone, otpCode)
+
+        await WhatsappService.sendOtp(user.phone, otpCode)
+      } catch (error) {
+        console.error('Erreur lors de l’envoi WhatsApp:', error.response?.data || error.message)
+        throw error
       }
       // Send response
       return response.send({
