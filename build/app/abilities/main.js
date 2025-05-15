@@ -1,0 +1,19 @@
+import { Bouncer } from '@adonisjs/bouncer';
+export const editUser = Bouncer.ability((user, targetUser, fields) => {
+    if (user.role === 'admin' || user.role === 'superadmin') {
+        return true;
+    }
+    const allowFields = ['firstName', 'lastName', 'phone', 'password'];
+    const isTryingToEditOnlyAllowedFields = fields.every((field) => allowFields.includes(field));
+    if (user.id === targetUser.id && isTryingToEditOnlyAllowedFields) {
+        return true;
+    }
+    return false;
+});
+export const deleteUser = Bouncer.ability((user) => {
+    if (user.role === 'admin') {
+        return true;
+    }
+    return false;
+});
+//# sourceMappingURL=main.js.map
