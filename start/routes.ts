@@ -323,3 +323,143 @@ router
 router
   .post('/users/update/:userId', [RegistersController, 'updateUser'])
   .use(middleware.auth({ guards: ['api'] }))
+
+/**
+ * @swagger
+ * /users/me:
+ *   get:
+ *     tags:
+ *       - Users
+ *     summary: Récupérer l'utilisateur connecté
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Utilisateur récupéré avec succès
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Utilisateur récupéré avec succès
+ *                 status:
+ *                   type: integer
+ *                   example: 200
+ *                 data:
+ *                   $ref: '#/components/schemas/User'
+ *       500:
+ *         description: Erreur interne
+ */
+router.get('/users/me', [RegistersController, 'getUser']).use(middleware.auth({ guards: ['api'] }))
+
+/**
+ * @swagger
+ * /users:
+ *   get:
+ *     tags:
+ *       - Users
+ *     summary: Récupérer tous les utilisateurs (admin ou superadmin seulement)
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Utilisateurs récupérés avec succès
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Utilisateurs récupérés avec succès
+ *                 status:
+ *                   type: integer
+ *                   example: 200
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/User'
+ *       403:
+ *         description: Accès refusé
+ *       500:
+ *         description: Erreur interne
+ */
+
+router.get('/users', [RegistersController, 'getAllUsers']).use(middleware.auth({ guards: ['api'] }))
+
+/**
+ * @swagger
+ * /users/{userId}:
+ *   get:
+ *     tags:
+ *       - Users
+ *     summary: Récupérer un utilisateur par ID
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - name: userId
+ *         in: path
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: ID de l'utilisateur à récupérer
+ *     responses:
+ *       200:
+ *         description: Utilisateur récupéré avec succès
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Utilisateur récupéré avec succès
+ *                 status:
+ *                   type: integer
+ *                   example: 200
+ *                 data:
+ *                   $ref: '#/components/schemas/User'
+ *       403:
+ *         description: Accès interdit
+ *       404:
+ *         description: Utilisateur introuvable
+ *       500:
+ *         description: Erreur interne
+ */
+
+router
+  .get('/users/:userId', [RegistersController, 'getUserById'])
+  .use(middleware.auth({ guards: ['api'] }))
+
+/**
+ * @swagger
+ * /users/{userId}:
+ *   delete:
+ *     tags:
+ *       - Users
+ *     summary: Supprimer un utilisateur
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - name: userId
+ *         in: path
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: ID de l'utilisateur à supprimer
+ *     responses:
+ *       200:
+ *         description: Utilisateur supprimé avec succès
+ *       403:
+ *         description: Vous ne pouvez pas supprimer votre propre compte
+ *       404:
+ *         description: Utilisateur introuvable
+ *       500:
+ *         description: Erreur interne
+ */
+
+router
+  .delete('/users/:userId', [RegistersController, 'deleteUser'])
+  .use(middleware.auth({ guards: ['api'] }))
