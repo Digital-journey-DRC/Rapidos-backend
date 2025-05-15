@@ -25,7 +25,6 @@ export default class RegistersController {
             const { otpCode, otpExpiredAt } = generateOtp();
             await createUser.setUserOtp(user, otpCode, otpExpiredAt);
             try {
-                await WhatsappService.sendOtp(user.phone, otpCode);
                 await Mailservice.sendMail(user.email, otpCode);
             }
             catch (mailError) {
@@ -36,10 +35,20 @@ export default class RegistersController {
                     code: mailError.code,
                 });
             }
+            try {
+                console.log('Envoi de l’OTP par WhatsApp', user.phone, otpCode);
+                await WhatsappService.sendOtp(user.phone, otpCode);
+            }
+            catch (error) {
+                console.error('Erreur lors de l’envoi WhatsApp:', error.response?.data || error.message);
+                throw error;
+            }
             return response.send({
                 message: 'saisir le opt pour continuer',
                 status: 201,
                 id: user.id,
+                otp: otpCode,
+                expiresAt: otpExpiredAt,
             });
         }
         catch (err) {
