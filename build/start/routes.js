@@ -16,4 +16,12 @@ router
 router
     .post('/users/update/:userId', [RegistersController, 'updateUser'])
     .use(middleware.auth({ guards: ['api'] }));
+router.get('/users/me', [RegistersController, 'getUser']).use(middleware.auth({ guards: ['api'] }));
+router.get('/users', [RegistersController, 'getAllUsers']).use(middleware.auth({ guards: ['api'] }));
+router
+    .get('/users/:userId', [RegistersController, 'getUserById'])
+    .use(middleware.auth({ guards: ['api'] }));
+router
+    .delete('/users/:userId', [RegistersController, 'deleteUser'])
+    .use(middleware.auth({ guards: ['api'] }));
 //# sourceMappingURL=routes.js.map
