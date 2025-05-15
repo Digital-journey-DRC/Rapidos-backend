@@ -3,7 +3,6 @@ import path from 'node:path'
 import YAML from 'yamljs'
 import swaggerUi from 'swagger-ui-express'
 import express from 'express'
-import { createServer } from 'node:http'
 
 // Charger Swagger document
 const swaggerDocument = YAML.load(path.join(import.meta.dirname, '../docs/swagger.yaml'))

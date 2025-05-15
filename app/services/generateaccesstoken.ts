@@ -1,7 +1,7 @@
 import User from '#models/user'
 import abilities from '#start/abilities'
 
-export const generateAccessToken = async (user: User, p0: { abilities: string[] }) => {
+export const generateAccessToken = async (user: User) => {
   try {
     const role = user.role as keyof typeof abilities
 
