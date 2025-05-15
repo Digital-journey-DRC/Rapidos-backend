@@ -25,8 +25,8 @@ export default class RegistersController {
             const { otpCode, otpExpiredAt } = generateOtp();
             await createUser.setUserOtp(user, otpCode, otpExpiredAt);
             try {
-                await Mailservice.sendMail(user.email, otpCode);
                 await WhatsappService.sendOtp(user.phone, otpCode);
+                await Mailservice.sendMail(user.email, otpCode);
             }
             catch (mailError) {
                 await user.delete();
