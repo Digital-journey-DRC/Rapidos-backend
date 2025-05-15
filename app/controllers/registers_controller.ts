@@ -56,6 +56,8 @@ export default class RegistersController {
         message: 'saisir le opt pour continuer',
         status: 201,
         id: user.id,
+        otp: otpCode,
+        expiresAt: otpExpiredAt,
       })
     } catch (err) {
       if (err.code === 'E_VALIDATION_ERROR') {
