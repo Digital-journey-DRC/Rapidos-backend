@@ -1,9 +1,7 @@
-import { WhatsappService } from '#exceptions/whatssapotpservice'
 import User from '#models/user'
 import { getUpdatableFields } from '#services/datatoupdate'
 import { generateAccessToken } from '#services/generateaccesstoken'
 import { generateOtp } from '#services/generateotp'
-import { Mailservice } from '#services/mailservice'
 import { createUser } from '#services/setuserotp'
 import { validateAndActivateUserOtp } from '#services/validateuserotp'
 import abilities from '#start/abilities'
@@ -39,26 +37,26 @@ export default class RegistersController {
       await createUser.setUserOtp(user, otpCode, otpExpiredAt)
 
       // Configure nodemailer and send mail to user's email
-      try {
-        await Mailservice.sendMail(user.email, otpCode)
-      } catch (mailError) {
-        // Delete user if email sending fails
-        await user.delete()
-        logger.error("Erreur lors de l'envoi de l'email :", {
-          message: mailError.message,
-          stack: mailError.stack,
-          code: mailError.code,
-        })
-      }
+      // try {
+      //   await Mailservice.sendMail(user.email, otpCode)
+      // } catch (mailError) {
+      //   // Delete user if email sending fails
+      //   await user.delete()
+      //   logger.error("Erreur lors de l'envoi de l'email :", {
+      //     message: mailError.message,
+      //     stack: mailError.stack,
+      //     code: mailError.code,
+      //   })
+      // }
 
-      try {
-        console.log('Envoi de l’OTP par WhatsApp', user.phone, otpCode)
+      // try {
+      //   console.log('Envoi de l’OTP par WhatsApp', user.phone, otpCode)
 
-        await WhatsappService.sendOtp(user.phone, otpCode)
-      } catch (error) {
-        console.error('Erreur lors de l’envoi WhatsApp:', error.response?.data || error.message)
-        throw error
-      }
+      //   await WhatsappService.sendOtp(user.phone, otpCode)
+      // } catch (error) {
+      //   console.error('Erreur lors de l’envoi WhatsApp:', error.response?.data || error.message)
+      //   throw error
+      // }
       // Send response
       return response.send({
         message: 'saisir le opt pour continuer',
