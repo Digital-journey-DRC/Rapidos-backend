@@ -1,0 +1,313 @@
+openapi: 3.0.0
+info:
+  title: RAPIDOS API
+  version: 1.0.0
+  description: API de mise en réseau des utilisateurs (acheteur, vendeur, livreur) avec envoi OTP (email ou WhatsApp)
+
+servers:
+  - url: http://localhost:3333
+
+paths:
+  /:
+    get:
+      summary: Vérifie que l’API fonctionne
+      responses:
+        '200':
+          description: API opérationnelle
+
+  /register:
+    post:
+      summary: Enregistrement d’un utilisateur
+      tags:
+        - Authentification
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - password
+                - firstName
+                - lastName
+                - phone
+                - role
+                - termsAccepted
+              properties:
+                email:
+                  type: string
+                  example: utilisateur@example.com
+                password:
+                  type: string
+                  example: MonmotDePasse123!
+                firstName:
+                  type: string
+                  example: Judah
+                lastName:
+                  type: string
+                  example: Mvi
+                phone:
+                  type: string
+                  example: '+2250700000000'
+                role:
+                  type: string
+                  example: vendeur
+                termsAccepted:
+                  type: boolean
+                  example: true
+      responses:
+        '201':
+          description: Utilisateur enregistré avec succès
+        '400':
+          description: Données invalides
+        '500':
+          description: Erreur interne
+
+  /verify-otp/{userId}:
+    post:
+      summary: Vérifie le code OTP d’un utilisateur
+      tags:
+        - Authentification
+      parameters:
+        - in: path
+          name: userId
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - otp
+              properties:
+                otp:
+                  type: string
+                  example: '123456'
+      responses:
+        '200':
+          description: Authentification réussie
+        '400':
+          description: Code OTP invalide
+        '404':
+          description: Utilisateur introuvable
+        '500':
+          description: Erreur interne
+
+  /login:
+    post:
+      summary: Authentification d’un utilisateur
+      tags:
+        - Authentification
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - password
+              properties:
+                email:
+                  type: string
+                  example: utilisateur@example.com
+                password:
+                  type: string
+                  example: MonMotDePasse123!
+      responses:
+        '200':
+          description: Connexion réussie
+        '400':
+          description: Identifiants invalides
+        '404':
+          description: Utilisateur introuvable
+        '500':
+          description: Erreur interne
+
+  /logout:
+    get:
+      summary: Déconnexion d’un utilisateur
+      tags:
+        - Authentification
+      responses:
+        '200':
+          description: Déconnexion réussie
+        '401':
+          description: Non autorisé
+
+  /users/editable-fields/{userId}:
+    get:
+      tags:
+        - Users
+      summary: Récupérer les champs modifiables pour la mise à jour
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Champs récupérés avec succès
+        '401':
+          description: Non autorisé
+        '404':
+          description: Utilisateur introuvable
+        '500':
+          description: Erreur interne
+
+  /users/update/{userId}:
+    post:
+      tags:
+        - Users
+      summary: Mettre à jour un utilisateur
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - firstName
+                - lastName
+                - phone
+                - password
+              properties:
+                firstName:
+                  type: string
+                lastName:
+                  type: string
+                phone:
+                  type: string
+                password:
+                  type: string
+                email:
+                  type: string
+                role:
+                  type: string
+                termsAccepted:
+                  type: boolean
+      responses:
+        '200':
+          description: Utilisateur mis à jour avec succès
+        '400':
+          description: Données invalides
+        '403':
+          description: Non autorisé à modifier cet utilisateur
+        '404':
+          description: Utilisateur introuvable
+        '500':
+          description: Erreur interne
+
+  /users/me:
+    get:
+      tags:
+        - Users
+      summary: Récupérer l'utilisateur connecté
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Utilisateur récupéré avec succès
+        '500':
+          description: Erreur interne
+
+  /users:
+    get:
+      tags:
+        - Users
+      summary: Récupérer tous les utilisateurs
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Utilisateurs récupérés avec succès
+        '403':
+          description: Accès refusé
+        '500':
+          description: Erreur interne
+
+  /users/{userId}:
+    get:
+      tags:
+        - Users
+      summary: Récupérer un utilisateur par ID
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Utilisateur récupéré avec succès
+        '403':
+          description: Accès interdit
+        '404':
+          description: Utilisateur introuvable
+        '500':
+          description: Erreur interne
+
+    delete:
+      tags:
+        - Users
+      summary: Supprimer un utilisateur
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Utilisateur supprimé avec succès
+        '403':
+          description: Vous ne pouvez pas supprimer votre propre compte
+        '404':
+          description: Utilisateur introuvable
+        '500':
+          description: Erreur interne
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+        email:
+          type: string
+        firstName:
+          type: string
+        lastName:
+          type: string
+        phone:
+          type: string
+        role:
+          type: string
+        termsAccepted:
+          type: boolean

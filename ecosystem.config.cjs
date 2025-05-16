@@ -26,13 +26,5 @@ module.exports = {
         APP_NAME: 'Rapidos',
       },
     },
-    {
-      name: 'swagger',
-      script: 'swagger-server.js',
-      watch: false,
-      env: {
-        NODE_ENV: 'production',
-      },
-    },
   ],
 }
