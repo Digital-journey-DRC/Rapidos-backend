@@ -28,7 +28,7 @@ module.exports = {
     },
     {
       name: 'swagger',
-      script: 'swagger-server.js',
+      script: 'start/swagger.js',
       watch: false,
       env: {
         NODE_ENV: 'production',
