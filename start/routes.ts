@@ -53,4 +53,6 @@ router
   .delete('/users/:userId', [RegistersController, 'deleteUser'])
   .use(middleware.auth({ guards: ['api'] }))
 
-router.post('/products', [ProductsController, 'store']).use(middleware.auth({ guards: ['api'] }))
+router
+  .post('/products/store', [ProductsController, 'store'])
+  .use(middleware.auth({ guards: ['api'] }))
