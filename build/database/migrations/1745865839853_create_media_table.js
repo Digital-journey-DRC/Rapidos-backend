@@ -6,6 +6,12 @@ export default class extends BaseSchema {
             table.increments('id');
             table.text('media_url').notNullable();
             table.string('media_type').notNullable();
+            table
+                .integer('product_id')
+                .unsigned()
+                .references('id')
+                .inTable('products')
+                .onDelete('CASCADE');
             table.timestamp('created_at');
             table.timestamp('updated_at');
         });

@@ -28,4 +28,4 @@ export default class extends BaseSchema {
         this.schema.dropTable(this.tableName);
     }
 }
-//# sourceMappingURL=1745943236602_create_products_table.js.map
+//# sourceMappingURL=1745865839852_create_products_table.js.map

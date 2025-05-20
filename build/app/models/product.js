@@ -8,7 +8,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
 import { DateTime } from 'luxon';
-import { BaseModel, belongsTo, column, manyToMany } from '@adonisjs/lucid/orm';
+import { BaseModel, belongsTo, column, hasOne, manyToMany } from '@adonisjs/lucid/orm';
 import Media from './media.js';
 import User from './user.js';
 import Commande from './commande.js';
@@ -66,13 +66,7 @@ __decorate([
     __metadata("design:type", Object)
 ], Product.prototype, "commandes", void 0);
 __decorate([
-    manyToMany(() => Media, {
-        pivotTable: 'product_media',
-        localKey: 'id',
-        relatedKey: 'id',
-        pivotForeignKey: 'product_id',
-        pivotRelatedForeignKey: 'media_id',
-    }),
+    hasOne(() => Media),
     __metadata("design:type", Object)
 ], Product.prototype, "media", void 0);
 //# sourceMappingURL=product.js.map
