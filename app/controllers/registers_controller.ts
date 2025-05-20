@@ -82,6 +82,7 @@ export default class RegistersController {
       return response.internalServerError({
         message: 'Une erreur interne est survenue. Veuillez réessayer plus tard.',
         status: 500,
+        error: err.message,
       })
     }
   }
