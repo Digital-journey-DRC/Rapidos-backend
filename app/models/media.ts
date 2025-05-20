@@ -1,7 +1,7 @@
 import { DateTime } from 'luxon'
-import { BaseModel, column, hasMany, manyToMany } from '@adonisjs/lucid/orm'
+import { BaseModel, belongsTo, column, hasMany } from '@adonisjs/lucid/orm'
 import Profil from './profil.js'
-import type { HasMany, ManyToMany } from '@adonisjs/lucid/types/relations'
+import type { BelongsTo, HasMany } from '@adonisjs/lucid/types/relations'
 import Product from './product.js'
 
 export default class Media extends BaseModel {
@@ -13,6 +13,9 @@ export default class Media extends BaseModel {
 
   @column()
   declare mediaType: string
+
+  @column()
+  declare productId: number
 
   @column.dateTime({ autoCreate: true })
   declare createdAt: DateTime
@@ -26,12 +29,6 @@ export default class Media extends BaseModel {
   })
   declare profil: HasMany<typeof Profil>
 
-  @manyToMany(() => Product, {
-    pivotTable: 'product_media',
-    localKey: 'id',
-    relatedKey: 'id',
-    pivotForeignKey: 'media_id',
-    pivotRelatedForeignKey: 'product_id',
-  })
-  declare productList: ManyToMany<typeof Product>
+  @belongsTo(() => Product)
+  declare product: BelongsTo<typeof Product>
 }
