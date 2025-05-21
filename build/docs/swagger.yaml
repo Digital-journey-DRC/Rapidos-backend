@@ -286,6 +286,94 @@ paths:
         '500':
           description: Erreur interne
 
+  /products/store:
+    post:
+      summary: Création d’un produit avec médias
+      tags:
+        - Produits
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - name
+                - description
+                - price
+                - stock
+                - category
+                - medias
+              properties:
+                name:
+                  type: string
+                  description: Nom du produit
+                  example: chasubles
+                description:
+                  type: string
+                  description: Description du produit
+                  example: chasubles d'entrainement.
+                price:
+                  type: number
+                  format: float
+                  description: Prix unitaire du produit
+                  example: 5.99
+                stock:
+                  type: integer
+                  description: Quantité disponible en stock
+                  example: 100
+                category:
+                  type: string
+                  description: Catégorie du produit
+                  example: sports
+                medias:
+                  type: array
+                  description: Médias à associer au produit (images, vidéos)
+                  items:
+                    type: string
+                    format: binary
+      security:
+        - bearerAuth: []
+      responses:
+        '201':
+          description: Produit créé avec succès
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Produit créé avec succès
+                  product:
+                    $ref: '#/components/schemas/Product'
+                  medias:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Media'
+        '207':
+          description: Produit créé, mais certaines images n’ont pas pu être uploadées
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Produit créé, mais certaines images n'ont pas pu être uploadées.
+                  errors:
+                    type: array
+                    items:
+                      type: string
+        '401':
+          description: Non autorisé (utilisateur non connecté)
+        '403':
+          description: Accès interdit (droits insuffisants)
+        '422':
+          description: Données invalides ou erreur d’upload de fichiers
+        '500':
+          description: Erreur interne du serveur
+
 components:
   securitySchemes:
     bearerAuth:
@@ -311,3 +399,40 @@ components:
           type: string
         termsAccepted:
           type: boolean
+
+    Product:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        description:
+          type: string
+        price:
+          type: number
+        stock:
+          type: integer
+        category:
+          type: string
+        vendeurId:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    Media:
+      type: object
+      properties:
+        id:
+          type: integer
+        mediaUrl:
+          type: string
+          format: uri
+        mediaType:
+          type: string
+        productId:
+          type: integer

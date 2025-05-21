@@ -1,3 +1,60 @@
+import Media from '#models/media';
+import Product from '#models/product';
+import { manageUploadProductMedias } from '#services/managemedias';
+import { createProductValidator } from '#validators/products';
 export default class ProductsController {
+    async store({ request, response, auth, bouncer }) {
+        const user = auth.user;
+        if (!user) {
+            return response.status(401).json({ message: "Vous n'êtes pas autorisé à faire cette action" });
+        }
+        try {
+            if (await bouncer.denies('createProduct')) {
+                return response
+                    .status(403)
+                    .json({ message: "Vous n'êtes pas autorisé à faire cette action" });
+            }
+            const vendeurId = user.id;
+            const payload = await request.validateUsing(createProductValidator);
+            const product = await Product.create({ ...payload, vendeurId });
+            const productMedia = request.files('medias');
+            const { medias, errors } = await manageUploadProductMedias(productMedia);
+            for (const media of medias) {
+                await product.related('media').create({
+                    mediaUrl: media.mediaUrl,
+                    mediaType: media.mediaType,
+                    productId: product.id,
+                });
+            }
+            await product.load('media');
+            if (errors.length > 0) {
+                return response.status(207).json({
+                    message: "Produit créé, mais certaines images n'ont pas pu être uploadées.",
+                    errors,
+                });
+            }
+            const mediasForProduct = await Media.query().where('product_id', product.id);
+            return response.created({
+                message: 'Produit créé avec succès',
+                product,
+                medias: mediasForProduct,
+            });
+        }
+        catch (error) {
+            if (error.code === 'E_VALIDATION_FAILURE') {
+                return response.status(422).json({ message: error.messages });
+            }
+            if (error.code === 'E_UNAUTHORIZED_ACCESS') {
+                return response.status(403).json({ message: error.message });
+            }
+            if (error.code === 'E_FILE_INVALID' ||
+                error.code === 'E_FILE_TOO_LARGE' ||
+                error.code === 'E_FILE_UNSUPPORTED_MEDIA_TYPE') {
+                return response.status(422).json({ message: error.message });
+            }
+            console.error(error);
+            return response.status(500).json({ message: 'Erreur serveur interne' });
+        }
+    }
 }
 //# sourceMappingURL=products_controller.js.map
