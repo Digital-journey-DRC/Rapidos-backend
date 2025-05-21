@@ -74,4 +74,21 @@ export default class ProductsController {
       return response.status(500).json({ message: 'Erreur serveur interne' })
     }
   }
+
+  async getAllProduct({ params, response }: HttpContext) {
+    const { userId } = params
+    try {
+      const product = await Product.query().where('vendeur_id', userId).preload('media')
+      if (!product) {
+        return response.status(404).json({ message: 'Produit non trouvé' })
+      }
+      return response.status(200).json({ product })
+    } catch (error) {
+      if (error.code === 'E_ROW_NOT_FOUND') {
+        return response.status(404).json({ message: 'Produit non trouvé', error: error.message })
+      }
+
+      return response.status(500).json({ message: 'Erreur serveur interne', error: error.message })
+    }
+  }
 }

@@ -56,3 +56,7 @@ router
 router
   .post('/products/store', [ProductsController, 'store'])
   .use(middleware.auth({ guards: ['api'] }))
+
+router
+  .get('/products/boutique/:userId', [ProductsController, 'getAllProduct'])
+  .use(middleware.auth({ guards: ['api'] }))
