@@ -4,6 +4,11 @@ export default class extends BaseSchema {
   protected tableName = 'users'
 
   async up() {
+    const exists = await this.schema.hasTable(this.tableName)
+    if (exists) {
+      return
+    }
+
     this.schema.alterTable(this.tableName, (table) => {
       table.string('secure_otp', 6).nullable()
       table.timestamp('otp_expired_at', { useTz: true }).nullable()

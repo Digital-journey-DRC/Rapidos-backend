@@ -5,6 +5,10 @@ export default class extends BaseSchema {
   protected tableName = 'products'
 
   async up() {
+    const exists = await this.schema.hasTable(this.tableName)
+    if (exists) {
+      return
+    }
     this.schema.createTable(this.tableName, (table) => {
       table.increments('id')
 
