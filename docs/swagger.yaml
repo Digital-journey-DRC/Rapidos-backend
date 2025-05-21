@@ -286,7 +286,7 @@ paths:
         '500':
           description: Erreur interne
 
-  /products/store:
+ /products/store:
     post:
       summary: Création d’un produit avec médias
       tags:
@@ -308,11 +308,11 @@ paths:
                 name:
                   type: string
                   description: Nom du produit
-                  example: Tomates bio
+                  example: ballon adidas
                 description:
                   type: string
                   description: Description du produit
-                  example: Tomates cultivées sans pesticides, riches en goût.
+                  example: ballon adidas pour enfant.
                 price:
                   type: number
                   format: float
@@ -325,7 +325,73 @@ paths:
                 category:
                   type: string
                   description: Catégorie du produit
-                  example: légumes
+                  example: sports
+                  enum:
+                    - électronique
+                    - mode
+                    - maison
+                    - beauté
+                    - sport
+                    - jouets
+                    - livres
+                    - jardin
+                    - automobile
+                    - santé
+                    - animaux
+                    - musique
+                    - films
+                    - jeux
+                    - bureau
+                    - épicerie
+                    - voyage
+                    - cuisine
+                    - bébé
+                    - papeterie
+                    - meubles
+                    - art
+                    - fait_main
+                    - logiciels
+                    - jeux vidéo
+                    - fitness
+                    - extérieur
+                    - vêtements
+                    - chaussures
+                    - accessoires
+                    - bijoux
+                    - montres
+                    - sacs
+                    - lunettes de soleil
+                    - ceintures
+                    - écharpes
+                    - chapeaux
+                    - chaussettes
+                    - sous-vêtements
+                    - maillots de bain
+                    - tenues sport
+                    - tenues intérieur
+                    - vêtements athlétiques
+                    - tenues décontractées
+                    - tenues habillées
+                    - manteaux
+                    - manteaux longs
+                    - vestes
+                    - parkas
+                    - gilets
+                    - imperméables
+                    - bombers
+                    - blazers
+                    - cardigans
+                    - fruits
+                    - légumes
+                    - conserves
+                    - produits laitiers
+                    - viandes
+                    - poissons
+                    - boissons
+                    - produits ménagers
+                    - entretien
+                    - hygiène
+                    - nettoyage
                 medias:
                   type: array
                   description: Médias à associer au produit (images, vidéos)
@@ -415,6 +481,72 @@ components:
           type: integer
         category:
           type: string
+          enum:
+            - électronique
+            - mode
+            - maison
+            - beauté
+            - sport
+            - jouets
+            - livres
+            - jardin
+            - automobile
+            - santé
+            - animaux
+            - musique
+            - films
+            - jeux
+            - bureau
+            - épicerie
+            - voyage
+            - cuisine
+            - bébé
+            - papeterie
+            - meubles
+            - art
+            - fait_main
+            - logiciels
+            - jeux vidéo
+            - fitness
+            - extérieur
+            - vêtements
+            - chaussures
+            - accessoires
+            - bijoux
+            - montres
+            - sacs
+            - lunettes de soleil
+            - ceintures
+            - écharpes
+            - chapeaux
+            - chaussettes
+            - sous-vêtements
+            - maillots de bain
+            - tenues sport
+            - tenues intérieur
+            - vêtements athlétiques
+            - tenues décontractées
+            - tenues habillées
+            - manteaux
+            - manteaux longs
+            - vestes
+            - parkas
+            - gilets
+            - imperméables
+            - bombers
+            - blazers
+            - cardigans
+            - fruits
+            - légumes
+            - conserves
+            - produits laitiers
+            - viandes
+            - poissons
+            - boissons
+            - produits ménagers
+            - entretien
+            - hygiène
+            - nettoyage
         vendeurId:
           type: integer
         createdAt:
