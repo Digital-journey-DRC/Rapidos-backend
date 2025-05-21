@@ -70,3 +70,11 @@ router
 router
   .get('/products/admin/all', [ProductsController, 'showAllProducts'])
   .use(middleware.auth({ guards: ['api'] }))
+
+router
+  .get('/products/:productId', [ProductsController, 'getProductById'])
+  .use(middleware.auth({ guards: ['api'] }))
+
+router
+  .get('/products/category/:categoryId', [ProductsController, 'getProductById'])
+  .use(middleware.auth({ guards: ['api'] }))
