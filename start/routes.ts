@@ -60,3 +60,13 @@ router
 router
   .get('/products/boutique/:userId', [ProductsController, 'getAllProduct'])
   .use(middleware.auth({ guards: ['api'] }))
+
+// 2. Récupérer tous les produits d’un vendeur donné (admin uniquement, via email dans le body)
+router
+  .post('/products/admin/by-email', [ProductsController, 'getAllProductsForAdmin'])
+  .use(middleware.auth({ guards: ['api'] }))
+
+// 3. Voir tous les produits (admin uniquement)
+router
+  .get('/products/admin/all', [ProductsController, 'showAllProducts'])
+  .use(middleware.auth({ guards: ['api'] }))
