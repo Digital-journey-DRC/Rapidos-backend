@@ -143,4 +143,38 @@ export default class ProductsController {
       return response.status(500).json({ message: 'Erreur serveur interne', error: error.message })
     }
   }
+
+  async getProductByCategory({ request, response, auth }: HttpContext) {
+    const category = request.input('category')
+    try {
+      const products = await Product.query().where('category', category).preload('media')
+      if (!products) {
+        return response.status(404).json({ message: 'Produit non trouvé' })
+      }
+      return response.status(200).json({ products })
+    } catch (error) {
+      if (error.code === 'E_ROW_NOT_FOUND') {
+        return response.status(404).json({ message: 'Produit non trouvé', error: error.message })
+      }
+
+      return response.status(500).json({ message: 'Erreur serveur interne', error: error.message })
+    }
+  }
+
+  async getProductById({ params, response }: HttpContext) {
+    const { id } = params
+    try {
+      const product = await Product.query().where('id', id).preload('media')
+      if (!product) {
+        return response.status(404).json({ message: 'Produit non trouvé' })
+      }
+      return response.status(200).json({ product })
+    } catch (error) {
+      if (error.code === 'E_ROW_NOT_FOUND') {
+        return response.status(404).json({ message: 'Produit non trouvé', error: error.message })
+      }
+
+      return response.status(500).json({ message: 'Erreur serveur interne', error: error.message })
+    }
+  }
 }
