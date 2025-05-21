@@ -39,4 +39,13 @@ router
 router
     .post('/products/store', [ProductsController, 'store'])
     .use(middleware.auth({ guards: ['api'] }));
+router
+    .get('/products/boutique/:userId', [ProductsController, 'getAllProduct'])
+    .use(middleware.auth({ guards: ['api'] }));
+router
+    .post('/products/admin/by-email', [ProductsController, 'getAllProductsForAdmin'])
+    .use(middleware.auth({ guards: ['api'] }));
+router
+    .get('/products/admin/all', [ProductsController, 'showAllProducts'])
+    .use(middleware.auth({ guards: ['api'] }));
 //# sourceMappingURL=routes.js.map
