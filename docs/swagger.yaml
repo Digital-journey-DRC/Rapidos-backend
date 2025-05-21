@@ -308,11 +308,11 @@ paths:
                 name:
                   type: string
                   description: Nom du produit
-                  example: Tomates bio
+                  example: chasubles
                 description:
                   type: string
                   description: Description du produit
-                  example: Tomates cultivées sans pesticides, riches en goût.
+                  example: chasubles d'entrainement.
                 price:
                   type: number
                   format: float
@@ -325,7 +325,7 @@ paths:
                 category:
                   type: string
                   description: Catégorie du produit
-                  example: légumes
+                  example: sports
                 medias:
                   type: array
                   description: Médias à associer au produit (images, vidéos)
