@@ -45,3 +45,10 @@ export const deleteUser = Bouncer.ability((user: User) => {
   }
   return false
 })
+
+export const createProduct = Bouncer.ability((user: User) => {
+  if (user.role === 'admin' || user.role === 'vendeur') {
+    return true
+  }
+  return false
+})
