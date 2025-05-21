@@ -52,3 +52,10 @@ export const createProduct = Bouncer.ability((user: User) => {
   }
   return false
 })
+
+export const showProductToAdmin = Bouncer.ability((user: User) => {
+  if (user.role === 'admin') {
+    return true
+  }
+  return false
+})
