@@ -4,6 +4,10 @@ export default class AlterMediasAddProductId extends BaseSchema {
   protected tableName = 'media'
 
   public async up() {
+    const isExists = await this.schema.hasTable(this.tableName)
+    if (isExists) {
+      return
+    }
     this.schema.alterTable(this.tableName, (table) => {
       table
         .integer('product_id')
