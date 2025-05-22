@@ -53,6 +53,19 @@ export const createProduct = Bouncer.ability((user: User) => {
   return false
 })
 
+export const canUpdateOrDeleteProduct = Bouncer.ability((user: User, productUserId: number) => {
+  if (user.role === 'admin') {
+    return true
+  }
+
+  // Allow user to edit their own product
+  if (user.id === productUserId) {
+    return true
+  }
+
+  return false
+})
+
 export const showProductToAdmin = Bouncer.ability((user: User) => {
   if (user.role === 'admin') {
     return true

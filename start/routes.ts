@@ -58,7 +58,7 @@ router
   .use(middleware.auth({ guards: ['api'] }))
 
 router
-  .get('/products/boutique/:userId', [ProductsController, 'getAllProduct'])
+  .get('/products/boutique/:userId', [ProductsController, 'getAllProductByUser'])
   .use(middleware.auth({ guards: ['api'] }))
 
 // 2. Récupérer tous les produits d’un vendeur donné (admin uniquement, via email dans le body)
@@ -72,9 +72,21 @@ router
   .use(middleware.auth({ guards: ['api'] }))
 
 router
-  .get('/products/:productId', [ProductsController, 'getProductById'])
+  .get('/products/get-products/:productId', [ProductsController, 'getProductById'])
   .use(middleware.auth({ guards: ['api'] }))
 
 router
   .get('/products/category/:categoryId', [ProductsController, 'getProductById'])
+  .use(middleware.auth({ guards: ['api'] }))
+
+router
+  .get('/products/all-products', [ProductsController, 'showAllProducts'])
+  .use(middleware.auth({ guards: ['api'] }))
+
+router
+  .get('/products/update/:productId', [ProductsController, 'updateProduct'])
+  .use(middleware.auth({ guards: ['api'] }))
+
+router
+  .delete('/products/:productId', [ProductsController, 'deleteProduct'])
   .use(middleware.auth({ guards: ['api'] }))
