@@ -66,6 +66,13 @@ export const canUpdateOrDeleteProduct = Bouncer.ability((user: User, productUser
   return false
 })
 
+export const canCreateOrDeleteCategory = Bouncer.ability((user: User) => {
+  if (user.role === 'admin' || user.role === 'superadmin') {
+    return true
+  }
+  return false
+})
+
 export const showProductToAdmin = Bouncer.ability((user: User) => {
   if (user.role === 'admin') {
     return true

@@ -2,6 +2,7 @@ import router from '@adonisjs/core/services/router'
 import { middleware } from './kernel.js'
 const RegistersController = () => import('#controllers/registers_controller')
 const ProductsController = () => import('#controllers/products_controller')
+const CategoryController = () => import('#controllers/categories_controller')
 
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
@@ -89,4 +90,12 @@ router
 
 router
   .delete('/products/:productId', [ProductsController, 'deleteProduct'])
+  .use(middleware.auth({ guards: ['api'] }))
+
+router
+  .post('/category/store', [CategoryController, 'createCategory'])
+  .use(middleware.auth({ guards: ['api'] }))
+
+router
+  .delete('/category/delete/:categoryId', [CategoryController, 'deleteCategory'])
   .use(middleware.auth({ guards: ['api'] }))
