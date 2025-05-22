@@ -1,3 +1,4 @@
+import Category from '#models/category'
 import Media from '#models/media'
 import Product from '#models/product'
 import User from '#models/user'
@@ -24,7 +25,18 @@ export default class ProductsController {
 
       const vendeurId = user.id
       const payload = await request.validateUsing(createProductValidator)
-      const product = await Product.create({ ...payload, vendeurId })
+      const category = await Category.query().where('name', payload.category).first()
+      if (!category) {
+        return response.status(404).json({ message: 'Catégorie non trouvée' })
+      }
+      const product = await Product.create({
+        name: payload.name,
+        description: payload.description,
+        price: payload.price,
+        stock: payload.stock,
+        categoryId: category.id,
+        vendeurId,
+      })
 
       // Gestion des médias
       const productMedia = request.files('medias')

@@ -1,4 +1,5 @@
 import vine from '@vinejs/vine'
+import { ProductCategory } from '../Enum/product_category.js'
 
 export const createProductValidator = vine.compile(
   vine.object({
@@ -6,6 +7,6 @@ export const createProductValidator = vine.compile(
     description: vine.string().trim().escape().minLength(2).maxLength(500),
     price: vine.number().positive(),
     stock: vine.number().positive(),
-    category: vine.string().trim().minLength(2).maxLength(50),
+    category: vine.enum(ProductCategory),
   })
 )
