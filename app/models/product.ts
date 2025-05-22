@@ -4,6 +4,7 @@ import Media from './media.js'
 import type { BelongsTo, HasOne, ManyToMany } from '@adonisjs/lucid/types/relations'
 import User from './user.js'
 import Commande from './commande.js'
+import Category from './category.js'
 
 export default class Product extends BaseModel {
   @column({ isPrimary: true })
@@ -22,7 +23,7 @@ export default class Product extends BaseModel {
   declare stock: number
 
   @column()
-  declare category: string
+  declare categoryId: number
 
   @column()
   declare vendeurId: number
@@ -48,4 +49,7 @@ export default class Product extends BaseModel {
 
   @hasOne(() => Media)
   declare media: HasOne<typeof Media>
+
+  @belongsTo(() => Category)
+  declare category: BelongsTo<typeof Category>
 }
