@@ -3,6 +3,10 @@ import { ProductCategory } from '../../app/Enum/product_category.js';
 export default class extends BaseSchema {
     tableName = 'products';
     async up() {
+        const exists = await this.schema.hasTable(this.tableName);
+        if (exists) {
+            return;
+        }
         this.schema.createTable(this.tableName, (table) => {
             table.increments('id');
             table.string('name').notNullable();
@@ -28,4 +32,4 @@ export default class extends BaseSchema {
         this.schema.dropTable(this.tableName);
     }
 }
-//# sourceMappingURL=1745943236602_create_products_table.js.map
+//# sourceMappingURL=1745865839852_create_products_table.js.map

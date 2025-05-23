@@ -16,4 +16,16 @@ export const deleteUser = Bouncer.ability((user) => {
     }
     return false;
 });
+export const createProduct = Bouncer.ability((user) => {
+    if (user.role === 'admin' || user.role === 'vendeur') {
+        return true;
+    }
+    return false;
+});
+export const showProductToAdmin = Bouncer.ability((user) => {
+    if (user.role === 'admin') {
+        return true;
+    }
+    return false;
+});
 //# sourceMappingURL=main.js.map

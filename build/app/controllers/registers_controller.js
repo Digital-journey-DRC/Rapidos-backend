@@ -46,6 +46,7 @@ export default class RegistersController {
             return response.internalServerError({
                 message: 'Une erreur interne est survenue. Veuillez réessayer plus tard.',
                 status: 500,
+                error: err.message,
             });
         }
     }
@@ -199,6 +200,103 @@ export default class RegistersController {
             }
             return response.internalServerError({
                 message: 'Erreur interne lors de la mise à jour de l’utilisateur',
+                status: 500,
+            });
+        }
+    }
+    async deleteUser({ response, auth, params }) {
+        const currentUser = auth.user;
+        try {
+            const targetUser = await User.findOrFail(params.userId);
+            if (currentUser.id === targetUser.id) {
+                return response.forbidden({
+                    message: 'Vous ne pouvez pas supprimer votre propre compte',
+                    status: 403,
+                });
+            }
+            await targetUser.delete();
+            return response.ok({
+                message: 'Utilisateur supprimé avec succès',
+                status: 200,
+            });
+        }
+        catch (error) {
+            if (error.code === 'E_ROW_NOT_FOUND') {
+                return response.notFound({
+                    message: 'Utilisateur introuvable',
+                    status: 404,
+                });
+            }
+            return response.internalServerError({
+                message: 'Erreur interne lors de la suppression de l’utilisateur',
+                status: 500,
+            });
+        }
+    }
+    async getUser({ response, auth }) {
+        try {
+            const user = auth.user;
+            return response.ok({
+                message: 'Utilisateur récupéré avec succès',
+                status: 200,
+                data: user,
+            });
+        }
+        catch (error) {
+            return response.internalServerError({
+                message: 'Erreur interne lors de la récupération de l’utilisateur',
+                status: 500,
+            });
+        }
+    }
+    async getAllUsers({ response, auth }) {
+        try {
+            const user = auth.user;
+            if (!['admin', 'superadmin'].includes(user.role)) {
+                return response.forbidden({
+                    message: 'Vous n’êtes pas autorisé à accéder à cette ressource',
+                    status: 403,
+                });
+            }
+            const users = await User.all();
+            return response.ok({
+                message: 'Utilisateurs récupérés avec succès',
+                status: 200,
+                data: users,
+            });
+        }
+        catch (error) {
+            return response.internalServerError({
+                message: 'Erreur interne lors de la récupération des utilisateurs',
+                status: 500,
+            });
+        }
+    }
+    async getUserById({ response, auth, params }) {
+        try {
+            const user = auth.user;
+            if (user.id !== params.userId && !['admin', 'superadmin'].includes(user.role)) {
+                return response.forbidden({
+                    message: 'Vous n’êtes pas autorisé à accéder à cet utilisateur',
+                    status: 403,
+                });
+            }
+            const targetUser = await User.findOrFail(params.userId);
+            return response.ok({
+                message: 'Utilisateur récupéré avec succès',
+                status: 200,
+                data: targetUser,
+            });
+        }
+        catch (error) {
+            if (error.code === 'E_ROW_NOT_FOUND') {
+                return response.notFound({
+                    message: 'Utilisateur introuvable',
+                    status: 404,
+                });
+            }
+            return response.internalServerError({
+                message: 'Erreur interne lors de la récupération de l’utilisateur',
                 status: 500,
             });
         }

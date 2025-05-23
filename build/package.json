@@ -5,10 +5,10 @@
   "type": "module",
   "license": "UNLICENSED",
   "scripts": {
-    "swagger": "node swagger-server.js",
+    "swagger": "node start/swagger.js",
     "start": "node bin/server.js",
-    "build": "node ace build",
-    "dev": "node ace serve --hmr & node swagger-server.js",
+    "build": "node ace build && cp -r docs build/ && cp -r resources build/",
+    "dev": "node ace serve --hmr & node ",
     "test": "node ace test",
     "lint": "eslint .",
     "format": "prettier --write .",
