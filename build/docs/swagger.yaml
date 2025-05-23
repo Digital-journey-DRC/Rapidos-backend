@@ -615,6 +615,85 @@ paths:
         '500':
           description: Erreur serveur interne
 
+  /category/store:
+    post:
+      tags:
+        - Categories
+      summary: Crée une nouvelle catégorie
+      security:
+        - bearerAuth: [] # Nécessite un token JWT (authentification par middleware)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                description:
+                  type: string
+                required:
+                  - name
+      responses:
+        '201':
+          description: Catégorie créée avec succès
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: number
+                      name:
+                        type: string
+                      description:
+                        type: string
+        '403':
+          description: Accès interdit
+        '409':
+          description: La catégorie existe déjà
+        '422':
+          description: Erreur de validation
+        '500':
+          description: Erreur serveur interne
+
+  /category/delete/{categoryId}:
+    delete:
+      tags:
+        - Categories
+      summary: Supprime une catégorie existante
+      security:
+        - bearerAuth: [] # Nécessite un token JWT
+      parameters:
+        - name: categoryId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: ID de la catégorie à supprimer
+      responses:
+        '200':
+          description: Catégorie supprimée avec succès
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+        '403':
+          description: Accès interdit
+        '404':
+          description: Catégorie introuvable
+        '500':
+          description: Erreur serveur interne
+
 components:
   securitySchemes:
     bearerAuth:
@@ -719,7 +798,7 @@ components:
             - mode
             - maison
             - beauté
-            - sport
+            - sports
             - jouets
             - livres
             - jardin

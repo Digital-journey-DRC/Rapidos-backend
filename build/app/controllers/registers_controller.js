@@ -96,18 +96,21 @@ export default class RegistersController {
                 return response.unauthorized({
                     message: 'Identifiants invalides',
                     status: 401,
+                    error: error.message,
                 });
             }
             else if (error.code === 'E_INVALID_AUTH_PASSWORD') {
                 return response.unauthorized({
                     message: 'Mot de passe incorrect',
                     status: 401,
+                    error: error.message,
                 });
             }
             else {
                 return response.internalServerError({
                     message: 'Erreur interne lors de la connexion',
                     status: 500,
+                    error: error.message,
                 });
             }
         }
