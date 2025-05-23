@@ -290,7 +290,7 @@ paths:
     post:
       summary: Création d’un produit avec médias
       tags:
-        - Produits
+        - Products
       requestBody:
         required: true
         content:
@@ -307,28 +307,22 @@ paths:
               properties:
                 name:
                   type: string
-                  description: Nom du produit
-                  example: chasubles
+                  example: Chasubles
                 description:
                   type: string
-                  description: Description du produit
-                  example: chasubles d'entrainement.
+                  example: Chasubles d'entraînement.
                 price:
                   type: number
                   format: float
-                  description: Prix unitaire du produit
                   example: 5.99
                 stock:
                   type: integer
-                  description: Quantité disponible en stock
                   example: 100
                 category:
                   type: string
-                  description: Catégorie du produit
-                  example: sports
+                  example: Sports
                 medias:
                   type: array
-                  description: Médias à associer au produit (images, vidéos)
                   items:
                     type: string
                     format: binary
@@ -351,6 +345,8 @@ paths:
                     type: array
                     items:
                       $ref: '#/components/schemas/Media'
+                  category:
+                    $ref: '#/components/schemas/Category'
         '207':
           description: Produit créé, mais certaines images n’ont pas pu être uploadées
           content:
@@ -360,28 +356,27 @@ paths:
                 properties:
                   message:
                     type: string
-                    example: Produit créé, mais certaines images n'ont pas pu être uploadées.
                   errors:
                     type: array
                     items:
                       type: string
         '401':
-          description: Non autorisé (utilisateur non connecté)
+          description: Non autorisé
         '403':
-          description: Accès interdit (droits insuffisants)
+          description: Accès interdit
         '422':
-          description: Données invalides ou erreur d’upload de fichiers
+          description: Données invalides ou fichier non supporté
         '500':
-          description: Erreur interne du serveur
+          description: Erreur serveur
+
   /products/boutique/{userId}:
     get:
       tags:
         - Products
       summary: Récupérer tous les produits d’un vendeur spécifique
-      description: Retourne tous les produits liés à un vendeur identifié par son ID utilisateur. Authentification requise.
       parameters:
-        - name: userId
-          in: path
+        - in: path
+          name: userId
           required: true
           schema:
             type: integer
@@ -400,6 +395,8 @@ paths:
                     type: array
                     items:
                       $ref: '#/components/schemas/Product'
+                  category:
+                    $ref: '#/components/schemas/Category'
         '404':
           description: Produit non trouvé
         '500':
@@ -410,13 +407,14 @@ paths:
       tags:
         - Products
       summary: Récupérer les produits d’un vendeur via email (admin uniquement)
-      description: Accessible uniquement aux administrateurs. Permet de récupérer les produits d’un vendeur donné en envoyant son email.
       requestBody:
         required: true
         content:
           application/json:
             schema:
               type: object
+              required:
+                - email
               properties:
                 email:
                   type: string
@@ -425,7 +423,7 @@ paths:
         - bearerAuth: []
       responses:
         '200':
-          description: Liste des produits du vendeur
+          description: Produits du vendeur
           content:
             application/json:
               schema:
@@ -435,6 +433,8 @@ paths:
                     type: array
                     items:
                       $ref: '#/components/schemas/Product'
+                  category:
+                    $ref: '#/components/schemas/Category'
         '403':
           description: Non autorisé
         '404':
@@ -442,12 +442,11 @@ paths:
         '500':
           description: Erreur serveur
 
-  /products/admin/all:
+  /products/all:
     get:
       tags:
         - Products
-      summary: Récupérer tous les produits (admin uniquement)
-      description: Retourne tous les produits existants. Accessible uniquement aux administrateurs.
+      summary: Récupérer tous les produits
       security:
         - bearerAuth: []
       responses:
@@ -462,12 +461,159 @@ paths:
                     type: array
                     items:
                       $ref: '#/components/schemas/Product'
+                  category:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Category'
         '403':
           description: Non autorisé
         '404':
-          description: Produit non trouvé
+          description: Aucun produit trouvé
         '500':
           description: Erreur serveur
+
+  /products/get-products/{productId}:
+    get:
+      tags:
+        - Products
+      summary: Récupérer un produit par son ID
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: productId
+          in: path
+          required: true
+          description: ID du produit à récupérer
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Détails du produit récupérés avec succès
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  product:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ProductWithRelations'
+                  category:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Category'
+        '404':
+          description: Produit non trouvé
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+        '500':
+          description: Erreur serveur interne
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  error:
+                    type: string
+
+  /products/update/{productId}:
+    get:
+      tags:
+        - Products
+      summary: Met à jour un produit existant
+      parameters:
+        - name: productId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: ID du produit à mettre à jour
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                description:
+                  type: string
+                price:
+                  type: number
+                stock:
+                  type: integer
+                category:
+                  type: string
+                medias:
+                  type: array
+                  items:
+                    type: string
+                    format: binary
+      responses:
+        '200':
+          description: Produit mis à jour avec succès
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  product:
+                    $ref: '#/components/schemas/Product'
+                  medias:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Media'
+        '207':
+          description: Produit mis à jour, mais certaines images ont échoué
+        '403':
+          description: Accès interdit
+        '404':
+          description: Produit ou catégorie non trouvé
+        '422':
+          description: Erreur de validation
+        '500':
+          description: Erreur serveur interne
+
+  /products/{productId}:
+    delete:
+      tags:
+        - Products
+      summary: Supprime un produit existant
+      parameters:
+        - name: productId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: ID du produit à supprimer
+      responses:
+        '200':
+          description: Produit supprimé avec succès
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  status:
+                    type: boolean
+        '403':
+          description: Accès interdit
+        '404':
+          description: Produit non trouvé
+        '500':
+          description: Erreur serveur interne
 
 components:
   securitySchemes:
@@ -506,10 +652,11 @@ components:
           type: string
         price:
           type: number
+          format: float
         stock:
           type: integer
-        category:
-          type: string
+        categoryId:
+          type: integer
         vendeurId:
           type: integer
         createdAt:
@@ -518,6 +665,12 @@ components:
         updatedAt:
           type: string
           format: date-time
+        category:
+          $ref: '#/components/schemas/Category'
+        media:
+          type: array
+          items:
+            $ref: '#/components/schemas/Media'
 
     Media:
       type: object
@@ -531,3 +684,155 @@ components:
           type: string
         productId:
           type: integer
+
+    Category:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    ProductWithRelations:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        description:
+          type: string
+        price:
+          type: number
+        stock:
+          type: integer
+        category:
+          type: string
+          enum:
+            - électronique
+            - mode
+            - maison
+            - beauté
+            - sport
+            - jouets
+            - livres
+            - jardin
+            - automobile
+            - santé
+            - animaux
+            - musique
+            - films
+            - jeux
+            - bureau
+            - épicerie
+            - voyage
+            - cuisine
+            - bébé
+            - papeterie
+            - meubles
+            - art
+            - fait_main
+            - logiciels
+            - jeux vidéo
+            - fitness
+            - extérieur
+            - vêtements
+            - chaussures
+            - accessoires
+            - bijoux
+            - montres
+            - sacs
+            - lunettes de soleil
+            - ceintures
+            - écharpes
+            - chapeaux
+            - chaussettes
+            - sous-vêtements
+            - maillots de bain
+            - tenues sport
+            - tenues intérieur
+            - vêtements athlétiques
+            - tenues décontractées
+            - tenues habillées
+            - manteaux
+            - manteaux longs
+            - vestes
+            - parkas
+            - gilets
+            - imperméables
+            - bombers
+            - blazers
+            - cardigans
+            - fruits
+            - légumes
+            - conserves
+            - produits laitiers
+            - viandes
+            - poissons
+            - boissons
+            - produits ménagers
+            - entretien
+            - hygiène
+            - nettoyage
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        media:
+          type: array
+          items:
+            $ref: '#/components/schemas/Media'
+        commandes:
+          type: array
+          items:
+            $ref: '#/components/schemas/Commande'
+
+    Commande:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        userId:
+          type: integer
+          example: 10
+        totalPrice:
+          type: number
+          format: float
+          example: 149.99
+        createdAt:
+          type: string
+          format: date-time
+          example: '2024-08-01T12:00:00Z'
+        updatedAt:
+          type: string
+          format: date-time
+          example: '2024-08-02T09:30:00Z'
+        user:
+          $ref: '#/components/schemas/User'
+
+        products:
+          type: array
+          items:
+            allOf:
+              - $ref: '#/components/schemas/Product'
+              - type: object
+                properties:
+                  pivot:
+                    type: object
+                    properties:
+                      quantity:
+                        type: integer
+                        example: 2
+                      price:
+                        type: number
+                        format: float
+                        example: 74.99

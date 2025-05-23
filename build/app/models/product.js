@@ -12,6 +12,7 @@ import { BaseModel, belongsTo, column, hasOne, manyToMany } from '@adonisjs/luci
 import Media from './media.js';
 import User from './user.js';
 import Commande from './commande.js';
+import Category from './category.js';
 export default class Product extends BaseModel {
 }
 __decorate([
@@ -36,8 +37,8 @@ __decorate([
 ], Product.prototype, "stock", void 0);
 __decorate([
     column(),
-    __metadata("design:type", String)
-], Product.prototype, "category", void 0);
+    __metadata("design:type", Number)
+], Product.prototype, "categorieId", void 0);
 __decorate([
     column(),
     __metadata("design:type", Number)
@@ -69,4 +70,8 @@ __decorate([
     hasOne(() => Media),
     __metadata("design:type", Object)
 ], Product.prototype, "media", void 0);
+__decorate([
+    belongsTo(() => Category),
+    __metadata("design:type", Object)
+], Product.prototype, "category", void 0);
 //# sourceMappingURL=product.js.map

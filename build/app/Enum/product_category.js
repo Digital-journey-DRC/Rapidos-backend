@@ -1,69 +1,118 @@
 export var ProductCategory;
 (function (ProductCategory) {
-    ProductCategory["ELECTRONIQUE"] = "\u00E9lectronique";
-    ProductCategory["MODE"] = "mode";
-    ProductCategory["MAISON"] = "maison";
-    ProductCategory["BEAUTE"] = "beaut\u00E9";
-    ProductCategory["SPORT"] = "sport";
-    ProductCategory["JOUETS"] = "jouets";
-    ProductCategory["LIVRES"] = "livres";
-    ProductCategory["JARDIN"] = "jardin";
-    ProductCategory["AUTOMOBILE"] = "automobile";
-    ProductCategory["SANTE"] = "sant\u00E9";
-    ProductCategory["ANIMAUX"] = "animaux";
-    ProductCategory["MUSIQUE"] = "musique";
-    ProductCategory["FILMS"] = "films";
-    ProductCategory["JEUX"] = "jeux";
-    ProductCategory["BUREAU"] = "bureau";
-    ProductCategory["EPICERIE"] = "\u00E9picerie";
-    ProductCategory["VOYAGE"] = "voyage";
-    ProductCategory["CUISINE"] = "cuisine";
-    ProductCategory["BEBE"] = "b\u00E9b\u00E9";
-    ProductCategory["PAPETERIE"] = "papeterie";
-    ProductCategory["MEUBLES"] = "meubles";
+    ProductCategory["ELECTRONICS"] = "electronics";
+    ProductCategory["FASHION"] = "fashion";
+    ProductCategory["HOME"] = "home";
+    ProductCategory["BEAUTY"] = "beauty";
+    ProductCategory["SPORTS"] = "sports";
+    ProductCategory["TOYS"] = "toys";
+    ProductCategory["BOOKS"] = "books";
+    ProductCategory["GARDEN"] = "garden";
+    ProductCategory["AUTOMOTIVE"] = "automotive";
+    ProductCategory["HEALTH"] = "health";
+    ProductCategory["PET_SUPPLIES"] = "pet_supplies";
+    ProductCategory["MUSIC"] = "music";
+    ProductCategory["MOVIES"] = "movies";
+    ProductCategory["GAMES"] = "games";
+    ProductCategory["OFFICE"] = "office";
+    ProductCategory["GROCERIES"] = "groceries";
+    ProductCategory["TRAVEL"] = "travel";
+    ProductCategory["KITCHEN"] = "kitchen";
+    ProductCategory["BABY"] = "baby";
+    ProductCategory["STATIONERY"] = "stationery";
+    ProductCategory["FURNITURE"] = "furniture";
     ProductCategory["ART"] = "art";
-    ProductCategory["FAIT_MAIN"] = "fait_main";
-    ProductCategory["LOGICIELS"] = "logiciels";
-    ProductCategory["JEUX_VIDEO"] = "jeux vid\u00E9o";
+    ProductCategory["HANDMADE"] = "handmade";
+    ProductCategory["SOFTWARE"] = "software";
+    ProductCategory["VIDEO_GAMES"] = "video_games";
     ProductCategory["FITNESS"] = "fitness";
-    ProductCategory["EXTERIEUR"] = "ext\u00E9rieur";
-    ProductCategory["VETEMENTS"] = "v\u00EAtements";
-    ProductCategory["CHAUSSURES"] = "chaussures";
-    ProductCategory["ACCESSOIRES"] = "accessoires";
-    ProductCategory["BIJOUX"] = "bijoux";
-    ProductCategory["MONTRES"] = "montres";
-    ProductCategory["SACS"] = "sacs";
-    ProductCategory["LUNETTES_DE_SOLEIL"] = "lunettes de soleil";
-    ProductCategory["CEINTURES"] = "ceintures";
-    ProductCategory["ECHARPES"] = "\u00E9charpes";
-    ProductCategory["CHAPEAUX"] = "chapeaux";
-    ProductCategory["CHAUSSETTES"] = "chaussettes";
-    ProductCategory["SOUS_VETEMENTS"] = "sous-v\u00EAtements";
-    ProductCategory["MAILLOTS_DE_BAIN"] = "maillots de bain";
-    ProductCategory["TENUES_SPORT"] = "tenues sport";
-    ProductCategory["TENUES_INTERIEUR"] = "tenues int\u00E9rieur";
-    ProductCategory["VETEMENTS_ATHLETIQUES"] = "v\u00EAtements athl\u00E9tiques";
-    ProductCategory["TENUES_DECONTRACTEES"] = "tenues d\u00E9contract\u00E9es";
-    ProductCategory["TENUES_HABILLEES"] = "tenues habill\u00E9es";
-    ProductCategory["MANTEAUX"] = "manteaux";
-    ProductCategory["MANTEAUX_LONGS"] = "manteaux longs";
-    ProductCategory["VESTES"] = "vestes";
+    ProductCategory["OUTDOORS"] = "outdoors";
+    ProductCategory["CLOTHING"] = "clothing";
+    ProductCategory["FOOTWEAR"] = "footwear";
+    ProductCategory["ACCESSORIES"] = "accessories";
+    ProductCategory["JEWELRY"] = "jewelry";
+    ProductCategory["WATCHES"] = "watches";
+    ProductCategory["BAGS"] = "bags";
+    ProductCategory["SUNGLASSES"] = "sunglasses";
+    ProductCategory["BELTS"] = "belts";
+    ProductCategory["SCARVES"] = "scarves";
+    ProductCategory["HATS"] = "hats";
+    ProductCategory["SOCKS"] = "socks";
+    ProductCategory["UNDERWEAR"] = "underwear";
+    ProductCategory["SWIMWEAR"] = "swimwear";
+    ProductCategory["ACTIVEWEAR"] = "activewear";
+    ProductCategory["LOUNGEWEAR"] = "loungewear";
+    ProductCategory["ATHLETICWEAR"] = "athleticwear";
+    ProductCategory["CASUALWEAR"] = "casualwear";
+    ProductCategory["FORMALWEAR"] = "formalwear";
+    ProductCategory["OUTERWEAR"] = "outerwear";
+    ProductCategory["COATS"] = "coats";
+    ProductCategory["JACKETS"] = "jackets";
     ProductCategory["PARKAS"] = "parkas";
-    ProductCategory["GILETS"] = "gilets";
-    ProductCategory["IMPERMEABLES"] = "imperm\u00E9ables";
+    ProductCategory["VESTS"] = "vests";
+    ProductCategory["RAINCOATS"] = "raincoats";
     ProductCategory["BOMBERS"] = "bombers";
     ProductCategory["BLAZERS"] = "blazers";
     ProductCategory["CARDIGANS"] = "cardigans";
-    ProductCategory["FRUITS"] = "fruits";
-    ProductCategory["LEGUMES"] = "l\u00E9gumes";
-    ProductCategory["CONSERVES"] = "conserves";
-    ProductCategory["PRODUITS_LAITIERS"] = "produits laitiers";
-    ProductCategory["VIANDES"] = "viandes";
-    ProductCategory["POISSONS"] = "poissons";
-    ProductCategory["BOISSONS"] = "boissons";
-    ProductCategory["PRODUITS_MENAGERS"] = "produits m\u00E9nagers";
-    ProductCategory["ENTRETIEN"] = "entretien";
-    ProductCategory["HYGIENE"] = "hygi\u00E8ne";
-    ProductCategory["NETTOYAGE"] = "nettoyage";
 })(ProductCategory || (ProductCategory = {}));
+export const ProductCategoryLabels = {
+    [ProductCategory.ELECTRONICS]: 'électronique',
+    [ProductCategory.FASHION]: 'mode',
+    [ProductCategory.HOME]: 'maison',
+    [ProductCategory.BEAUTY]: 'beauté',
+    [ProductCategory.SPORTS]: 'sports',
+    [ProductCategory.TOYS]: 'jouets',
+    [ProductCategory.BOOKS]: 'livres',
+    [ProductCategory.GARDEN]: 'jardin',
+    [ProductCategory.AUTOMOTIVE]: 'automobile',
+    [ProductCategory.HEALTH]: 'santé',
+    [ProductCategory.PET_SUPPLIES]: 'animaux',
+    [ProductCategory.MUSIC]: 'musique',
+    [ProductCategory.MOVIES]: 'films',
+    [ProductCategory.GAMES]: 'jeux',
+    [ProductCategory.OFFICE]: 'bureau',
+    [ProductCategory.GROCERIES]: 'épicerie',
+    [ProductCategory.TRAVEL]: 'voyage',
+    [ProductCategory.KITCHEN]: 'cuisine',
+    [ProductCategory.BABY]: 'bébé',
+    [ProductCategory.STATIONERY]: 'papeterie',
+    [ProductCategory.FURNITURE]: 'meubles',
+    [ProductCategory.ART]: 'art',
+    [ProductCategory.HANDMADE]: 'fait main',
+    [ProductCategory.SOFTWARE]: 'logiciels',
+    [ProductCategory.VIDEO_GAMES]: 'jeux vidéo',
+    [ProductCategory.FITNESS]: 'fitness',
+    [ProductCategory.OUTDOORS]: 'extérieur',
+    [ProductCategory.CLOTHING]: 'vêtements',
+    [ProductCategory.FOOTWEAR]: 'chaussures',
+    [ProductCategory.ACCESSORIES]: 'accessoires',
+    [ProductCategory.JEWELRY]: 'bijoux',
+    [ProductCategory.WATCHES]: 'montres',
+    [ProductCategory.BAGS]: 'sacs',
+    [ProductCategory.SUNGLASSES]: 'lunettes de soleil',
+    [ProductCategory.BELTS]: 'ceintures',
+    [ProductCategory.SCARVES]: 'écharpes',
+    [ProductCategory.HATS]: 'chapeaux',
+    [ProductCategory.SOCKS]: 'chaussettes',
+    [ProductCategory.UNDERWEAR]: 'sous-vêtements',
+    [ProductCategory.SWIMWEAR]: 'maillots de bain',
+    [ProductCategory.ACTIVEWEAR]: 'tenues sport',
+    [ProductCategory.LOUNGEWEAR]: 'tenues intérieur',
+    [ProductCategory.ATHLETICWEAR]: 'vêtements athlétiques',
+    [ProductCategory.CASUALWEAR]: 'tenues décontractées',
+    [ProductCategory.FORMALWEAR]: 'tenues habillées',
+    [ProductCategory.OUTERWEAR]: 'manteaux',
+    [ProductCategory.COATS]: 'manteaux longs',
+    [ProductCategory.JACKETS]: 'vestes',
+    [ProductCategory.PARKAS]: 'parkas',
+    [ProductCategory.VESTS]: 'gilets',
+    [ProductCategory.RAINCOATS]: 'imperméables',
+    [ProductCategory.BOMBERS]: 'bombers',
+    [ProductCategory.BLAZERS]: 'blazers',
+    [ProductCategory.CARDIGANS]: 'cardigans',
+};
+export const LabelToProductCategory = Object.fromEntries(Object.entries(ProductCategoryLabels).map(([key, label]) => [
+    label.toLowerCase(),
+    key,
+]));
 //# sourceMappingURL=product_category.js.map

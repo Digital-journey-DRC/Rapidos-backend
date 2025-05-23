@@ -22,6 +22,21 @@ export const createProduct = Bouncer.ability((user) => {
     }
     return false;
 });
+export const canUpdateOrDeleteProduct = Bouncer.ability((user, productUserId) => {
+    if (user.role === 'admin') {
+        return true;
+    }
+    if (user.id === productUserId) {
+        return true;
+    }
+    return false;
+});
+export const canCreateOrDeleteCategory = Bouncer.ability((user) => {
+    if (user.role === 'admin' || user.role === 'superadmin') {
+        return true;
+    }
+    return false;
+});
 export const showProductToAdmin = Bouncer.ability((user) => {
     if (user.role === 'admin') {
         return true;

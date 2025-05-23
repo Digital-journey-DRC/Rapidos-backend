@@ -4,6 +4,6 @@ export const createProductValidator = vine.compile(vine.object({
     description: vine.string().trim().escape().minLength(2).maxLength(500),
     price: vine.number().positive(),
     stock: vine.number().positive(),
-    category: vine.string().trim().minLength(2).maxLength(50),
+    category: vine.string().trim().escape().minLength(2).maxLength(50),
 }));
 //# sourceMappingURL=products.js.map

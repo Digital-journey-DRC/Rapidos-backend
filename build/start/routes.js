@@ -2,6 +2,7 @@ import router from '@adonisjs/core/services/router';
 import { middleware } from './kernel.js';
 const RegistersController = () => import('#controllers/registers_controller');
 const ProductsController = () => import('#controllers/products_controller');
+const CategoryController = () => import('#controllers/categories_controller');
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import YAML from 'yamljs';
@@ -40,12 +41,33 @@ router
     .post('/products/store', [ProductsController, 'store'])
     .use(middleware.auth({ guards: ['api'] }));
 router
-    .get('/products/boutique/:userId', [ProductsController, 'getAllProduct'])
+    .get('/products/boutique/:userId', [ProductsController, 'getAllProductByUser'])
     .use(middleware.auth({ guards: ['api'] }));
 router
     .post('/products/admin/by-email', [ProductsController, 'getAllProductsForAdmin'])
     .use(middleware.auth({ guards: ['api'] }));
 router
     .get('/products/admin/all', [ProductsController, 'showAllProducts'])
+    .use(middleware.auth({ guards: ['api'] }));
+router
+    .get('/products/get-products/:productId', [ProductsController, 'getProductById'])
+    .use(middleware.auth({ guards: ['api'] }));
+router
+    .get('/products/category/:categoryId', [ProductsController, 'getProductById'])
+    .use(middleware.auth({ guards: ['api'] }));
+router
+    .get('/products/all-products', [ProductsController, 'showAllProducts'])
+    .use(middleware.auth({ guards: ['api'] }));
+router
+    .get('/products/update/:productId', [ProductsController, 'updateProduct'])
+    .use(middleware.auth({ guards: ['api'] }));
+router
+    .delete('/products/:productId', [ProductsController, 'deleteProduct'])
+    .use(middleware.auth({ guards: ['api'] }));
+router
+    .post('/category/store', [CategoryController, 'createCategory'])
+    .use(middleware.auth({ guards: ['api'] }));
+router
+    .delete('/category/delete/:categoryId', [CategoryController, 'deleteCategory'])
     .use(middleware.auth({ guards: ['api'] }));
 //# sourceMappingURL=routes.js.map

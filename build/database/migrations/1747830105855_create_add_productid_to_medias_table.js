@@ -2,6 +2,10 @@ import { BaseSchema } from '@adonisjs/lucid/schema';
 export default class AlterMediasAddProductId extends BaseSchema {
     tableName = 'media';
     async up() {
+        const isExists = await this.schema.hasTable(this.tableName);
+        if (isExists) {
+            return;
+        }
         this.schema.alterTable(this.tableName, (table) => {
             table
                 .integer('product_id')
