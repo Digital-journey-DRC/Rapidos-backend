@@ -23,7 +23,7 @@ export default class Product extends BaseModel {
   declare stock: number
 
   @column()
-  declare categoryId: number
+  declare categorieId: number
 
   @column()
   declare vendeurId: number
