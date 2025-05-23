@@ -7,7 +7,7 @@ export default class extends BaseSchema {
   async up() {
     this.schema.createTable(this.tableName, (table) => {
       table.increments('id')
-      table.enum('name', Object.values(ProductCategory)).defaultTo(ProductCategory.ACCESSOIRES)
+      table.enum('name', Object.values(ProductCategory)).defaultTo(ProductCategory.ACCESSORIES)
       table.text('description').nullable()
 
       table.timestamp('created_at')
