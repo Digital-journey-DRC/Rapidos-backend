@@ -3,6 +3,8 @@ import Media from '#models/media'
 import Product from '#models/product'
 import User from '#models/user'
 import { manageUploadProductMedias } from '#services/managemedias'
+import { LabelParseCategoryFromFrenchInEnglish } from '#services/parsecategoryfromfrenchinenglish'
+import { categoryValidator } from '#validators/category'
 
 import { createProductValidator } from '#validators/products'
 
@@ -11,6 +13,7 @@ import type { HttpContext } from '@adonisjs/core/http'
 export default class ProductsController {
   async store({ request, response, auth, bouncer }: HttpContext) {
     const user = auth.user!
+    const data = request.only(['description', 'category'])
 
     if (!user) {
       return response.status(401).json({ message: "Vous n'êtes pas autorisé à faire cette action" })
@@ -23,9 +26,17 @@ export default class ProductsController {
           .json({ message: "Vous n'êtes pas autorisé à faire cette action" })
       }
 
+      const dataForCategory = {
+        name: data.category,
+        description: data.description,
+      }
+
       const vendeurId = user.id
       const payload = await request.validateUsing(createProductValidator)
-      const category = await Category.findBy('name', payload.category)
+      const catData = await categoryValidator.validate(
+        LabelParseCategoryFromFrenchInEnglish(dataForCategory)
+      )
+      const category = await Category.findBy('name', catData.name)
       if (!category) {
         return response.status(404).json({ message: 'Catégorie non trouvée' })
       }
@@ -34,7 +45,7 @@ export default class ProductsController {
         description: payload.description,
         price: payload.price,
         stock: payload.stock,
-        categoryId: category.id,
+        categorieId: category.id,
         vendeurId,
       })
 
@@ -168,7 +179,7 @@ export default class ProductsController {
         return response.status(404).json({ message: 'Catégorie non trouvée' })
       }
       const products = await Product.query()
-        .where('categoryId', categoryId)
+        .where('categorieId', categoryId)
         .preload('media')
         .preload('category')
         .preload('commandes')
@@ -227,7 +238,7 @@ export default class ProductsController {
       product.description = payload.description
       product.price = payload.price
       product.stock = payload.stock
-      product.categoryId = category.id
+      product.categorieId = category.id
       await product.save()
       // Gestion des médias
       const productMedia = request.files('medias')

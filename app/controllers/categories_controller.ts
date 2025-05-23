@@ -2,14 +2,28 @@ import Category from '#models/category'
 import { categoryValidator } from '#validators/category'
 import type { HttpContext } from '@adonisjs/core/http'
 
+import { LabelParseCategoryFromFrenchInEnglish } from '#services/parsecategoryfromfrenchinenglish'
+
 export default class CategoriesController {
   async createCategory({ request, bouncer, response }: HttpContext) {
+    const data = request.only(['name', 'description'])
     try {
       if (await bouncer.denies('canCreateOrDeleteCategory')) {
         return response.status(403).json({ message: 'Unauthorized' })
       }
-      const payload = await request.validateUsing(categoryValidator)
-      const category = await Category.create(payload)
+
+      const payload = await categoryValidator.validate(LabelParseCategoryFromFrenchInEnglish(data))
+
+      const isCategoryExists = await Category.findBy('name', payload.name)
+      if (isCategoryExists) {
+        return response.status(409).json({
+          message: 'Category already exists',
+        })
+      }
+      const category = await Category.create({
+        name: payload.name,
+        description: payload.description,
+      })
       return response.status(201).json({
         message: 'Category created successfully',
         data: category,
