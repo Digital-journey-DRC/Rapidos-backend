@@ -7,3 +7,8 @@ export interface UploadResult {
   medias: UploadedMedia[]
   errors: any[]
 }
+
+export interface DataCategory {
+  name: any
+  description: any
+}
