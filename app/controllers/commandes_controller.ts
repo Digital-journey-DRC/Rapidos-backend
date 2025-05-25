@@ -4,6 +4,7 @@ import CommandeProduct from '#models/commande_product'
 import Product from '#models/product'
 import { adresseValidator } from '#validators/adress'
 import type { HttpContext } from '@adonisjs/core/http'
+import { StatusCommande } from '../Enum/status_commande.js'
 
 export default class CommandesController {
   async createCommande({ request, response, auth, bouncer }: HttpContext) {
@@ -24,6 +25,7 @@ export default class CommandesController {
       const commande = await Commande.create({
         userId: user.id,
         totalPrice: 0,
+        status: StatusCommande.EN_ATTENTE,
       })
 
       let totalPrice = 0
