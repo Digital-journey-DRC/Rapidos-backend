@@ -1,4 +1,5 @@
 import Adresse from '#models/adresse'
+import CommandeProduct from '#models/commande_product'
 import Product from '#models/product'
 import type { HttpContext } from '@adonisjs/core/http'
 
@@ -18,7 +19,7 @@ export default class CommandesController {
 
       for (const productId of produits) {
         const product = await Product.findByOrFail(productId)
-        const commandeProducts = await commandeProdduct.create()
+        const commandeProducts = await CommandeProduct.create()
       }
       const isAdresseExist = await Adresse.query()
         .where('user_id', user.id)
