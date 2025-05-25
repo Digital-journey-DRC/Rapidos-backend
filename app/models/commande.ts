@@ -5,6 +5,7 @@ import type { BelongsTo, HasOne, ManyToMany } from '@adonisjs/lucid/types/relati
 import User from './user.js'
 import Product from './product.js'
 import Paiement from './paiement.js'
+import { StatusCommande } from '../Enum/status_commande.js'
 
 export default class Commande extends BaseModel {
   @column({ isPrimary: true })
@@ -15,6 +16,9 @@ export default class Commande extends BaseModel {
 
   @column()
   declare totalPrice: number
+
+  @column()
+  declare status: StatusCommande
 
   @column.dateTime({ autoCreate: true })
   declare createdAt: DateTime
