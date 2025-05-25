@@ -24,7 +24,7 @@ export default class Adresse extends BaseModel {
   declare userId: number
 
   @column()
-  declare codePostal: string | null
+  declare codePostale: string | null
 
   @column()
   declare isPrincipal: boolean
