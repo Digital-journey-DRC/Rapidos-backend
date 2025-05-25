@@ -12,5 +12,6 @@ export const adresseValidator = vine.compile(
     numero: vine.string().trim().maxLength(10),
     isPrincipal: vine.boolean(),
     type: vine.enum(TypeAdresse),
+    pays: vine.string().trim().minLength(2).maxLength(50),
   })
 )
