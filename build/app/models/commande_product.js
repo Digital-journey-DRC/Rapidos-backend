@@ -8,57 +8,50 @@ var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
 import { DateTime } from 'luxon';
-import { BaseModel, belongsTo, column, hasOne, manyToMany } from '@adonisjs/lucid/orm';
-import User from './user.js';
+import { BaseModel, belongsTo, column } from '@adonisjs/lucid/orm';
+import Commande from './commande.js';
 import Product from './product.js';
-import Paiement from './paiement.js';
-import { StatusCommande } from '../Enum/status_commande.js';
-export default class Commande extends BaseModel {
+export default class CommandeProduct extends BaseModel {
+    static table = 'commande_products';
 }
 __decorate([
     column({ isPrimary: true }),
     __metadata("design:type", Number)
-], Commande.prototype, "id", void 0);
+], CommandeProduct.prototype, "id", void 0);
 __decorate([
     column(),
     __metadata("design:type", Number)
-], Commande.prototype, "userId", void 0);
+], CommandeProduct.prototype, "commandeId", void 0);
 __decorate([
     column(),
     __metadata("design:type", Number)
-], Commande.prototype, "totalPrice", void 0);
+], CommandeProduct.prototype, "productId", void 0);
 __decorate([
     column(),
-    __metadata("design:type", String)
-], Commande.prototype, "status", void 0);
+    __metadata("design:type", Number)
+], CommandeProduct.prototype, "quantity", void 0);
+__decorate([
+    column(),
+    __metadata("design:type", Number)
+], CommandeProduct.prototype, "price", void 0);
+__decorate([
+    column(),
+    __metadata("design:type", Number)
+], CommandeProduct.prototype, "totalUnitaire", void 0);
 __decorate([
     column.dateTime({ autoCreate: true }),
     __metadata("design:type", DateTime)
-], Commande.prototype, "createdAt", void 0);
+], CommandeProduct.prototype, "createdAt", void 0);
 __decorate([
     column.dateTime({ autoCreate: true, autoUpdate: true }),
     __metadata("design:type", DateTime)
-], Commande.prototype, "updatedAt", void 0);
+], CommandeProduct.prototype, "updatedAt", void 0);
 __decorate([
-    belongsTo(() => User),
+    belongsTo(() => Commande),
     __metadata("design:type", Object)
-], Commande.prototype, "user", void 0);
+], CommandeProduct.prototype, "commande", void 0);
 __decorate([
-    hasOne(() => Paiement, {
-        foreignKey: 'commandeId',
-        localKey: 'id',
-    }),
+    belongsTo(() => Product),
     __metadata("design:type", Object)
-], Commande.prototype, "paiement", void 0);
-__decorate([
-    manyToMany(() => Product, {
-        pivotTable: 'commande_products',
-        localKey: 'id',
-        relatedKey: 'id',
-        pivotForeignKey: 'commande_id',
-        pivotRelatedForeignKey: 'product_id',
-        pivotColumns: ['quantity', 'price'],
-    }),
-    __metadata("design:type", Object)
-], Commande.prototype, "products", void 0);
-//# sourceMappingURL=commande.js.map
+], CommandeProduct.prototype, "product", void 0);
+//# sourceMappingURL=commande_product.js.map

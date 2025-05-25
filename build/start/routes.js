@@ -3,6 +3,7 @@ import { middleware } from './kernel.js';
 const RegistersController = () => import('#controllers/registers_controller');
 const ProductsController = () => import('#controllers/products_controller');
 const CategoryController = () => import('#controllers/categories_controller');
+const CommandesController = () => import('#controllers/commandes_controller');
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import YAML from 'yamljs';
@@ -69,5 +70,8 @@ router
     .use(middleware.auth({ guards: ['api'] }));
 router
     .delete('/category/delete/:categoryId', [CategoryController, 'deleteCategory'])
+    .use(middleware.auth({ guards: ['api'] }));
+router
+    .post('/commandes/store', [CommandesController, 'createCommande'])
     .use(middleware.auth({ guards: ['api'] }));
 //# sourceMappingURL=routes.js.map

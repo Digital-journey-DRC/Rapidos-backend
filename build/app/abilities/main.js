@@ -43,4 +43,10 @@ export const showProductToAdmin = Bouncer.ability((user) => {
     }
     return false;
 });
+export const canCommandeProduct = Bouncer.ability((user) => {
+    if (user.role === 'admin' || user.role === 'vendeur' || user.role === 'acheteur') {
+        return true;
+    }
+    return false;
+});
 //# sourceMappingURL=main.js.map
