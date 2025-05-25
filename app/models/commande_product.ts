@@ -19,7 +19,7 @@ export default class CommandeProduct extends BaseModel {
   @column()
   declare price: number
   @column()
-  declare total: number
+  declare totalUnitaire: number
 
   @column.dateTime({ autoCreate: true })
   declare createdAt: DateTime
