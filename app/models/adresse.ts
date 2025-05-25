@@ -2,6 +2,7 @@ import { DateTime } from 'luxon'
 import { BaseModel, belongsTo, column } from '@adonisjs/lucid/orm'
 import User from './user.js'
 import type { BelongsTo } from '@adonisjs/lucid/types/relations'
+import { TypeAdresse } from '../Enum/type_adresse.js'
 
 export default class Adresse extends BaseModel {
   @column({ isPrimary: true })
@@ -23,10 +24,16 @@ export default class Adresse extends BaseModel {
   declare userId: number
 
   @column()
-  declare codePostal: string | null
+  declare codePostale: string | null
 
   @column()
   declare isPrincipal: boolean
+
+  @column()
+  declare type: TypeAdresse
+
+  @column()
+  declare numero: string
 
   @column.dateTime({ autoCreate: true })
   declare createdAt: DateTime
