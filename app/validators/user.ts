@@ -32,7 +32,13 @@ export const registerUserValidator = vine.compile(
     lastName: vine.string().trim().escape().minLength(2).maxLength(50),
 
     //, 'invalid international phone number format'
-    phone: vine.string().regex(/^\+[1-9]\d{1,14}$/),
+    phone: vine
+      .string()
+      .regex(/^\+[1-9]\d{1,14}$/)
+      .unique(async (db, value) => {
+        const user = await db.from('users').where('phone', value).first()
+        return !user
+      }),
 
     //obligation de l'accéptation des termes et conditions d'utilisation
     termsAccepted: vine.boolean({ strict: true }),
@@ -60,3 +66,4 @@ export const UpdateUserValidatorForAdmin = vine.compile(
     phone: vine.string().regex(/^\+[1-9]\d{1,14}$/),
   })
 )
+// To handle custom messages, configure them in your validation middleware or handler as per VineJS documentation.
