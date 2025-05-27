@@ -21,7 +21,13 @@ export const registerUserValidator = vine.compile(vine.object({
         .regex(/[^A-Za-z0-9]/),
     firstName: vine.string().trim().escape().minLength(2).maxLength(50),
     lastName: vine.string().trim().escape().minLength(2).maxLength(50),
-    phone: vine.string().regex(/^\+[1-9]\d{1,14}$/),
+    phone: vine
+        .string()
+        .regex(/^\+[1-9]\d{1,14}$/)
+        .unique(async (db, value) => {
+        const user = await db.from('users').where('phone', value).first();
+        return !user;
+    }),
     termsAccepted: vine.boolean({ strict: true }),
 }));
 export const UpdateUserValidator = vine.compile(vine.object({

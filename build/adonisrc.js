@@ -14,7 +14,7 @@ export default defineConfig({
         () => import('@adonisjs/auth/auth_provider'),
         () => import('@adonisjs/bouncer/bouncer_provider')
     ],
-    preloads: [() => import('#start/routes'), () => import('#start/kernel')],
+    preloads: [() => import('#start/routes'), () => import('#start/kernel'), () => import('#start/validator')],
     tests: {
         suites: [
             {
