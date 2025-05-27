@@ -766,9 +766,17 @@ paths:
                     $ref: '#/components/schemas/Commande'
                   total:
                     type: number
-                    example: 6000
+                    example: 10000
                   adresse:
                     $ref: '#/components/schemas/Adresse'
+                  notification:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        message:
+                          type: string
+                          example: Bonjour Mvi vous avez une nouvelle commande pour le produit chemise de l'acheteur andia. Détails de la commande :3 unités à 1000 $ chaque.
         '400':
           description: Requête invalide
         '403':
@@ -1018,3 +1026,21 @@ components:
         updatedAt:
           type: string
           format: date-time
+
+    UserRole:
+      type: string
+      enum:
+        - admin
+        - acheteur
+        - vendeur
+        - livreur
+      example: acheteur
+      description: Rôle attribué à un utilisateur (admin, acheteur, vendeur, livreur)
+
+    AdresseType:
+      type: string
+      enum:
+        - domicile
+        - livraison
+      example: livraison
+      description: Type d'adresse spécifiant si c'est un domicile ou une adresse de livraison
