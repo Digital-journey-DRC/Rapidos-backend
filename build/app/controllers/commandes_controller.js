@@ -4,6 +4,7 @@ import CommandeProduct from '#models/commande_product';
 import Product from '#models/product';
 import { adresseValidator } from '#validators/adress';
 import { StatusCommande } from '../Enum/status_commande.js';
+import { sendMessageToBuyers } from '#services/sendnotificationtobuyers';
 export default class CommandesController {
     async createCommande({ request, response, auth, bouncer }) {
         try {
@@ -22,6 +23,8 @@ export default class CommandesController {
                 status: StatusCommande.EN_ATTENTE,
             });
             let totalPrice = 0;
+            let productInCommande = [];
+            let messageTobuyers = [];
             for (const item of produits) {
                 const product = await Product.find(item.id);
                 if (!product) {
@@ -30,6 +33,7 @@ export default class CommandesController {
                 const quantity = item.quantity ?? 1;
                 const price = product.price;
                 const totalUnitaire = price * quantity;
+                productInCommande.push(product);
                 await CommandeProduct.create({
                     commandeId: commande.id,
                     productId: product.id,
@@ -39,6 +43,7 @@ export default class CommandesController {
                 });
                 totalPrice += totalUnitaire;
             }
+            messageTobuyers = await sendMessageToBuyers(productInCommande, commande.id);
             commande.totalPrice = totalPrice;
             await commande.save();
             const adresseExistante = await Adresse.query()
@@ -58,6 +63,7 @@ export default class CommandesController {
                 commande: commande,
                 total: commande.totalPrice,
                 adresse: adresse,
+                notification: messageTobuyers,
             });
         }
         catch (error) {
