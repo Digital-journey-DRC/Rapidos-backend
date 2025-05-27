@@ -15,6 +15,7 @@ export const sendMessageToBuyers = async (products, commandeId) => {
             const message = `Bonjour ${vendeur.lastName} vous avez une nouvelle commande pour le produit ${product.product.name} de l'acheteur ${acheteur.lastName}. Détails de la commande :${product.quantity} unités à ${product.product.price} $ chaque.`;
             messages.push({
                 message,
+                numero: vendeur.phone,
             });
         }
         return messages;

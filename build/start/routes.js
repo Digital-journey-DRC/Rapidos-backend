@@ -74,4 +74,7 @@ router
 router
     .post('/commandes/store', [CommandesController, 'createCommande'])
     .use(middleware.auth({ guards: ['api'] }));
+router
+    .get('/commandes/vendeur', [CommandesController, 'getCommandesByUser'])
+    .use(middleware.auth({ guards: ['api'] }));
 //# sourceMappingURL=routes.js.map

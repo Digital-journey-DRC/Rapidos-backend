@@ -74,5 +74,37 @@ export default class CommandesController {
             });
         }
     }
+    async getCommandesByUser({ auth, response }) {
+        try {
+            const products = await Product.query().where('vendeurId', auth.user.id);
+            if (products.length === 0) {
+                return response.ok({
+                    message: 'Aucun produit trouvé pour cet utilisateur',
+                    products: [],
+                });
+            }
+            const commandes = await CommandeProduct.query()
+                .whereIn('productId', products.map((p) => p.id))
+                .preload('product')
+                .preload('commande', (query) => {
+                query.preload('user');
+            })
+                .orderBy('created_at', 'desc');
+            const factureByCommande = await Commande.query().whereIn('id', commandes.map((c) => c.commandeId));
+            return response.ok({
+                message: 'Commandes récupérées avec succès',
+                commandes: commandes,
+                facture: factureByCommande,
+                products: products,
+            });
+        }
+        catch (error) {
+            console.error(error);
+            return response.internalServerError({
+                message: 'Erreur lors de la récupération des commandes',
+                error: error.message,
+            });
+        }
+    }
 }
 //# sourceMappingURL=commandes_controller.js.map
