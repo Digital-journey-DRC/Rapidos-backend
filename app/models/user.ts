@@ -12,7 +12,7 @@ import Wallet from './wallet.js'
 import AccessToken from './access_token.js'
 
 const AuthFinder = withAuthFinder(() => hash.use('scrypt'), {
-  uids: ['email'],
+  uids: ['email', 'phone'],
   passwordColumnName: 'password',
 })
 
