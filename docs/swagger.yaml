@@ -114,25 +114,91 @@ paths:
               properties:
                 uid:
                   type: string
-                  description: Peut être un email ou un numéro de téléphone
+                  description: Email ou numéro de téléphone
                   example: +243819493091
                 password:
                   type: string
                   example: MonMotDePasse123!
       responses:
         '200':
-          description: Connexion réussie
+          description: Connexion réussie avec succès
           content:
             application/json:
               schema:
                 type: object
                 properties:
+                  message:
+                    type: string
+                    example: Connexion réussie avec succès
                   token:
                     type: object
-                    description: Token JWT d’authentification
+                    properties:
+                      type:
+                        type: string
+                        example: bearer
+                      name:
+                        type: string
+                        nullable: true
+                        example: null
+                      token:
+                        type: string
+                        example: oat_MTc.LVZjbTZvSXhLWlYwOGJES0F6c01SUWhBWktIVmdkZEY5T3lOZnIxQjgyNTA1NDA2
+                      abilities:
+                        type: array
+                        items:
+                          type: string
+                        example: ['*']
+                      lastUsedAt:
+                        type: string
+                        nullable: true
+                        format: date-time
+                        example: null
+                      expiresAt:
+                        type: string
+                        format: date-time
+                        example: 2025-06-27T14:26:53.513Z
                   user:
                     type: object
-                    description: Informations de l’utilisateur authentifié
+                    properties:
+                      id:
+                        type: integer
+                        example: 18
+                      firstName:
+                        type: string
+                        example: jojo
+                      lastName:
+                        type: string
+                        example: jojo
+                      email:
+                        type: string
+                        example: jojo@gmail.com
+                      phone:
+                        type: string
+                        example: '+243819493091'
+                      role:
+                        type: string
+                        example: vendeur
+                      createdAt:
+                        type: string
+                        format: date-time
+                        example: 2025-05-27T16:59:58.495Z
+                      updatedAt:
+                        type: string
+                        format: date-time
+                        example: 2025-05-27T16:59:58.525Z
+                      secureOtp:
+                        type: string
+                        example: '238392'
+                      otpExpiredAt:
+                        type: string
+                        format: date-time
+                        example: 2025-05-27T17:49:58.522Z
+                      termsAccepted:
+                        type: boolean
+                        example: true
+                  status:
+                    type: integer
+                    example: 200
         '401':
           description: Identifiants invalides ou mot de passe incorrect
         '500':
