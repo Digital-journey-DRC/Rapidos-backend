@@ -86,9 +86,9 @@ export default class RegistersController {
         }
     }
     async login({ request, auth, response }) {
-        const { email, password } = request.only(['email', 'password']);
+        const { uid, password } = request.only(['uid', 'password']);
         try {
-            const user = await User.verifyCredentials(email, password);
+            const user = await User.verifyCredentials(uid, password);
             return await auth.use('api').createToken(user);
         }
         catch (error) {
