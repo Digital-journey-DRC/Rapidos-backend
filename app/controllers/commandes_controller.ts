@@ -67,6 +67,10 @@ export default class CommandesController {
           totalUnitaire,
         })
 
+        // Mise à jour du stock du produit
+        product.stock -= quantity
+        await product.save()
+
         totalPrice += totalUnitaire
       }
 
