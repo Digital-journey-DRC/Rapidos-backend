@@ -99,7 +99,7 @@ paths:
 
   /login:
     post:
-      summary: Authentification d’un utilisateur
+      summary: Authentification d’un utilisateur (email ou téléphone)
       tags:
         - Authentification
       requestBody:
@@ -109,22 +109,32 @@ paths:
             schema:
               type: object
               required:
-                - email
+                - uid
                 - password
               properties:
-                email:
+                uid:
                   type: string
-                  example: utilisateur@example.com
+                  description: Peut être un email ou un numéro de téléphone
+                  example: +243819493091
                 password:
                   type: string
                   example: MonMotDePasse123!
       responses:
         '200':
           description: Connexion réussie
-        '400':
-          description: Identifiants invalides
-        '404':
-          description: Utilisateur introuvable
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: object
+                    description: Token JWT d’authentification
+                  user:
+                    type: object
+                    description: Informations de l’utilisateur authentifié
+        '401':
+          description: Identifiants invalides ou mot de passe incorrect
         '500':
           description: Erreur interne
 
