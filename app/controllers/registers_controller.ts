@@ -133,7 +133,13 @@ export default class RegistersController {
     const { uid, password } = request.only(['uid', 'password'])
     try {
       const user = await User.verifyCredentials(uid, password)
-      return await auth.use('api').createToken(user)
+      const token = await auth.use('api').createToken(user)
+      return response.ok({
+        message: 'Connexion réussie avec succès',
+        token,
+        user: user.serialize(),
+        status: 200,
+      })
     } catch (error) {
       if (error.code === 'E_INVALID_AUTH_UID') {
         return response.unauthorized({
