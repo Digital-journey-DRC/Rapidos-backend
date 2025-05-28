@@ -97,13 +97,18 @@ export default class CommandesController {
         status: StatusCommande.EN_ATTENTE,
       })
 
+      const deliveryDetails = await Livraison.query()
+        .preload('adresse')
+        .where('id', livraison.id)
+        .first()
+
       return response.created({
         message: 'Commande enregistrée avec succès',
         commande: commande,
         total: commande.totalPrice,
         adresse: adresse,
         notification: messageTobuyers,
-        livraison: livraison,
+        livraison: deliveryDetails,
       })
     } catch (error) {
       console.error(error)
