@@ -6,6 +6,7 @@ import { adresseValidator } from '#validators/adress'
 import type { HttpContext } from '@adonisjs/core/http'
 import { StatusCommande } from '../Enum/status_commande.js'
 import { sendMessageToBuyers } from '#services/sendnotificationtobuyers'
+import Livraison from '#models/livraison'
 
 export default class CommandesController {
   async createCommande({ request, response, auth, bouncer }: HttpContext) {
@@ -20,6 +21,20 @@ export default class CommandesController {
 
       if (!produits || !Array.isArray(produits) || produits.length === 0) {
         return response.badRequest({ message: 'Le panier est vide.' })
+      }
+
+      // vérification du stock du produit avant de créer la commande
+
+      for (const item of produits) {
+        const product = await Product.find(item.id)
+        if (!product) {
+          return response.badRequest({ message: `Produit ${item.id} introuvable` })
+        }
+        if (product.stock < (item.quantity ?? 1)) {
+          return response.badRequest({
+            message: `Le produit ${product.name} n'a pas assez de stock disponible.`,
+          })
+        }
       }
 
       // Création de la commande
@@ -52,6 +67,10 @@ export default class CommandesController {
           totalUnitaire,
         })
 
+        // Mise à jour du stock du produit
+        product.stock -= quantity
+        await product.save()
+
         totalPrice += totalUnitaire
       }
 
@@ -75,12 +94,25 @@ export default class CommandesController {
             userId: user.id,
           })
 
+      // si la commande est créée alors on crée automatiquement une livraison en pending
+      const livraison = await Livraison.create({
+        commandeId: commande.id,
+        adresseId: adresse.id,
+        status: StatusCommande.EN_ATTENTE,
+      })
+
+      const deliveryDetails = await Livraison.query()
+        .preload('adresse')
+        .where('id', livraison.id)
+        .first()
+
       return response.created({
         message: 'Commande enregistrée avec succès',
         commande: commande,
         total: commande.totalPrice,
         adresse: adresse,
         notification: messageTobuyers,
+        livraison: deliveryDetails,
       })
     } catch (error) {
       console.error(error)
