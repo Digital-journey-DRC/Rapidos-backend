@@ -700,7 +700,7 @@ paths:
         - Commandes
       summary: Crée une nouvelle commande avec les produits et l'adresse de livraison
       security:
-        - bearerAuth: [] # Nécessite un token JWT
+        - bearerAuth: []
       requestBody:
         required: true
         content:
@@ -766,23 +766,15 @@ paths:
                     $ref: '#/components/schemas/Commande'
                   total:
                     type: number
-                    example: 10000
+                    example: 2000
                   adresse:
                     $ref: '#/components/schemas/Adresse'
                   notification:
                     type: array
                     items:
-                      type: object
-                      properties:
-                        message:
-                          type: string
-                          example: Bonjour Mvi vous avez une nouvelle commande pour le produit chemise de l'acheteur andia. Détails de la commande :3 unités à 1000 $ chaque.
-        '400':
-          description: Requête invalide
-        '403':
-          description: Accès interdit
-        '500':
-          description: Erreur serveur interne
+                      $ref: '#/components/schemas/Notification'
+                  livraison:
+                    $ref: '#/components/schemas/Livraison'
 
   /commandes/vendeur:
     get:
@@ -1192,3 +1184,51 @@ components:
         - livraison
       example: livraison
       description: Type d'adresse spécifiant si c'est un domicile ou une adresse de livraison
+
+    Livraison:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        commandeId:
+          type: integer
+          example: 19
+        adresseId:
+          type: integer
+          example: 3
+        livreurId:
+          type: integer
+          nullable: true
+          example: null
+        status:
+          $ref: '#/components/schemas/StatusCommande'
+        codeLivraison:
+          type: string
+          nullable: true
+          example: null
+        numeroSuivi:
+          type: string
+          nullable: true
+          example: null
+        fraisLivraison:
+          type: number
+          nullable: true
+          example: null
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        adresse:
+          $ref: '#/components/schemas/Adresse'
+
+    StatusCommande:
+      type: string
+      enum:
+        - en attente
+        - en cours
+        - livrée
+        - annulée
+      example: en attente
