@@ -1,7 +1,6 @@
 import Category from '#models/category'
 import Media from '#models/media'
 import Product from '#models/product'
-import User from '#models/user'
 import { manageUploadProductMedias } from '#services/managemedias'
 import { LabelParseCategoryFromFrenchInEnglish } from '#services/parsecategoryfromfrenchinenglish'
 import { categoryValidator } from '#validators/category'
