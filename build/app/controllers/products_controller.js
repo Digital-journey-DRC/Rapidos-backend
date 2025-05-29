@@ -126,12 +126,9 @@ export default class ProductsController {
             return response.status(500).json({ message: 'Erreur serveur interne', error: error.message });
         }
     }
-    async showAllProducts({ response }) {
+    async showAllProducts({ response, auth }) {
         try {
-            const products = await Product.query()
-                .preload('media')
-                .preload('category')
-                .preload('commandes');
+            const products = await Product.query().where('vendeur_id', auth.user.id).preload('media');
             if (products.length === 0) {
                 return response.status(404).json({ message: 'Produit non trouvé' });
             }
