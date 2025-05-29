@@ -65,12 +65,12 @@ router
 
 // 2. Récupérer tous les produits d’un vendeur donné (admin uniquement, via email dans le body)
 router
-  .post('/products/admin/by-email', [ProductsController, 'getAllProductsForAdmin'])
+  .get('/products/all', [ProductsController, 'getAllProducts'])
   .use(middleware.auth({ guards: ['api'] }))
 
 // 3. Voir tous les produits (admin uniquement)
 router
-  .get('/products/admin/all', [ProductsController, 'showAllProducts'])
+  .get('/products/adm/all', [ProductsController, 'showAllProducts'])
   .use(middleware.auth({ guards: ['api'] }))
 
 router
