@@ -369,11 +369,11 @@ paths:
         '500':
           description: Erreur serveur
 
-  /products/boutique/{userId}:
+  /products/all-products:
     get:
       tags:
         - Products
-      summary: Récupérer tous les produits d’un vendeur spécifique
+      summary: Récupérer tous les produits d’un vendeur spécifique connecté
       parameters:
         - in: path
           name: userId
