@@ -120,24 +120,9 @@ export default class ProductsController {
     }
   }
 
-  async getAllProductsForAdmin({ response, request, bouncer }: HttpContext) {
-    const email = request.input('email')
-
+  async getAllProducts({ response }: HttpContext) {
     try {
-      if (await bouncer.denies('showProductToAdmin')) {
-        return response
-          .status(403)
-          .json({ message: "Vous n'êtes pas autorisé à faire cette action" })
-      }
-      const userProductOwner = await User.query().where('email', email).first()
-      if (!userProductOwner) {
-        return response.status(404).json({ message: 'Utilisateur non trouvé' })
-      }
-      const products = await Product.query()
-        .where('vendeur_id', userProductOwner.id)
-        .preload('media')
-        .preload('category')
-        .preload('commandes')
+      const products = await Product.query().preload('media')
 
       if (products.length === 0) {
         return response.status(404).json({ message: 'Produit non trouvé' })
