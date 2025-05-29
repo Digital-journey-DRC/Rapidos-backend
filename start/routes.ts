@@ -82,6 +82,10 @@ router
   .use(middleware.auth({ guards: ['api'] }))
 
 router
+  .get('/category/get-all', [CategoryController, 'getAllCategory'])
+  .use(middleware.auth({ guards: ['api'] }))
+
+router
   .get('/products/all-products', [ProductsController, 'showAllProducts'])
   .use(middleware.auth({ guards: ['api'] }))
 
