@@ -152,12 +152,10 @@ export default class ProductsController {
     }
   }
 
-  async showAllProducts({ response }: HttpContext) {
+  async showAllProducts({ response, auth }: HttpContext) {
     try {
-      const products = await Product.query()
-        .preload('media')
-        .preload('category')
-        .preload('commandes')
+      const products = await Product.query().where('vendeur_id', auth.user!.id).preload('media')
+
       if (products.length === 0) {
         return response.status(404).json({ message: 'Produit non trouvé' })
       }
