@@ -12,7 +12,7 @@ export default class Adresse extends BaseModel {
   declare avenue: string
 
   @column()
-  declare quartier: string
+  declare quartier: string | null
 
   @column()
   declare ville: string
