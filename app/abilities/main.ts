@@ -12,6 +12,9 @@
 |
 */
 
+import Commande from '#models/commande'
+import Livraison from '#models/livraison'
+import Product from '#models/product'
 import User from '#models/user'
 import { Bouncer } from '@adonisjs/bouncer'
 
@@ -86,3 +89,23 @@ export const canCommandeProduct = Bouncer.ability((user: User) => {
   }
   return false
 })
+
+export const canShowAllDelivery = Bouncer.ability(
+  (user: User, commandes: Commande[], produits: Product[]) => {
+    if (user.role === 'admin' || user.role === 'livreur') {
+      return true
+    }
+
+    for (const commande of commandes) {
+      if (user.role === 'acheteur' && commande.userId === user.id) {
+        return true
+      }
+    }
+    for (const produit of produits) {
+      if (user.role === 'vendeur' && produit.vendeurId === user.id) {
+        return true
+      }
+    }
+    return false
+  }
+)
