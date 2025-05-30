@@ -114,6 +114,4 @@ router
   .get('/commandes/vendeur', [CommandesController, 'getCommandesByUser'])
   .use(middleware.auth({ guards: ['api'] }))
 
-router
-  .get('/livraison/ma-liste', [LivraisonsController, 'showAllDelivery'])
-  .use(middleware.auth({ guards: ['api'] }))
+router.get('/livraison/ma-liste', [LivraisonsController, 'showAllDelivery'])
