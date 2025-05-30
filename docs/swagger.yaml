@@ -1162,6 +1162,12 @@ components:
         ville:
           type: string
           example: Kinshasa
+        commune:
+          type: string
+          example: Gombe
+        quartier:
+          type: string
+          example: Quartier Central
         pays:
           type: string
           example: Congo
