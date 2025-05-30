@@ -99,3 +99,7 @@ router
 router
   .delete('/category/delete/:categoryId', [CategoryController, 'deleteCategory'])
   .use(middleware.auth({ guards: ['api'] }))
+
+router
+  .get('/vendeurs', [ProductsController, 'getSellesAndProducts'])
+  .use(middleware.auth({ guards: ['api'] }))

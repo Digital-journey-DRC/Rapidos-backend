@@ -1,6 +1,7 @@
 import Category from '#models/category'
 import Media from '#models/media'
 import Product from '#models/product'
+import User from '#models/user'
 import { manageUploadProductMedias } from '#services/managemedias'
 import { LabelParseCategoryFromFrenchInEnglish } from '#services/parsecategoryfromfrenchinenglish'
 import { categoryValidator } from '#validators/category'
@@ -287,6 +288,34 @@ export default class ProductsController {
     } catch (error) {
       if (error.code === 'E_ROW_NOT_FOUND') {
         return response.status(404).json({ message: 'Produit non trouvé', error: error.message })
+      }
+
+      return response.status(500).json({ message: 'Erreur serveur interne', error: error.message })
+    }
+  }
+
+  async getSellesAndProducts({ response }: HttpContext) {
+    try {
+      const vendeurs = await User.query().where('role', 'vendeur')
+      const allProduct = []
+      for (const vendeur of vendeurs) {
+        const product = await Product.query().where('vendeur_id', vendeur.id).preload('media')
+
+        if (!product || product.length === 0) {
+          continue
+        }
+        allProduct.push({
+          vendeur,
+          products: product,
+        })
+      }
+      if (vendeurs.length === 0) {
+        return response.status(404).json({ message: 'Aucun vendeur trouvé' })
+      }
+      return response.ok({ allProduct })
+    } catch (error) {
+      if (error.code === 'E_ROW_NOT_FOUND') {
+        return response.status(404).json({ message: 'Aucun vendeur trouvé', error: error.message })
       }
 
       return response.status(500).json({ message: 'Erreur serveur interne', error: error.message })
