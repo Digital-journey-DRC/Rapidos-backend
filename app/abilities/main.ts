@@ -13,7 +13,7 @@
 */
 
 import Commande from '#models/commande'
-import Livraison from '#models/livraison'
+
 import Product from '#models/product'
 import User from '#models/user'
 import { Bouncer } from '@adonisjs/bouncer'
