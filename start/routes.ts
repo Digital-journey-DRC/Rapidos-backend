@@ -101,5 +101,5 @@ router
   .use(middleware.auth({ guards: ['api'] }))
 
 router
-  .get('/vendeurs', [ProductsController, 'getSellesAndProducts'])
+  .get('/vendeurs', [ProductsController, 'getVendeurAndTheirProducts'])
   .use(middleware.auth({ guards: ['api'] }))

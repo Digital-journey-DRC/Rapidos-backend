@@ -294,25 +294,22 @@ export default class ProductsController {
     }
   }
 
-  async getSellesAndProducts({ response }: HttpContext) {
+  async getVendeurAndTheirProducts({ response }: HttpContext) {
     try {
       const vendeurs = await User.query().where('role', 'vendeur')
-      const allProduct = []
+      const vendeurWITHProduct = []
       for (const vendeur of vendeurs) {
         const product = await Product.query().where('vendeur_id', vendeur.id).preload('media')
 
         if (!product || product.length === 0) {
           continue
         }
-        allProduct.push({
+        vendeurWITHProduct.push({
           vendeur,
           products: product,
         })
       }
-      if (vendeurs.length === 0) {
-        return response.status(404).json({ message: 'Aucun vendeur trouvé' })
-      }
-      return response.ok({ allProduct })
+      return response.ok({ vendeurWITHProduct })
     } catch (error) {
       if (error.code === 'E_ROW_NOT_FOUND') {
         return response.status(404).json({ message: 'Aucun vendeur trouvé', error: error.message })

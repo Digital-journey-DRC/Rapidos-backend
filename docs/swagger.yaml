@@ -694,6 +694,55 @@ paths:
         '500':
           description: Erreur serveur interne
 
+  /vendeurs:
+    get:
+      summary: Liste des vendeurs avec leurs produits
+      description: Retourne tous les vendeurs ayant le rôle "vendeur" avec leurs produits associés et les médias de chaque produit.
+      tags:
+        - Vendeurs
+      responses:
+        '200':
+          description: Succès - liste des vendeurs et produits
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  vendeurWITHProduct:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        vendeur:
+                          $ref: '#/components/schemas/UserVendeur'
+                        products:
+                          type: array
+                          items:
+                            $ref: '#/components/schemas/ProductAvecMedia'
+        '404':
+          description: Aucun vendeur trouvé
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Aucun vendeur trouvé
+                  error:
+                    type: string
+        '500':
+          description: Erreur serveur interne
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Erreur serveur interne
+                  error:
+                    type: string
 components:
   securitySchemes:
     bearerAuth:
