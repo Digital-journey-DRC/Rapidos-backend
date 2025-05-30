@@ -945,6 +945,59 @@ paths:
         '500':
           description: Erreur serveur interne
 
+  /livraison/ma-liste:
+    get:
+      tags:
+        - Livraisons
+      summary: Récupérer toutes les livraisons avec adresse et numéro de téléphone de l'acheteur
+      responses:
+        '200':
+          description: Liste des livraisons
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  livraison:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Livraison'
+              example:
+                livraison:
+                  - id: 1
+                    commandeId: 19
+                    adresseId: 3
+                    livreurId: null
+                    status: 'en attente'
+                    codeLivraison: null
+                    numeroSuivi: null
+                    fraisLivraison: null
+                    createdAt: '2025-05-28T17:24:18.379+00:00'
+                    updatedAt: '2025-05-28T17:24:18.379+00:00'
+                    adresse:
+                      id: 3
+                      avenue: "Avenue de l'ouest"
+                      ville: 'Kinshasa'
+                      pays: 'Congo'
+                      codePostale: '12345'
+                      isPrincipal: false
+                      userId: 14
+                      type: 'livraison'
+                      createdAt: '2025-05-25T17:30:44.371+00:00'
+                      updatedAt: '2025-05-25T17:30:44.371+00:00'
+                      numero: '42B55'
+                    commande:
+                      id: 19
+                      userId: 14
+                      totalPrice: 2000
+                      createdAt: '2025-05-28T17:24:18.230+00:00'
+                      updatedAt: '2025-05-28T17:24:18.362+00:00'
+                      status: 'en attente'
+                      user:
+                        id: 14
+                        firstName: 'STEVIE'
+                        lastName: 'andia'
+                        phone: '+243819493095'
 components:
   securitySchemes:
     bearerAuth:
@@ -1253,3 +1306,7 @@ components:
         - livrée
         - annulée
       example: en attente
+
+    Devise:
+      type: string
+      enum: [FC, USD]
