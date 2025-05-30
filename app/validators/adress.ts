@@ -13,5 +13,7 @@ export const adresseValidator = vine.compile(
     isPrincipal: vine.boolean(),
     type: vine.enum(TypeAdresse),
     pays: vine.string().trim().minLength(2).maxLength(50),
+    quartier: vine.string().trim().maxLength(50).optional(),
+    commune: vine.string().trim().maxLength(50).optional(),
   })
 )
