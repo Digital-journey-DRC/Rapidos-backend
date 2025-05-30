@@ -737,6 +737,8 @@ paths:
                 - isPrincipal
                 - type
                 - pays
+                -commune
+                - quartier
               properties:
                 produits:
                   type: array
@@ -1177,6 +1179,12 @@ components:
         isPrincipal:
           type: boolean
           example: true
+        commune:
+          type: string
+          example: Gombe
+        quartier:
+          type: string
+          example: Quartier Central
         userId:
           type: integer
           example: 14
