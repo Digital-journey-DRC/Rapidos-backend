@@ -43,6 +43,10 @@ __decorate([
 ], Adresse.prototype, "codePostale", void 0);
 __decorate([
     column(),
+    __metadata("design:type", Object)
+], Adresse.prototype, "commune", void 0);
+__decorate([
+    column(),
     __metadata("design:type", Boolean)
 ], Adresse.prototype, "isPrincipal", void 0);
 __decorate([

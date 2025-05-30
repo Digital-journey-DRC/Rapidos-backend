@@ -49,4 +49,20 @@ export const canCommandeProduct = Bouncer.ability((user) => {
     }
     return false;
 });
+export const canShowAllDelivery = Bouncer.ability((user, commandes, produits) => {
+    if (user.role === 'admin' || user.role === 'livreur') {
+        return true;
+    }
+    for (const commande of commandes) {
+        if (user.role === 'acheteur' && commande.userId === user.id) {
+            return true;
+        }
+    }
+    for (const produit of produits) {
+        if (user.role === 'vendeur' && produit.vendeurId === user.id) {
+            return true;
+        }
+    }
+    return false;
+});
 //# sourceMappingURL=main.js.map

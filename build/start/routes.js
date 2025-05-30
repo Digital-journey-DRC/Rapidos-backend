@@ -4,6 +4,7 @@ const RegistersController = () => import('#controllers/registers_controller');
 const ProductsController = () => import('#controllers/products_controller');
 const CategoryController = () => import('#controllers/categories_controller');
 const CommandesController = () => import('#controllers/commandes_controller');
+const LivraisonsController = () => import('#controllers/livraisons_controller');
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import YAML from 'yamljs';
@@ -79,5 +80,11 @@ router
     .use(middleware.auth({ guards: ['api'] }));
 router
     .get('/commandes/vendeur', [CommandesController, 'getCommandesByUser'])
+    .use(middleware.auth({ guards: ['api'] }));
+router
+    .get('/livraison/ma-liste', [LivraisonsController, 'showAllDelivery'])
+    .use(middleware.auth({ guards: ['api'] }));
+router
+    .get('/vendeurs', [ProductsController, 'getVendeurAndTheirProducts'])
     .use(middleware.auth({ guards: ['api'] }));
 //# sourceMappingURL=routes.js.map
