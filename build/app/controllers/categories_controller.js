@@ -37,6 +37,26 @@ export default class CategoriesController {
             });
         }
     }
+    async getAllCategory({ response }) {
+        try {
+            const categories = await Category.all();
+            return response.ok({
+                categories,
+                status: 200,
+            });
+        }
+        catch (error) {
+            if (error.code === 'E_ROW_NOT_FOUND') {
+                return response.status(404).json({
+                    message: 'pas des catégories existante',
+                });
+            }
+            return response.status(500).json({
+                message: 'Internal server error',
+                error: error.message,
+            });
+        }
+    }
     async deleteCategory({ params, bouncer, response }) {
         try {
             if (await bouncer.denies('canCreateOrDeleteCategory')) {
