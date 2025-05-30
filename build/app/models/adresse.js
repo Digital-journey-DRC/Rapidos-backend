@@ -23,7 +23,7 @@ __decorate([
 ], Adresse.prototype, "avenue", void 0);
 __decorate([
     column(),
-    __metadata("design:type", String)
+    __metadata("design:type", Object)
 ], Adresse.prototype, "quartier", void 0);
 __decorate([
     column(),
