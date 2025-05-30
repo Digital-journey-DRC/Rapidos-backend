@@ -27,6 +27,9 @@ export default class Adresse extends BaseModel {
   declare codePostale: string | null
 
   @column()
+  declare commune: string | null
+
+  @column()
   declare isPrincipal: boolean
 
   @column()
