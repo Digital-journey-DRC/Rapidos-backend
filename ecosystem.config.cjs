@@ -24,10 +24,6 @@ module.exports = {
         WHATSAPP_TOKEN:
           'EAALOqv96b5kBOyZBK9MAZCF7Ev63btHib6DKyOTudKXvNYFkZBDdYZA6LDE6nssXrTZCEkdLP3hZBRLky3LS4SC5ZByFOtTzXNBVTQZDZD',
         APP_NAME: 'Rapidos',
-        CLOUDINARY_CLOUD_NAME: dnn2ght5x,
-        CLOUDINARY_API_KEY: 556929167677951,
-        CLOUDINARY_API_SECRET: iAuiRngjOIQJZhNFuavIIZO_J2E,
-        CLOUDINARY_URL: 'cloudinary://556929167677951:iAuiRngjOIQJZhNFuavIIZO_J2E@dnn2ght5x',
       },
     },
   ],
