@@ -13,13 +13,12 @@ export const manageUploadProductMedias = async (medias) => {
                 continue;
             }
             const filename = `${cuid()}.${image.extname}`;
-            const uploadPath = path.join('uploads', 'products', filename);
             await image.move(path.join('public', 'uploads', 'products'), {
                 name: filename,
                 overwrite: true,
             });
             uploaded.push({
-                mediaUrl: uploadPath,
+                mediaUrl: `/uploads/products/${filename}`,
                 mediaType: image.extname,
             });
         }
