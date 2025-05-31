@@ -1,33 +1,45 @@
-import { MultipartFile } from '@adonisjs/core/bodyparser'
-import { cuid } from '@adonisjs/core/helpers'
-import path from 'node:path'
+import cloudinary from '#services/cloudinary'
+import type { MultipartFile } from '@adonisjs/core/bodyparser'
+import { createReadStream } from 'node:fs'
 import { UploadedMedia, UploadResult } from '../types/products.js'
 
 export const manageUploadProductMedias = async (medias: MultipartFile[]): Promise<UploadResult> => {
   const uploaded: UploadedMedia[] = []
   const errors: any[] = []
 
-  if (medias && medias.length > 0) {
-    for (const image of medias) {
-      if (!image.isValid) {
-        errors.push({
-          errors: image.errors,
-          clientName: image.clientName,
-        })
-        continue
-      }
+  for (const file of medias) {
+    if (!file.isValid || !file.tmpPath) {
+      errors.push({
+        errors: file.errors || ['Invalid file or missing tmpPath'],
+        clientName: file.clientName,
+      })
+      continue
+    }
 
-      const filename = `${cuid()}.${image.extname}`
+    try {
+      const stream = createReadStream(file.tmpPath)
 
-      await image.move(path.join('public', 'uploads', 'products'), {
-        name: filename,
-        overwrite: true,
+      const result = await new Promise<any>((resolve, reject) => {
+        const uploadStream = cloudinary.uploader.upload_stream(
+          {
+            resource_type: 'image',
+            folder: 'products',
+          },
+          (error, myResult) => {
+            if (error) reject(error)
+            else resolve(myResult)
+          }
+        )
+
+        stream.pipe(uploadStream)
       })
 
       uploaded.push({
-        mediaUrl: `/uploads/products/${filename}`,
-        mediaType: image.extname!,
+        mediaUrl: result.secure_url,
+        mediaType: result.format,
       })
+    } catch (err) {
+      errors.push({ error: err, clientName: file.clientName })
     }
   }
 
