@@ -11,7 +11,7 @@
 |
 */
 
-import 'reflect-metadata'
+import 'reflect-metadata/Reflect.js'
 import { Ignitor, prettyPrintError } from '@adonisjs/core'
 
 /**
