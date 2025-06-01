@@ -1,27 +1,37 @@
-import { cuid } from '@adonisjs/core/helpers';
-import path from 'node:path';
+import cloudinary from '#services/cloudinary';
+import { createReadStream } from 'node:fs';
 export const manageUploadProductMedias = async (medias) => {
     const uploaded = [];
     const errors = [];
-    if (medias && medias.length > 0) {
-        for (const image of medias) {
-            if (!image.isValid) {
-                errors.push({
-                    errors: image.errors,
-                    clientName: image.clientName,
+    for (const file of medias) {
+        if (!file.isValid || !file.tmpPath) {
+            errors.push({
+                errors: file.errors || ['Invalid file or missing tmpPath'],
+                clientName: file.clientName,
+            });
+            continue;
+        }
+        try {
+            const stream = createReadStream(file.tmpPath);
+            const result = await new Promise((resolve, reject) => {
+                const uploadStream = cloudinary.uploader.upload_stream({
+                    resource_type: 'image',
+                    folder: 'products',
+                }, (error, myResult) => {
+                    if (error)
+                        reject(error);
+                    else
+                        resolve(myResult);
                 });
-                continue;
-            }
-            const filename = `${cuid()}.${image.extname}`;
-            const uploadPath = path.join('uploads', 'products', filename);
-            await image.move(path.join('public', 'uploads', 'products'), {
-                name: filename,
-                overwrite: true,
+                stream.pipe(uploadStream);
             });
             uploaded.push({
-                mediaUrl: uploadPath,
-                mediaType: image.extname,
+                mediaUrl: result.secure_url,
+                mediaType: result.format,
             });
+        }
+        catch (err) {
+            errors.push({ error: err, clientName: file.clientName });
         }
     }
     return {

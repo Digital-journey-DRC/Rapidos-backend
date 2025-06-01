@@ -12,6 +12,7 @@ import { BaseModel, belongsTo, column, hasOne, manyToMany } from '@adonisjs/luci
 import User from './user.js';
 import Product from './product.js';
 import Paiement from './paiement.js';
+import { StatusCommande } from '../Enum/status_commande.js';
 export default class Commande extends BaseModel {
 }
 __decorate([
@@ -26,6 +27,10 @@ __decorate([
     column(),
     __metadata("design:type", Number)
 ], Commande.prototype, "totalPrice", void 0);
+__decorate([
+    column(),
+    __metadata("design:type", String)
+], Commande.prototype, "status", void 0);
 __decorate([
     column.dateTime({ autoCreate: true }),
     __metadata("design:type", DateTime)

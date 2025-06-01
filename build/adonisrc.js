@@ -12,9 +12,10 @@ export default defineConfig({
         () => import('@adonisjs/cors/cors_provider'),
         () => import('@adonisjs/lucid/database_provider'),
         () => import('@adonisjs/auth/auth_provider'),
-        () => import('@adonisjs/bouncer/bouncer_provider')
+        () => import('@adonisjs/bouncer/bouncer_provider'),
+        () => import('@adonisjs/static/static_provider')
     ],
-    preloads: [() => import('#start/routes'), () => import('#start/kernel')],
+    preloads: [() => import('#start/routes'), () => import('#start/kernel'), () => import('#start/validator')],
     tests: {
         suites: [
             {
@@ -30,5 +31,9 @@ export default defineConfig({
         ],
         forceExit: false,
     },
+    metaFiles: [{
+            pattern: 'public/**',
+            reloadServer: false,
+        }]
 });
 //# sourceMappingURL=adonisrc.js.map

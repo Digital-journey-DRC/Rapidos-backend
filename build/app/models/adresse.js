@@ -10,6 +10,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 import { DateTime } from 'luxon';
 import { BaseModel, belongsTo, column } from '@adonisjs/lucid/orm';
 import User from './user.js';
+import { TypeAdresse } from '../Enum/type_adresse.js';
 export default class Adresse extends BaseModel {
 }
 __decorate([
@@ -22,7 +23,7 @@ __decorate([
 ], Adresse.prototype, "avenue", void 0);
 __decorate([
     column(),
-    __metadata("design:type", String)
+    __metadata("design:type", Object)
 ], Adresse.prototype, "quartier", void 0);
 __decorate([
     column(),
@@ -39,11 +40,23 @@ __decorate([
 __decorate([
     column(),
     __metadata("design:type", Object)
-], Adresse.prototype, "codePostal", void 0);
+], Adresse.prototype, "codePostale", void 0);
+__decorate([
+    column(),
+    __metadata("design:type", Object)
+], Adresse.prototype, "commune", void 0);
 __decorate([
     column(),
     __metadata("design:type", Boolean)
 ], Adresse.prototype, "isPrincipal", void 0);
+__decorate([
+    column(),
+    __metadata("design:type", String)
+], Adresse.prototype, "type", void 0);
+__decorate([
+    column(),
+    __metadata("design:type", String)
+], Adresse.prototype, "numero", void 0);
 __decorate([
     column.dateTime({ autoCreate: true }),
     __metadata("design:type", DateTime)

@@ -22,9 +22,46 @@ export const createProduct = Bouncer.ability((user) => {
     }
     return false;
 });
+export const canUpdateOrDeleteProduct = Bouncer.ability((user, productUserId) => {
+    if (user.role === 'admin') {
+        return true;
+    }
+    if (user.id === productUserId) {
+        return true;
+    }
+    return false;
+});
+export const canCreateOrDeleteCategory = Bouncer.ability((user) => {
+    if (user.role === 'admin' || user.role === 'superadmin') {
+        return true;
+    }
+    return false;
+});
 export const showProductToAdmin = Bouncer.ability((user) => {
     if (user.role === 'admin') {
         return true;
+    }
+    return false;
+});
+export const canCommandeProduct = Bouncer.ability((user) => {
+    if (user.role === 'admin' || user.role === 'vendeur' || user.role === 'acheteur') {
+        return true;
+    }
+    return false;
+});
+export const canShowAllDelivery = Bouncer.ability((user, commandes, produits) => {
+    if (user.role === 'admin' || user.role === 'livreur') {
+        return true;
+    }
+    for (const commande of commandes) {
+        if (user.role === 'acheteur' && commande.userId === user.id) {
+            return true;
+        }
+    }
+    for (const produit of produits) {
+        if (user.role === 'vendeur' && produit.vendeurId === user.id) {
+            return true;
+        }
     }
     return false;
 });
