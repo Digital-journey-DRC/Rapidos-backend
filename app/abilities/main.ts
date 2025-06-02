@@ -109,3 +109,11 @@ export const canShowAllDelivery = Bouncer.ability(
     return false
   }
 )
+
+export const canAcceptDelivery = Bouncer.ability((user: User) => {
+  if (user.role === 'admin' || user.role === 'livreur') {
+    return true
+  }
+
+  return false
+})

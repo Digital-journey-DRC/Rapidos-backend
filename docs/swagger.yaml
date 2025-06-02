@@ -813,7 +813,7 @@ paths:
                 - isPrincipal
                 - type
                 - pays
-                -commune
+                  -commune
                 - quartier
               properties:
                 produits:
@@ -1023,14 +1023,26 @@ paths:
         '500':
           description: Erreur serveur interne
 
-  /livraison/ma-liste:
+    /livraison/ma-liste:
+      get:
+        tags:
+          - Livraisons
+        summary: Récupérer toutes les livraisons avec adresse et numéro de téléphone de l'acheteur
+        responses:
+          '200':
+            description: Liste des livraisons
+
+  /commandes/acheteur:
     get:
       tags:
-        - Livraisons
-      summary: Récupérer toutes les livraisons avec adresse et numéro de téléphone de l'acheteur
+        - Commandes
+      summary: Récupère toutes les commandes passées par un acheteur
+      security:
+        - bearerAuth: []
       responses:
         '200':
-          description: Liste des livraisons
+          description: Commandes récupérées avec succès
+
           content:
             application/json:
               schema:
@@ -1076,6 +1088,97 @@ paths:
                         firstName: 'STEVIE'
                         lastName: 'andia'
                         phone: '+243819493095'
+
+                    message:
+                      type: string
+                      example: Commandes récupérées avec succès
+                    commandes:
+                      type: array
+                      items:
+                        $ref: '#/components/schemas/CommandeProductResponse'
+
+          '403':
+            description: Accès interdit
+          '500':
+            description: Erreur serveur interne
+
+  /livraison/accept/{livraisonId}:
+    get:
+      tags:
+        - Livraisons
+      summary: Accepte une livraison et met à jour son statut (EN_ATTENTE → EN_COURS → LIVREE)
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: livraisonId
+          required: true
+          schema:
+            type: integer
+          description: ID de la livraison à mettre à jour
+      responses:
+        '200':
+          description: Livraison acceptée avec succès
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Livraison acceptée avec succès
+                  livraison:
+                    $ref: '#/components/schemas/Livraison'
+        '400':
+          description: Livraison déjà livrée ou requête invalide
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Cette livraison a déjà été livrée
+                  status:
+                    type: integer
+                    example: 400
+        '403':
+          description: Accès interdit
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Vous n'avez pas accès à cette fonctionnalité
+        '404':
+          description: Livraison non trouvée
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Livraison non trouvée
+                  status:
+                    type: integer
+                    example: 404
+        '500':
+          description: Erreur serveur interne
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Une erreur est survenue lors de l'acceptation de la livraison
+                  status:
+                    type: integer
+                    example: 500
+
 components:
   securitySchemes:
     bearerAuth:
@@ -1308,12 +1411,6 @@ components:
         isPrincipal:
           type: boolean
           example: true
-        commune:
-          type: string
-          example: Gombe
-        quartier:
-          type: string
-          example: Quartier Central
         userId:
           type: integer
           example: 14
@@ -1400,3 +1497,35 @@ components:
     Devise:
       type: string
       enum: [FC, USD]
+
+    CommandeProductResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        commandeId:
+          type: integer
+          example: 1
+        productId:
+          type: integer
+          example: 3
+        quantity:
+          type: integer
+          example: 2
+        price:
+          type: number
+          example: 20
+        totalUnitaire:
+          type: number
+          example: 40
+        createdAt:
+          type: string
+          format: date-time
+          example: '2025-05-25T16:15:09.636+00:00'
+        updatedAt:
+          type: string
+          format: date-time
+          example: '2025-05-25T16:15:09.637+00:00'
+        commande:
+          $ref: '#/components/schemas/Commande'

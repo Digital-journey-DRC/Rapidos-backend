@@ -117,6 +117,15 @@ router
 router
   .get('/livraison/ma-liste', [LivraisonsController, 'showAllDelivery'])
   .use(middleware.auth({ guards: ['api'] }))
+
 router
   .get('/vendeurs', [ProductsController, 'getVendeurAndTheirProducts'])
+  .use(middleware.auth({ guards: ['api'] }))
+
+router
+  .get('/commandes/acheteur', [CommandesController, 'getCommandeByAcheteur'])
+  .use(middleware.auth({ guards: ['api'] }))
+
+router
+  .get('/livraison/accept/:livraisonId', [LivraisonsController, 'accepteDelivery'])
   .use(middleware.auth({ guards: ['api'] }))
