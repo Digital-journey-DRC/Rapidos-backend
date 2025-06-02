@@ -117,3 +117,7 @@ router
 router
   .get('/livraison/ma-liste', [LivraisonsController, 'showAllDelivery'])
   .use(middleware.auth({ guards: ['api'] }))
+
+router
+  .get('/livraison/accept/:livraisonId', [LivraisonsController, 'accepteDelivery'])
+  .use(middleware.auth({ guards: ['api'] }))
