@@ -1090,6 +1090,7 @@ paths:
                         firstName: 'STEVIE'
                         lastName: 'andia'
                         phone: '+243819493095'
+<<<<<<< HEAD
 =======
                   message:
                     type: string
@@ -1105,6 +1106,86 @@ paths:
           description: Erreur serveur interne
 
 >>>>>>> feat/manage-commande
+=======
+
+  /livraison/accept/{livraisonId}:
+    get:
+      tags:
+        - Livraisons
+      summary: Accepte une livraison et met à jour son statut (EN_ATTENTE → EN_COURS → LIVREE)
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: livraisonId
+          required: true
+          schema:
+            type: integer
+          description: ID de la livraison à mettre à jour
+      responses:
+        '200':
+          description: Livraison acceptée avec succès
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Livraison acceptée avec succès
+                  livraison:
+                    $ref: '#/components/schemas/Livraison'
+        '400':
+          description: Livraison déjà livrée ou requête invalide
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Cette livraison a déjà été livrée
+                  status:
+                    type: integer
+                    example: 400
+        '403':
+          description: Accès interdit
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Vous n'avez pas accès à cette fonctionnalité
+        '404':
+          description: Livraison non trouvée
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Livraison non trouvée
+                  status:
+                    type: integer
+                    example: 404
+        '500':
+          description: Erreur serveur interne
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Une erreur est survenue lors de l'acceptation de la livraison
+                  status:
+                    type: integer
+                    example: 500
+
+>>>>>>> feat/manage-delevery
 components:
   securitySchemes:
     bearerAuth:
