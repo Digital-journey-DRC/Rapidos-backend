@@ -120,3 +120,7 @@ router
 router
   .get('/vendeurs', [ProductsController, 'getVendeurAndTheirProducts'])
   .use(middleware.auth({ guards: ['api'] }))
+
+router
+  .get('/commandes/acheteur', [CommandesController, 'getCommandeByAcheteur'])
+  .use(middleware.auth({ guards: ['api'] }))
