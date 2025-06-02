@@ -1,0 +1,1531 @@
+openapi: 3.0.0
+info:
+  title: RAPIDOS API
+  version: 1.0.0
+  description: API de mise en réseau des utilisateurs (acheteur, vendeur, livreur) avec envoi OTP (email ou WhatsApp)
+
+servers:
+  - url: http://localhost:3333
+
+paths:
+  /:
+    get:
+      summary: Vérifie que l’API fonctionne
+      responses:
+        '200':
+          description: API opérationnelle
+
+  /register:
+    post:
+      summary: Enregistrement d’un utilisateur
+      tags:
+        - Authentification
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - password
+                - firstName
+                - lastName
+                - phone
+                - role
+                - termsAccepted
+              properties:
+                email:
+                  type: string
+                  example: utilisateur@example.com
+                password:
+                  type: string
+                  example: MonmotDePasse123!
+                firstName:
+                  type: string
+                  example: Judah
+                lastName:
+                  type: string
+                  example: Mvi
+                phone:
+                  type: string
+                  example: '+2250700000000'
+                role:
+                  type: string
+                  example: vendeur
+                termsAccepted:
+                  type: boolean
+                  example: true
+      responses:
+        '201':
+          description: Utilisateur enregistré avec succès
+        '400':
+          description: Données invalides
+        '500':
+          description: Erreur interne
+
+  /verify-otp/{userId}:
+    post:
+      summary: Vérifie le code OTP d’un utilisateur
+      tags:
+        - Authentification
+      parameters:
+        - in: path
+          name: userId
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - otp
+              properties:
+                otp:
+                  type: string
+                  example: '123456'
+      responses:
+        '200':
+          description: Authentification réussie
+        '400':
+          description: Code OTP invalide
+        '404':
+          description: Utilisateur introuvable
+        '500':
+          description: Erreur interne
+
+  /login:
+    post:
+      summary: Authentification d’un utilisateur (email ou téléphone)
+      tags:
+        - Authentification
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - uid
+                - password
+              properties:
+                uid:
+                  type: string
+                  description: Email ou numéro de téléphone
+                  example: +243819493091
+                password:
+                  type: string
+                  example: MonMotDePasse123!
+      responses:
+        '200':
+          description: Connexion réussie avec succès
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Connexion réussie avec succès
+                  token:
+                    type: object
+                    properties:
+                      type:
+                        type: string
+                        example: bearer
+                      name:
+                        type: string
+                        nullable: true
+                        example: null
+                      token:
+                        type: string
+                        example: oat_MTc.LVZjbTZvSXhLWlYwOGJES0F6c01SUWhBWktIVmdkZEY5T3lOZnIxQjgyNTA1NDA2
+                      abilities:
+                        type: array
+                        items:
+                          type: string
+                        example: ['*']
+                      lastUsedAt:
+                        type: string
+                        nullable: true
+                        format: date-time
+                        example: null
+                      expiresAt:
+                        type: string
+                        format: date-time
+                        example: 2025-06-27T14:26:53.513Z
+                  user:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                        example: 18
+                      firstName:
+                        type: string
+                        example: jojo
+                      lastName:
+                        type: string
+                        example: jojo
+                      email:
+                        type: string
+                        example: jojo@gmail.com
+                      phone:
+                        type: string
+                        example: '+243819493091'
+                      role:
+                        type: string
+                        example: vendeur
+                      createdAt:
+                        type: string
+                        format: date-time
+                        example: 2025-05-27T16:59:58.495Z
+                      updatedAt:
+                        type: string
+                        format: date-time
+                        example: 2025-05-27T16:59:58.525Z
+                      secureOtp:
+                        type: string
+                        example: '238392'
+                      otpExpiredAt:
+                        type: string
+                        format: date-time
+                        example: 2025-05-27T17:49:58.522Z
+                      termsAccepted:
+                        type: boolean
+                        example: true
+                  status:
+                    type: integer
+                    example: 200
+        '401':
+          description: Identifiants invalides ou mot de passe incorrect
+        '500':
+          description: Erreur interne
+
+  /logout:
+    get:
+      summary: Déconnexion d’un utilisateur
+      tags:
+        - Authentification
+      responses:
+        '200':
+          description: Déconnexion réussie
+        '401':
+          description: Non autorisé
+
+  /users/editable-fields/{userId}:
+    get:
+      tags:
+        - Users
+      summary: Récupérer les champs modifiables pour la mise à jour
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Champs récupérés avec succès
+        '401':
+          description: Non autorisé
+        '404':
+          description: Utilisateur introuvable
+        '500':
+          description: Erreur interne
+
+  /users/update/{userId}:
+    post:
+      tags:
+        - Users
+      summary: Mettre à jour un utilisateur
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - firstName
+                - lastName
+                - phone
+                - password
+              properties:
+                firstName:
+                  type: string
+                lastName:
+                  type: string
+                phone:
+                  type: string
+                password:
+                  type: string
+                email:
+                  type: string
+                role:
+                  type: string
+                termsAccepted:
+                  type: boolean
+      responses:
+        '200':
+          description: Utilisateur mis à jour avec succès
+        '400':
+          description: Données invalides
+        '403':
+          description: Non autorisé à modifier cet utilisateur
+        '404':
+          description: Utilisateur introuvable
+        '500':
+          description: Erreur interne
+
+  /users/me:
+    get:
+      tags:
+        - Users
+      summary: Récupérer l'utilisateur connecté
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Utilisateur récupéré avec succès
+        '500':
+          description: Erreur interne
+
+  /users:
+    get:
+      tags:
+        - Users
+      summary: Récupérer tous les utilisateurs
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Utilisateurs récupérés avec succès
+        '403':
+          description: Accès refusé
+        '500':
+          description: Erreur interne
+
+  /users/{userId}:
+    get:
+      tags:
+        - Users
+      summary: Récupérer un utilisateur par ID
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Utilisateur récupéré avec succès
+        '403':
+          description: Accès interdit
+        '404':
+          description: Utilisateur introuvable
+        '500':
+          description: Erreur interne
+
+    delete:
+      tags:
+        - Users
+      summary: Supprimer un utilisateur
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Utilisateur supprimé avec succès
+        '403':
+          description: Vous ne pouvez pas supprimer votre propre compte
+        '404':
+          description: Utilisateur introuvable
+        '500':
+          description: Erreur interne
+
+  /products/store:
+    post:
+      summary: Création d’un produit avec médias
+      tags:
+        - Products
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - name
+                - description
+                - price
+                - stock
+                - category
+                - medias
+              properties:
+                name:
+                  type: string
+                  example: Chasubles
+                description:
+                  type: string
+                  example: Chasubles d'entraînement.
+                price:
+                  type: number
+                  format: float
+                  example: 5.99
+                stock:
+                  type: integer
+                  example: 100
+                category:
+                  type: string
+                  example: Sports
+                medias:
+                  type: array
+                  items:
+                    type: string
+                    format: binary
+      security:
+        - bearerAuth: []
+      responses:
+        '201':
+          description: Produit créé avec succès
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Produit créé avec succès
+                  product:
+                    $ref: '#/components/schemas/Product'
+                  medias:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Media'
+                  category:
+                    $ref: '#/components/schemas/Category'
+        '207':
+          description: Produit créé, mais certaines images n’ont pas pu être uploadées
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  errors:
+                    type: array
+                    items:
+                      type: string
+        '401':
+          description: Non autorisé
+        '403':
+          description: Accès interdit
+        '422':
+          description: Données invalides ou fichier non supporté
+        '500':
+          description: Erreur serveur
+
+  /products/all-products:
+    get:
+      tags:
+        - Products
+      summary: Récupérer tous les produits d’un vendeur spécifique connecté
+      parameters:
+        - in: path
+          name: userId
+          required: true
+          schema:
+            type: integer
+          description: ID du vendeur
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Liste des produits
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  product:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Product'
+                  category:
+                    $ref: '#/components/schemas/Category'
+        '404':
+          description: Produit non trouvé
+        '500':
+          description: Erreur serveur
+
+  /products/admin/by-email:
+    post:
+      tags:
+        - Products
+      summary: Récupérer les produits d’un vendeur via email (admin uniquement)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+              properties:
+                email:
+                  type: string
+                  example: vendeur@example.com
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Produits du vendeur
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  products:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Product'
+                  category:
+                    $ref: '#/components/schemas/Category'
+        '403':
+          description: Non autorisé
+        '404':
+          description: Utilisateur ou produit non trouvé
+        '500':
+          description: Erreur serveur
+
+  /products/all:
+    get:
+      tags:
+        - Products
+      summary: Récupérer tous les produits
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Liste complète des produits
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  products:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Product'
+                  category:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Category'
+        '403':
+          description: Non autorisé
+        '404':
+          description: Aucun produit trouvé
+        '500':
+          description: Erreur serveur
+
+  /products/get-products/{productId}:
+    get:
+      tags:
+        - Products
+      summary: Récupérer un produit par son ID
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: productId
+          in: path
+          required: true
+          description: ID du produit à récupérer
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Détails du produit récupérés avec succès
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  product:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ProductWithRelations'
+                  category:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Category'
+        '404':
+          description: Produit non trouvé
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+        '500':
+          description: Erreur serveur interne
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  error:
+                    type: string
+
+  /products/update/{productId}:
+    get:
+      tags:
+        - Products
+      summary: Met à jour un produit existant
+      parameters:
+        - name: productId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: ID du produit à mettre à jour
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                description:
+                  type: string
+                price:
+                  type: number
+                stock:
+                  type: integer
+                category:
+                  type: string
+                medias:
+                  type: array
+                  items:
+                    type: string
+                    format: binary
+      responses:
+        '200':
+          description: Produit mis à jour avec succès
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  product:
+                    $ref: '#/components/schemas/Product'
+                  medias:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Media'
+        '207':
+          description: Produit mis à jour, mais certaines images ont échoué
+        '403':
+          description: Accès interdit
+        '404':
+          description: Produit ou catégorie non trouvé
+        '422':
+          description: Erreur de validation
+        '500':
+          description: Erreur serveur interne
+
+  /products/{productId}:
+    delete:
+      tags:
+        - Products
+      summary: Supprime un produit existant
+      parameters:
+        - name: productId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: ID du produit à supprimer
+      responses:
+        '200':
+          description: Produit supprimé avec succès
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  status:
+                    type: boolean
+        '403':
+          description: Accès interdit
+        '404':
+          description: Produit non trouvé
+        '500':
+          description: Erreur serveur interne
+
+  /category/store:
+    post:
+      tags:
+        - Categories
+      summary: Crée une nouvelle catégorie
+      security:
+        - bearerAuth: [] # Nécessite un token JWT (authentification par middleware)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                description:
+                  type: string
+                required:
+                  - name
+      responses:
+        '201':
+          description: Catégorie créée avec succès
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: number
+                      name:
+                        type: string
+                      description:
+                        type: string
+        '403':
+          description: Accès interdit
+        '409':
+          description: La catégorie existe déjà
+        '422':
+          description: Erreur de validation
+        '500':
+          description: Erreur serveur interne
+
+  /category/delete/{categoryId}:
+    delete:
+      tags:
+        - Categories
+      summary: Supprime une catégorie existante
+      security:
+        - bearerAuth: [] # Nécessite un token JWT
+      parameters:
+        - name: categoryId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: ID de la catégorie à supprimer
+      responses:
+        '200':
+          description: Catégorie supprimée avec succès
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+        '403':
+          description: Accès interdit
+        '404':
+          description: Catégorie introuvable
+        '500':
+          description: Erreur serveur interne
+  /category/all:
+    get:
+      tags:
+        - Categories
+      summary: Récupère toutes les catégories
+      security:
+        - bearerAuth: [] # Nécessite un token JWT
+      responses:
+        '200':
+          description: Liste des catégories récupérée avec succès
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  categories:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Category'
+        '500':
+          description: Erreur serveur interne
+
+  /commandes/store:
+    post:
+      tags:
+        - Commandes
+      summary: Crée une nouvelle commande avec les produits et l'adresse de livraison
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - produits
+                - ville
+                - avenue
+                - codePostale
+                - numero
+                - isPrincipal
+                - type
+                - pays
+                  -commune
+                - quartier
+              properties:
+                produits:
+                  type: array
+                  description: Liste des produits à commander
+                  items:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                        example: 15
+                      quantity:
+                        type: integer
+                        example: 2
+                ville:
+                  type: string
+                  example: Kinshasa
+                avenue:
+                  type: string
+                  example: Avenue de la Paix
+                codePostale:
+                  type: string
+                  example: '12345'
+                numero:
+                  type: string
+                  example: '42B'
+                isPrincipal:
+                  type: boolean
+                  example: true
+                type:
+                  type: string
+                  enum: [domicile, livraison]
+                  example: livraison
+                pays:
+                  type: string
+                  example: Congo
+      responses:
+        '201':
+          description: Commande enregistrée avec succès
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Commande enregistrée avec succès
+                  commande:
+                    $ref: '#/components/schemas/Commande'
+                  total:
+                    type: number
+                    example: 2000
+                  adresse:
+                    $ref: '#/components/schemas/Adresse'
+                  notification:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Notification'
+                  livraison:
+                    $ref: '#/components/schemas/Livraison'
+
+  /commandes/vendeur:
+    get:
+      tags:
+        - Commandes
+      summary: Récupère toutes les commandes reçues par un vendeur
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Commandes récupérées avec succès
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Commandes récupérées avec succès
+                  commandes:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                          example: 50
+                        commandeId:
+                          type: integer
+                          example: 18
+                        productId:
+                          type: integer
+                          example: 23
+                        quantity:
+                          type: integer
+                          example: 6
+                        price:
+                          type: number
+                          example: 1000
+                        totalUnitaire:
+                          type: number
+                          example: 6000
+                        createdAt:
+                          type: string
+                          format: date-time
+                          example: 2025-05-27T17:14:16.996+00:00
+                        updatedAt:
+                          type: string
+                          format: date-time
+                          example: 2025-05-27T17:14:16.997+00:00
+                        product:
+                          type: object
+                          properties:
+                            id:
+                              type: integer
+                              example: 23
+                            name:
+                              type: string
+                              example: pomade1
+                            description:
+                              type: string
+                              example: spark 13
+                            price:
+                              type: number
+                              example: 1000
+                            stock:
+                              type: integer
+                              example: 4
+                            vendeurId:
+                              type: integer
+                              example: 18
+                            categorieId:
+                              type: integer
+                              example: 7
+                            createdAt:
+                              type: string
+                              format: date-time
+                              example: 2025-05-27T17:07:34.475+00:00
+                            updatedAt:
+                              type: string
+                              format: date-time
+                              example: 2025-05-27T17:07:34.475+00:00
+                        commande:
+                          type: object
+                          properties:
+                            id:
+                              type: integer
+                              example: 18
+                            userId:
+                              type: integer
+                              example: 14
+                            totalPrice:
+                              type: number
+                              example: 10000
+                            status:
+                              type: string
+                              example: en attente
+                            createdAt:
+                              type: string
+                              format: date-time
+                              example: 2025-05-27T17:14:16.982+00:00
+                            updatedAt:
+                              type: string
+                              format: date-time
+                              example: 2025-05-27T17:14:17.023+00:00
+                            user:
+                              type: object
+                              properties:
+                                id:
+                                  type: integer
+                                  example: 14
+                                firstName:
+                                  type: string
+                                  example: STEVIE
+                                lastName:
+                                  type: string
+                                  example: andia
+                                email:
+                                  type: string
+                                  example: yuda216@gmail.com
+                                phone:
+                                  type: string
+                                  example: +243819493095
+                                role:
+                                  type: string
+                                  example: admin
+                                createdAt:
+                                  type: string
+                                  format: date-time
+                                  example: 2025-05-20T10:53:51.962+00:00
+                                updatedAt:
+                                  type: string
+                                  format: date-time
+                                  example: 2025-05-20T10:53:52.000+00:00
+                                secureOtp:
+                                  type: string
+                                  example: 445448
+                                otpExpiredAt:
+                                  type: string
+                                  format: date-time
+                                  example: 2025-05-20T11:43:51.998Z
+                                termsAccepted:
+                                  type: boolean
+                                  example: true
+        '403':
+          description: Accès interdit
+        '500':
+          description: Erreur serveur interne
+
+    /livraison/ma-liste:
+      get:
+        tags:
+          - Livraisons
+        summary: Récupérer toutes les livraisons avec adresse et numéro de téléphone de l'acheteur
+        responses:
+          '200':
+            description: Liste des livraisons
+
+  /commandes/acheteur:
+    get:
+      tags:
+        - Commandes
+      summary: Récupère toutes les commandes passées par un acheteur
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Commandes récupérées avec succès
+
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  livraison:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Livraison'
+              example:
+                livraison:
+                  - id: 1
+                    commandeId: 19
+                    adresseId: 3
+                    livreurId: null
+                    status: 'en attente'
+                    codeLivraison: null
+                    numeroSuivi: null
+                    fraisLivraison: null
+                    createdAt: '2025-05-28T17:24:18.379+00:00'
+                    updatedAt: '2025-05-28T17:24:18.379+00:00'
+                    adresse:
+                      id: 3
+                      avenue: "Avenue de l'ouest"
+                      ville: 'Kinshasa'
+                      pays: 'Congo'
+                      codePostale: '12345'
+                      isPrincipal: false
+                      userId: 14
+                      type: 'livraison'
+                      createdAt: '2025-05-25T17:30:44.371+00:00'
+                      updatedAt: '2025-05-25T17:30:44.371+00:00'
+                      numero: '42B55'
+                    commande:
+                      id: 19
+                      userId: 14
+                      totalPrice: 2000
+                      createdAt: '2025-05-28T17:24:18.230+00:00'
+                      updatedAt: '2025-05-28T17:24:18.362+00:00'
+                      status: 'en attente'
+                      user:
+                        id: 14
+                        firstName: 'STEVIE'
+                        lastName: 'andia'
+                        phone: '+243819493095'
+
+                    message:
+                      type: string
+                      example: Commandes récupérées avec succès
+                    commandes:
+                      type: array
+                      items:
+                        $ref: '#/components/schemas/CommandeProductResponse'
+
+          '403':
+            description: Accès interdit
+          '500':
+            description: Erreur serveur interne
+
+  /livraison/accept/{livraisonId}:
+    get:
+      tags:
+        - Livraisons
+      summary: Accepte une livraison et met à jour son statut (EN_ATTENTE → EN_COURS → LIVREE)
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: livraisonId
+          required: true
+          schema:
+            type: integer
+          description: ID de la livraison à mettre à jour
+      responses:
+        '200':
+          description: Livraison acceptée avec succès
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Livraison acceptée avec succès
+                  livraison:
+                    $ref: '#/components/schemas/Livraison'
+        '400':
+          description: Livraison déjà livrée ou requête invalide
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Cette livraison a déjà été livrée
+                  status:
+                    type: integer
+                    example: 400
+        '403':
+          description: Accès interdit
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Vous n'avez pas accès à cette fonctionnalité
+        '404':
+          description: Livraison non trouvée
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Livraison non trouvée
+                  status:
+                    type: integer
+                    example: 404
+        '500':
+          description: Erreur serveur interne
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Une erreur est survenue lors de l'acceptation de la livraison
+                  status:
+                    type: integer
+                    example: 500
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+        email:
+          type: string
+        firstName:
+          type: string
+        lastName:
+          type: string
+        phone:
+          type: string
+        role:
+          type: string
+        termsAccepted:
+          type: boolean
+
+    Product:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        description:
+          type: string
+        price:
+          type: number
+          format: float
+        stock:
+          type: integer
+        categoryId:
+          type: integer
+        vendeurId:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        category:
+          $ref: '#/components/schemas/Category'
+        media:
+          type: array
+          items:
+            $ref: '#/components/schemas/Media'
+
+    Media:
+      type: object
+      properties:
+        id:
+          type: integer
+        mediaUrl:
+          type: string
+          format: uri
+        mediaType:
+          type: string
+        productId:
+          type: integer
+
+    Category:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    ProductWithRelations:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        description:
+          type: string
+        price:
+          type: number
+        stock:
+          type: integer
+        category:
+          type: string
+          enum:
+            - électronique
+            - mode
+            - maison
+            - beauté
+            - sports
+            - jouets
+            - livres
+            - jardin
+            - automobile
+            - santé
+            - animaux
+            - musique
+            - films
+            - jeux
+            - bureau
+            - épicerie
+            - voyage
+            - cuisine
+            - bébé
+            - papeterie
+            - meubles
+            - art
+            - fait_main
+            - logiciels
+            - jeux vidéo
+            - fitness
+            - extérieur
+            - vêtements
+            - chaussures
+            - accessoires
+            - bijoux
+            - montres
+            - sacs
+            - lunettes de soleil
+            - ceintures
+            - écharpes
+            - chapeaux
+            - chaussettes
+            - sous-vêtements
+            - maillots de bain
+            - tenues sport
+            - tenues intérieur
+            - vêtements athlétiques
+            - tenues décontractées
+            - tenues habillées
+            - manteaux
+            - manteaux longs
+            - vestes
+            - parkas
+            - gilets
+            - imperméables
+            - bombers
+            - blazers
+            - cardigans
+            - fruits
+            - légumes
+            - conserves
+            - produits laitiers
+            - viandes
+            - poissons
+            - boissons
+            - produits ménagers
+            - entretien
+            - hygiène
+            - nettoyage
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        media:
+          type: array
+          items:
+            $ref: '#/components/schemas/Media'
+        commandes:
+          type: array
+          items:
+            $ref: '#/components/schemas/Commande'
+
+    Commande:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 7
+        userId:
+          type: integer
+          example: 14
+        totalPrice:
+          type: number
+          example: 6000
+        status:
+          type: string
+          enum: [en attente, validée, livrée]
+          example: en attente
+        createdAt:
+          type: string
+          format: date-time
+          example: '2025-05-25T16:50:04.103+00:00'
+        updatedAt:
+          type: string
+          format: date-time
+          example: '2025-05-25T16:50:04.175+00:00'
+
+    Adresse:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 2
+        avenue:
+          type: string
+          example: Avenue de la Paix
+        ville:
+          type: string
+          example: Kinshasa
+        commune:
+          type: string
+          example: Gombe
+        quartier:
+          type: string
+          example: Quartier Central
+        pays:
+          type: string
+          example: Congo
+        codePostale:
+          type: string
+          example: '12345'
+        isPrincipal:
+          type: boolean
+          example: true
+        userId:
+          type: integer
+          example: 14
+        type:
+          type: string
+          enum: [livraison, facturation]
+          example: livraison
+        numero:
+          type: string
+          example: '42B'
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    UserRole:
+      type: string
+      enum:
+        - admin
+        - acheteur
+        - vendeur
+        - livreur
+      example: acheteur
+      description: Rôle attribué à un utilisateur (admin, acheteur, vendeur, livreur)
+
+    AdresseType:
+      type: string
+      enum:
+        - domicile
+        - livraison
+      example: livraison
+      description: Type d'adresse spécifiant si c'est un domicile ou une adresse de livraison
+
+    Livraison:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        commandeId:
+          type: integer
+          example: 19
+        adresseId:
+          type: integer
+          example: 3
+        livreurId:
+          type: integer
+          nullable: true
+          example: null
+        status:
+          $ref: '#/components/schemas/StatusCommande'
+        codeLivraison:
+          type: string
+          nullable: true
+          example: null
+        numeroSuivi:
+          type: string
+          nullable: true
+          example: null
+        fraisLivraison:
+          type: number
+          nullable: true
+          example: null
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        adresse:
+          $ref: '#/components/schemas/Adresse'
+
+    StatusCommande:
+      type: string
+      enum:
+        - en attente
+        - en cours
+        - livrée
+        - annulée
+      example: en attente
+
+    Devise:
+      type: string
+      enum: [FC, USD]
+
+    CommandeProductResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        commandeId:
+          type: integer
+          example: 1
+        productId:
+          type: integer
+          example: 3
+        quantity:
+          type: integer
+          example: 2
+        price:
+          type: number
+          example: 20
+        totalUnitaire:
+          type: number
+          example: 40
+        createdAt:
+          type: string
+          format: date-time
+          example: '2025-05-25T16:15:09.636+00:00'
+        updatedAt:
+          type: string
+          format: date-time
+          example: '2025-05-25T16:15:09.637+00:00'
+        commande:
+          $ref: '#/components/schemas/Commande'
