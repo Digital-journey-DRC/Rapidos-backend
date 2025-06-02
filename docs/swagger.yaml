@@ -1023,16 +1023,15 @@ paths:
         '500':
           description: Erreur serveur interne
 
-<<<<<<< HEAD
-  /livraison/ma-liste:
-    get:
-      tags:
-        - Livraisons
-      summary: Récupérer toutes les livraisons avec adresse et numéro de téléphone de l'acheteur
-      responses:
-        '200':
-          description: Liste des livraisons
-=======
+    /livraison/ma-liste:
+      get:
+        tags:
+          - Livraisons
+        summary: Récupérer toutes les livraisons avec adresse et numéro de téléphone de l'acheteur
+        responses:
+          '200':
+            description: Liste des livraisons
+
   /commandes/acheteur:
     get:
       tags:
@@ -1043,13 +1042,12 @@ paths:
       responses:
         '200':
           description: Commandes récupérées avec succès
->>>>>>> feat/manage-commande
+
           content:
             application/json:
               schema:
                 type: object
                 properties:
-<<<<<<< HEAD
                   livraison:
                     type: array
                     items:
@@ -1090,23 +1088,19 @@ paths:
                         firstName: 'STEVIE'
                         lastName: 'andia'
                         phone: '+243819493095'
-<<<<<<< HEAD
-=======
-                  message:
-                    type: string
-                    example: Commandes récupérées avec succès
-                  commandes:
-                    type: array
-                    items:
-                      $ref: '#/components/schemas/CommandeProductResponse'
 
-        '403':
-          description: Accès interdit
-        '500':
-          description: Erreur serveur interne
+                    message:
+                      type: string
+                      example: Commandes récupérées avec succès
+                    commandes:
+                      type: array
+                      items:
+                        $ref: '#/components/schemas/CommandeProductResponse'
 
->>>>>>> feat/manage-commande
-=======
+          '403':
+            description: Accès interdit
+          '500':
+            description: Erreur serveur interne
 
   /livraison/accept/{livraisonId}:
     get:
@@ -1185,7 +1179,6 @@ paths:
                     type: integer
                     example: 500
 
->>>>>>> feat/manage-delevery
 components:
   securitySchemes:
     bearerAuth:
@@ -1418,12 +1411,6 @@ components:
         isPrincipal:
           type: boolean
           example: true
-        commune:
-          type: string
-          example: Gombe
-        quartier:
-          type: string
-          example: Quartier Central
         userId:
           type: integer
           example: 14
@@ -1507,11 +1494,10 @@ components:
         - annulée
       example: en attente
 
-<<<<<<< HEAD
     Devise:
       type: string
       enum: [FC, USD]
-=======
+
     CommandeProductResponse:
       type: object
       properties:
@@ -1536,11 +1522,10 @@ components:
         createdAt:
           type: string
           format: date-time
-          example: "2025-05-25T16:15:09.636+00:00"
+          example: '2025-05-25T16:15:09.636+00:00'
         updatedAt:
           type: string
           format: date-time
-          example: "2025-05-25T16:15:09.637+00:00"
+          example: '2025-05-25T16:15:09.637+00:00'
         commande:
           $ref: '#/components/schemas/Commande'
->>>>>>> feat/manage-commande
