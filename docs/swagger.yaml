@@ -737,7 +737,7 @@ paths:
                 - isPrincipal
                 - type
                 - pays
-                -commune
+                  -commune
                 - quartier
               properties:
                 produits:
@@ -942,6 +942,34 @@ paths:
                                 termsAccepted:
                                   type: boolean
                                   example: true
+        '403':
+          description: Accès interdit
+        '500':
+          description: Erreur serveur interne
+
+  /commandes/acheteur:
+    get:
+      tags:
+        - Commandes
+      summary: Récupère toutes les commandes passées par un acheteur
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Commandes récupérées avec succès
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Commandes récupérées avec succès
+                  commandes:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/CommandeProductResponse'
+
         '403':
           description: Accès interdit
         '500':
@@ -1267,3 +1295,35 @@ components:
         - livrée
         - annulée
       example: en attente
+
+    CommandeProductResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        commandeId:
+          type: integer
+          example: 1
+        productId:
+          type: integer
+          example: 3
+        quantity:
+          type: integer
+          example: 2
+        price:
+          type: number
+          example: 20
+        totalUnitaire:
+          type: number
+          example: 40
+        createdAt:
+          type: string
+          format: date-time
+          example: "2025-05-25T16:15:09.636+00:00"
+        updatedAt:
+          type: string
+          format: date-time
+          example: "2025-05-25T16:15:09.637+00:00"
+        commande:
+          $ref: '#/components/schemas/Commande'
