@@ -450,13 +450,6 @@ paths:
       tags:
         - Products
       summary: Récupérer tous les produits d’un vendeur spécifique connecté
-      parameters:
-        - in: path
-          name: userId
-          required: true
-          schema:
-            type: integer
-          description: ID du vendeur
       security:
         - bearerAuth: []
       responses:
@@ -600,7 +593,7 @@ paths:
                     type: string
 
   /products/update/{productId}:
-    get:
+    post:
       tags:
         - Products
       summary: Met à jour un produit existant
@@ -704,13 +697,14 @@ paths:
           application/json:
             schema:
               type: object
+              required:
+                - name
               properties:
                 name:
                   type: string
                 description:
                   type: string
-                required:
-                  - name
+
       responses:
         '201':
           description: Catégorie créée avec succès
@@ -1023,14 +1017,14 @@ paths:
         '500':
           description: Erreur serveur interne
 
-    /livraison/ma-liste:
-      get:
-        tags:
-          - Livraisons
-        summary: Récupérer toutes les livraisons avec adresse et numéro de téléphone de l'acheteur
-        responses:
-          '200':
-            description: Liste des livraisons
+  /livraison/ma-liste:
+    get:
+      tags:
+        - Livraisons
+      summary: Récupérer toutes les livraisons avec adresse et numéro de téléphone de l'acheteur
+      responses:
+        '200':
+          description: Liste des livraisons
 
   /commandes/acheteur:
     get:
@@ -1042,7 +1036,6 @@ paths:
       responses:
         '200':
           description: Commandes récupérées avec succès
-
           content:
             application/json:
               schema:
@@ -1097,10 +1090,10 @@ paths:
                       items:
                         $ref: '#/components/schemas/CommandeProductResponse'
 
-          '403':
-            description: Accès interdit
-          '500':
-            description: Erreur serveur interne
+        '403':
+          description: Accès interdit
+        '500':
+          description: Erreur serveur interne
 
   /livraison/accept/{livraisonId}:
     get:

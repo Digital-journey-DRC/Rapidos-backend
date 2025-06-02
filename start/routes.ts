@@ -91,7 +91,7 @@ router
   .use(middleware.auth({ guards: ['api'] }))
 
 router
-  .get('/products/update/:productId', [ProductsController, 'updateProduct'])
+  .post('/products/update/:productId', [ProductsController, 'updateProduct'])
   .use(middleware.auth({ guards: ['api'] }))
 
 router
