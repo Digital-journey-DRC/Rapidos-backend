@@ -1021,7 +1021,7 @@ paths:
     get:
       tags:
         - Livraisons
-      summary: Récupérer toutes les livraisons avec adresse et numéro de téléphone de l'acheteur
+      summary: Récupérer toutes les livraisons avec adresse, produits de la commande et numéro de téléphone de l'acheteur
       responses:
         '200':
           description: Liste des livraisons
@@ -1044,7 +1044,81 @@ paths:
                   livraison:
                     type: array
                     items:
-                      $ref: '#/components/schemas/Livraison'
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                        commandeId:
+                          type: integer
+                        adresseId:
+                          type: integer
+                        livreurId:
+                          type: integer
+                          nullable: true
+                        status:
+                          type: string
+                        codeLivraison:
+                          type: string
+                          nullable: true
+                        numeroSuivi:
+                          type: string
+                          nullable: true
+                        fraisLivraison:
+                          type: number
+                          nullable: true
+                        createdAt:
+                          type: string
+                          format: date-time
+                        updatedAt:
+                          type: string
+                          format: date-time
+                        adresse:
+                          type: object
+                          properties:
+                            id:
+                              type: integer
+                            avenue:
+                              type: string
+                            numero:
+                              type: string
+                            quartier:
+                              type: string
+                              nullable: true
+                            ville:
+                              type: string
+                        commande:
+                          type: object
+                          properties:
+                            id:
+                              type: integer
+                            userId:
+                              type: integer
+                            status:
+                              type: string
+                            totalPrice:
+                              type: number
+                            user:
+                              type: object
+                              properties:
+                                id:
+                                  type: integer
+                                firstName:
+                                  type: string
+                                lastName:
+                                  type: string
+                                phone:
+                                  type: string
+                            products:
+                              type: array
+                              items:
+                                type: object
+                                properties:
+                                  id:
+                                    type: integer
+                                  name:
+                                    type: string
+                                  price:
+                                    type: number
               example:
                 livraison:
                   - id: 1
@@ -1060,27 +1134,26 @@ paths:
                     adresse:
                       id: 3
                       avenue: "Avenue de l'ouest"
-                      ville: 'Kinshasa'
-                      pays: 'Congo'
-                      codePostale: '12345'
-                      isPrincipal: false
-                      userId: 14
-                      type: 'livraison'
-                      createdAt: '2025-05-25T17:30:44.371+00:00'
-                      updatedAt: '2025-05-25T17:30:44.371+00:00'
                       numero: '42B55'
+                      quartier: null
+                      ville: 'Kinshasa'
                     commande:
                       id: 19
                       userId: 14
-                      totalPrice: 2000
-                      createdAt: '2025-05-28T17:24:18.230+00:00'
-                      updatedAt: '2025-05-28T17:24:18.362+00:00'
                       status: 'en attente'
+                      totalPrice: 2000
                       user:
                         id: 14
                         firstName: 'STEVIE'
                         lastName: 'andia'
                         phone: '+243819493095'
+                      products:
+                        - id: 22
+                          name: 'crème éclairessissantes'
+                          price: 1000
+                        - id: 23
+                          name: 'pomade1'
+                          price: 1000
 
                     message:
                       type: string
