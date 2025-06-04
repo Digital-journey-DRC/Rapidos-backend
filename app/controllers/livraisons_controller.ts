@@ -15,8 +15,7 @@ export default class LivraisonsController {
       }
 
       //récupération de toutes les livraisons avec adresses et numéro de téléphone de l'acheteur sachant que l'id de l'acheteur est dans la commande
-      // ...existing code...
-      // ...existing code...
+
       const deliverys = await Livraison.query()
         .preload('adresse')
         .preload('commande', (commandeQuery) => {
