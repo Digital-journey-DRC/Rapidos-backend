@@ -15,13 +15,22 @@ export default class LivraisonsController {
       }
 
       //récupération de toutes les livraisons avec adresses et numéro de téléphone de l'acheteur sachant que l'id de l'acheteur est dans la commande
+
       const deliverys = await Livraison.query()
-        .preload('adresse') // relation directe
-        .preload('commande', (commandeQuery) => {
-          commandeQuery.preload('user', (userQuery) => {
-            userQuery.select(['id', 'firstName', 'lastName', 'phone'])
-          })
+        .preload('adresse', (adresse) => {
+          adresse.select(['avenue', 'numero', 'quartier', 'ville'])
         })
+        .preload('commande', (commandeQuery) => {
+          commandeQuery
+            .select(['id', 'userId', 'status', 'totalPrice'])
+            .preload('user', (userQuery) => {
+              userQuery.select(['id', 'firstName', 'lastName', 'phone'])
+            })
+            .preload('products', (productQuery) => {
+              productQuery.select(['id', 'name', 'price'])
+            })
+        })
+
       return response.ok({
         livraison: deliverys,
       })
