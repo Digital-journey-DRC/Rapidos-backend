@@ -11,10 +11,17 @@ export default class LivraisonsController {
                 return response.forbidden({ message: "Vous n'avez pas accès à cette fonctionnalité" });
             }
             const deliverys = await Livraison.query()
-                .preload('adresse')
+                .preload('adresse', (adresse) => {
+                adresse.select(['avenue', 'numero', 'quartier', 'ville']);
+            })
                 .preload('commande', (commandeQuery) => {
-                commandeQuery.preload('user', (userQuery) => {
+                commandeQuery
+                    .select(['id', 'userId', 'status', 'totalPrice'])
+                    .preload('user', (userQuery) => {
                     userQuery.select(['id', 'firstName', 'lastName', 'phone']);
+                })
+                    .preload('products', (productQuery) => {
+                    productQuery.select(['id', 'name', 'price']);
                 });
             });
             return response.ok({
