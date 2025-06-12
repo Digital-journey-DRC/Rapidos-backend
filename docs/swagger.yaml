@@ -684,6 +684,103 @@ paths:
         '500':
           description: Erreur serveur interne
 
+  /stock/{productId}/update:
+    post:
+      tags:
+        - Products
+      summary: Met à jour le stock d'un produit (ajoute la quantité reçue)
+      security:
+        - bearerAuth: [] # Nécessite un token JWT
+      parameters:
+        - name: productId
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: ID du produit à mettre à jour
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - stock
+              properties:
+                stock:
+                  type: integer
+                  example: 5
+                  description: Quantité à ajouter au stock actuel
+      responses:
+        '200':
+          description: Stock mis à jour avec succès
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Stock mis à jour avec succès
+                  product:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                        example: 30
+                      name:
+                        type: string
+                        example: savon mousse a main bain noir
+                      stock:
+                        type: integer
+                        example: 41
+        '403':
+          description: Vous n'êtes pas autorisé à faire cette action
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Vous n'êtes pas autorisé à faire cette action
+        '404':
+          description: Produit non trouvé
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Produit non trouvé
+                  error:
+                    type: string
+                    example: Produit non trouvé
+        '422':
+          description: Erreur de validation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Erreur de validation
+        '500':
+          description: Erreur serveur interne
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Erreur serveur interne
+                  error:
+                    type: string
+                    example: Détail de l'erreur serveur
+
   /category/store:
     post:
       tags:
