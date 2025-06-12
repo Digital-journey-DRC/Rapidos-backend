@@ -6,9 +6,10 @@ import { manageUploadProductMedias } from '#services/managemedias'
 import { LabelParseCategoryFromFrenchInEnglish } from '#services/parsecategoryfromfrenchinenglish'
 import { categoryValidator } from '#validators/category'
 
-import { createProductValidator } from '#validators/products'
+import { createProductValidator, validateProductStock } from '#validators/products'
 
 import type { HttpContext } from '@adonisjs/core/http'
+import logger from '@adonisjs/core/services/logger'
 
 export default class ProductsController {
   async store({ request, response, auth, bouncer }: HttpContext) {
@@ -315,6 +316,48 @@ export default class ProductsController {
         return response.status(404).json({ message: 'Aucun vendeur trouvé', error: error.message })
       }
 
+      return response.status(500).json({ message: 'Erreur serveur interne', error: error.message })
+    }
+  }
+
+  async updateStockForProduct({ params, response, request, bouncer }: HttpContext) {
+    const productId = params.productId
+    try {
+      const payload = await request.validateUsing(validateProductStock)
+      const product = await Product.findOrFail(productId)
+
+      if (await bouncer.denies('canUpdateStock', product.vendeurId)) {
+        return response
+          .status(403)
+          .json({ message: "Vous n'êtes pas autorisé à faire cette action" })
+      }
+
+      product.stock += payload.stock
+      await product.save()
+      return response.status(200).json({
+        message: 'Stock mis à jour avec succès',
+        product: {
+          id: product.id,
+          name: product.name,
+          stock: product.stock,
+        },
+      })
+    } catch (error) {
+      logger.error({
+        message: 'Erreur lors de la mise à jour du stock',
+        error: error.message,
+      })
+      if (error.code === 'E_ROW_NOT_FOUND') {
+        return response.status(404).json({ message: 'Produit non trouvé', error: error.message })
+      }
+      if (error.code === 'E_UNAUTHORIZED_ACCESS') {
+        return response.status(403).json({ message: error.message })
+      }
+      if (error.code === 'E_VALIDATION_FAILURE') {
+        return response.status(422).json({ message: error.messages })
+      }
+
+      console.error(error)
       return response.status(500).json({ message: 'Erreur serveur interne', error: error.message })
     }
   }

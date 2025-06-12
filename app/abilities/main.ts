@@ -114,6 +114,18 @@ export const canAcceptDelivery = Bouncer.ability((user: User) => {
   if (user.role === 'admin' || user.role === 'livreur') {
     return true
   }
+  return false
+})
+
+export const canUpdateStock = Bouncer.ability((user: User, producyUserId: number) => {
+  if (user.role === 'admin') {
+    return true
+  }
+
+  // Allow user to update stock of their own product
+  if (user.role === 'vendeur' && user.id === producyUserId) {
+    return true
+  }
 
   return false
 })
