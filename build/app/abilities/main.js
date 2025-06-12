@@ -71,4 +71,13 @@ export const canAcceptDelivery = Bouncer.ability((user) => {
     }
     return false;
 });
+export const canUpdateStock = Bouncer.ability((user, producyUserId) => {
+    if (user.role === 'admin') {
+        return true;
+    }
+    if (user.role === 'vendeur' && user.id === producyUserId) {
+        return true;
+    }
+    return false;
+});
 //# sourceMappingURL=main.js.map
