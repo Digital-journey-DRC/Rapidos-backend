@@ -79,3 +79,16 @@ export const showProductToAdmin = Bouncer.ability((user: User) => {
   }
   return false
 })
+
+export const canUpdateStock = Bouncer.ability((user: User, producyUserId: number) => {
+  if (user.role === 'admin') {
+    return true
+  }
+
+  // Allow user to update stock of their own product
+  if (user.role === 'vendeur' && user.id === producyUserId) {
+    return true
+  }
+
+  return false
+})

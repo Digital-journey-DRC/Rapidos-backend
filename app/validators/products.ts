@@ -9,3 +9,9 @@ export const createProductValidator = vine.compile(
     category: vine.string().trim().escape().minLength(2).maxLength(50),
   })
 )
+
+export const validateProductStock = vine.compile(
+  vine.object({
+    stock: vine.number().positive(),
+  })
+)
