@@ -129,3 +129,6 @@ router
 router
   .get('/livraison/accept/:livraisonId', [LivraisonsController, 'accepteDelivery'])
   .use(middleware.auth({ guards: ['api'] }))
+router
+  .post('/stock/:productId/update', [ProductsController, 'updateStockForProduct'])
+  .use(middleware.auth({ guards: ['api'] }))
