@@ -103,3 +103,7 @@ router
 router
   .get('/vendeurs', [ProductsController, 'getVendeurAndTheirProducts'])
   .use(middleware.auth({ guards: ['api'] }))
+
+router
+  .get('/stock/:productId/update', [ProductsController, 'updateStockForProduct'])
+  .use(middleware.auth({ guards: ['api'] }))
