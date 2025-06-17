@@ -7,6 +7,7 @@ import { validateAndActivateUserOtp } from '#services/validateuserotp'
 import abilities from '#start/abilities'
 import {
   registerUserValidator,
+  setPasswordValidator,
   UpdateUserValidator,
   UpdateUserValidatorForAdmin,
 } from '#validators/user'
@@ -392,9 +393,10 @@ export default class RegistersController {
   }
 
   async resetPassword({ request, response }: HttpContext) {
-    const { otp, newPassword } = request.only(['otp', 'newPassword'])
+    const { otp } = request.only(['otp'])
 
     try {
+      const payload = await request.validateUsing(setPasswordValidator)
       const user = await User.findOrFail('secureOtp', otp)
       //vérification de la validation de l'otp
       if (user.otpExpiredAt && user.otpExpiredAt < new Date()) {
@@ -402,7 +404,7 @@ export default class RegistersController {
           message: 'Le code OTP a expiré. Veuillez en demander',
         })
       }
-      user.password = newPassword
+      user.password = payload.newPassword
       user.secureOtp = null // Clear OTP after successful reset
       user.otpExpiredAt = null // Clear OTP expiration time
       await user.save()
