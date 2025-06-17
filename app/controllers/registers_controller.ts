@@ -3,6 +3,7 @@ import { getUpdatableFields } from '#services/datatoupdate'
 import { generateAccessToken } from '#services/generateaccesstoken'
 import { generateOtp } from '#services/generateotp'
 import { createUser } from '#services/setuserotp'
+import smsservice from '#services/smsservice'
 import { validateAndActivateUserOtp } from '#services/validateuserotp'
 import abilities from '#start/abilities'
 import {
@@ -368,11 +369,10 @@ export default class RegistersController {
       const { otpCode, otpExpiredAt } = generateOtp()
       // Set user OTP code and expiration time
       await createUser.setUserOtp(user, otpCode, otpExpiredAt)
+      await smsservice.envoyerSms(user.phone, otpCode)
       return response.ok({
         message: 'Un code de réinitialisation a été envoyé à votre téléphone',
         status: 200,
-        otp: otpCode,
-        expiresAt: otpExpiredAt,
       })
     } catch (error) {
       if (error.code === 'E_ROW_NOT_FOUND') {
