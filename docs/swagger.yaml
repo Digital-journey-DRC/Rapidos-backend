@@ -420,87 +420,91 @@ paths:
                     type: integer
                     example: 500
 
-/reset-password:
-  post:
-    tags:
-      - Authentification
-    summary: Réinitialise le mot de passe via OTP
-    requestBody:
-      required: true
-      content:
-        application/json:
-          schema:
-            type: object
-            required:
-              - otp
-              - newPassword
-            properties:
-              otp:
-                type: string
-                example: '123456'
-              newPassword:
-                type: string
-                example: MonNouveauMotDePasse123!
-    responses:
-      '200':
-        description: Mot de passe réinitialisé avec succès
+  /reset-password:
+    post:
+      tags:
+        - Authentification
+      summary: Réinitialise le mot de passe via OTP
+      requestBody:
+        required: true
         content:
           application/json:
             schema:
               type: object
+              required:
+                - otp
+                - newPassword
+                - confirmNewPassword
               properties:
-                message:
+                otp:
                   type: string
-                  example: Mot de passe réinitialisé avec succès
-                status:
-                  type: integer
-                  example: 200
-                accessToken:
+                  example: '123456'
+                newPassword:
                   type: string
-                  example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
-                expiresIn:
+                  example: MonNouve123!
+                confirmNewPassword:
                   type: string
-                  format: date-time
-                  example: 2025-06-27T14:26:53.513Z
-                userId:
-                  type: integer
-                  example: 18
-      '400':
-        description: OTP expiré ou invalide
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                message:
-                  type: string
-                  example: Le code OTP a expiré. Veuillez en demander
-      '404':
-        description: Utilisateur introuvable
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                message:
-                  type: string
-                  example: Utilisateur introuvable
-                status:
-                  type: integer
-                  example: 404
-      '500':
-        description: Erreur interne
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                message:
-                  type: string
-                  example: Erreur interne lors de la réinitialisation du mot de passe
-                status:
-                  type: integer
-                  example: 500
+                  example: MonNouve123!
+      responses:
+        '200':
+          description: Mot de passe réinitialisé avec succès
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Mot de passe réinitialisé avec succès
+                  status:
+                    type: integer
+                    example: 200
+                  accessToken:
+                    type: string
+                    example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+                  expiresIn:
+                    type: string
+                    format: date-time
+                    example: 2025-06-27T14:26:53.513Z
+                  userId:
+                    type: integer
+                    example: 18
+        '400':
+          description: OTP expiré ou invalide
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Le code OTP a expiré. Veuillez en demander
+        '404':
+          description: Utilisateur introuvable
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Utilisateur introuvable
+                  status:
+                    type: integer
+                    example: 404
+        '500':
+          description: Erreur interne
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Erreur interne lors de la réinitialisation du mot de passe
+                  status:
+                    type: integer
+                    example: 500
 
   /products/store:
     post:
