@@ -373,6 +373,8 @@ export default class RegistersController {
       return response.ok({
         message: 'Un code de réinitialisation a été envoyé à votre téléphone',
         status: 200,
+        otp: otpCode,
+        expiresAt: otpExpiredAt,
       })
     } catch (error) {
       if (error.code === 'E_ROW_NOT_FOUND') {
