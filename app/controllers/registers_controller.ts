@@ -358,4 +358,79 @@ export default class RegistersController {
       })
     }
   }
+
+  async forgotPassWord({ request, response }: HttpContext) {
+    const { phone } = request.only(['phone'])
+    try {
+      const user = await User.findByOrFail('phone', phone)
+      //Generate token
+      const { otpCode, otpExpiredAt } = generateOtp()
+      // Set user OTP code and expiration time
+      await createUser.setUserOtp(user, otpCode, otpExpiredAt)
+      return response.ok({
+        message: 'Un code de réinitialisation a été envoyé à votre téléphone',
+        status: 200,
+        otp: otpCode,
+        expiresAt: otpExpiredAt,
+      })
+    } catch (error) {
+      if (error.code === 'E_ROW_NOT_FOUND') {
+        return response.notFound({
+          message: 'Utilisateur introuvable',
+          status: 404,
+        })
+      }
+      logger.error('Erreur lors de la demande de réinitialisation du mot de passe', {
+        message: error.message,
+        stack: error.stack,
+      })
+      return response.internalServerError({
+        message: 'Erreur interne lors de la demande de réinitialisation du mot de passe',
+        status: 500,
+      })
+    }
+  }
+
+  async resetPassword({ request, response }: HttpContext) {
+    const { otp, newPassword } = request.only(['otp', 'newPassword'])
+
+    try {
+      const user = await User.findOrFail('secureOtp', otp)
+      //vérification de la validation de l'otp
+      if (user.otpExpiredAt && user.otpExpiredAt < new Date()) {
+        return response.badRequest({
+          message: 'Le code OTP a expiré. Veuillez en demander',
+        })
+      }
+      user.password = newPassword
+      user.secureOtp = null // Clear OTP after successful reset
+      user.otpExpiredAt = null // Clear OTP expiration time
+      await user.save()
+      const accessToken = await generateAccessToken(user, {
+        abilities: abilities[user.role],
+      })
+      return response.ok({
+        message: 'Mot de passe réinitialisé avec succès',
+        status: 200,
+        accessToken: accessToken?.value!.release(),
+        expiresIn: accessToken?.expiresAt,
+        userId: accessToken?.tokenableId,
+      })
+    } catch (error) {
+      if (error.code === 'E_ROW_NOT_FOUND') {
+        return response.notFound({
+          message: 'Utilisateur introuvable',
+          status: 404,
+        })
+      }
+      logger.error('Erreur lors de la réinitialisation du mot de passe', {
+        message: error.message,
+        stack: error.stack,
+      })
+      return response.internalServerError({
+        message: 'Erreur interne lors de la réinitialisation du mot de passe',
+        status: 500,
+      })
+    }
+  }
 }

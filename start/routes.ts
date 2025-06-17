@@ -132,3 +132,6 @@ router
 router
   .post('/stock/:productId/update', [ProductsController, 'updateStockForProduct'])
   .use(middleware.auth({ guards: ['api'] }))
+
+router.post('/users/forgot-password', [RegistersController, 'forgotPassWord'])
+router.post('/users/reset-password', [RegistersController, 'resetPassword'])
