@@ -67,3 +67,17 @@ export const UpdateUserValidatorForAdmin = vine.compile(
   })
 )
 // To handle custom messages, configure them in your validation middleware or handler as per VineJS documentation.
+
+export const setPasswordValidator = vine.compile(
+  vine.object({
+    newPassword: vine
+      .string()
+      .minLength(8)
+      .maxLength(64)
+      .regex(/[A-Z]/)
+      .regex(/[a-z]/)
+      .regex(/[0-9]/)
+      .regex(/[^A-Za-z0-9]/),
+    confirmNewPassword: vine.string().minLength(12).maxLength(64).sameAs('newPassword'),
+  })
+)
