@@ -324,7 +324,10 @@ export default class ProductsController {
     const productId = params.productId
     try {
       const payload = await request.validateUsing(validateProductStock)
-      const product = await Product.findOrFail(productId)
+      const product = await Product.query()
+        .select(['id', 'vendeurId', 'stock', 'name'])
+        .where('id', productId)
+        .firstOrFail()
 
       if (await bouncer.denies('canUpdateStock', product.vendeurId)) {
         return response
