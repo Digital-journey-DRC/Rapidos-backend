@@ -3,10 +3,12 @@ import { getUpdatableFields } from '#services/datatoupdate'
 import { generateAccessToken } from '#services/generateaccesstoken'
 import { generateOtp } from '#services/generateotp'
 import { createUser } from '#services/setuserotp'
+import smsservice from '#services/smsservice'
 import { validateAndActivateUserOtp } from '#services/validateuserotp'
 import abilities from '#start/abilities'
 import {
   registerUserValidator,
+  setPasswordValidator,
   UpdateUserValidator,
   UpdateUserValidatorForAdmin,
 } from '#validators/user'
@@ -354,6 +356,81 @@ export default class RegistersController {
       }
       return response.internalServerError({
         message: 'Erreur interne lors de la récupération de l’utilisateur',
+        status: 500,
+      })
+    }
+  }
+
+  async forgotPassWord({ request, response }: HttpContext) {
+    const { phone } = request.only(['phone'])
+    try {
+      const user = await User.findByOrFail('phone', phone)
+      //Generate token
+      const { otpCode, otpExpiredAt } = generateOtp()
+      // Set user OTP code and expiration time
+      await createUser.setUserOtp(user, otpCode, otpExpiredAt)
+
+      await smsservice.envoyerSms(user.phone, user.secureOtp as number)
+      return response.ok({
+        message: 'Un code de réinitialisation a été envoyé à votre téléphone',
+        status: 200,
+      })
+    } catch (error) {
+      if (error.code === 'E_ROW_NOT_FOUND') {
+        return response.notFound({
+          message: 'Utilisateur introuvable',
+          status: 404,
+        })
+      }
+      logger.error('Erreur lors de la demande de réinitialisation du mot de passe', {
+        message: error.message,
+        stack: error.stack,
+      })
+      return response.internalServerError({
+        message: 'Erreur interne lors de la demande de réinitialisation du mot de passe',
+        status: 500,
+      })
+    }
+  }
+
+  async resetPassword({ request, response }: HttpContext) {
+    const { otp } = request.only(['otp'])
+    try {
+      const payload = await request.validateUsing(setPasswordValidator)
+      const user = await User.findByOrFail('secureOtp', otp)
+      if (user.otpExpiredAt && user.otpExpiredAt < new Date()) {
+        return response.badRequest({
+          message: 'Code OTP invalide, expiré ou utilisateur non trouvé',
+          status: 400,
+        })
+      }
+      user.password = payload.newPassword
+      user.secureOtp = null
+      user.otpExpiredAt = null
+      await user.save()
+      const accessToken = await generateAccessToken(user, {
+        abilities: abilities[user.role],
+      })
+      return response.ok({
+        message: 'Mot de passe réinitialisé avec succès',
+        status: 200,
+        accessToken: accessToken?.value!.release(),
+        expiresIn: accessToken?.expiresAt,
+        userId: accessToken?.tokenableId,
+      })
+    } catch (error) {
+      if (error.code === 'E_ROW_NOT_FOUND') {
+        return response.notFound({
+          message: 'Utilisateur introuvable',
+          status: 404,
+        })
+      }
+      logger.error('Erreur lors de la réinitialisation du mot de passe', {
+        message: error.message,
+        stack: error.stack,
+      })
+      return response.internalServerError({
+        message: 'Erreur interne lors de la réinitialisation du mot de passe',
         status: 500,
       })
     }
