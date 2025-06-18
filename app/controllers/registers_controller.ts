@@ -369,12 +369,12 @@ export default class RegistersController {
       const { otpCode, otpExpiredAt } = generateOtp()
       // Set user OTP code and expiration time
       await createUser.setUserOtp(user, otpCode, otpExpiredAt)
-      await smsservice.envoyerSms(user.phone, otpCode)
+
+      await smsservice.envoyerSms(user.phone, user.secureOtp as number)
       return response.ok({
         message: 'Un code de réinitialisation a été envoyé à votre téléphone',
         status: 200,
-        otp: otpCode,
-        expiresAt: otpExpiredAt,
+        otp: user.secureOtp,
       })
     } catch (error) {
       if (error.code === 'E_ROW_NOT_FOUND') {
@@ -396,19 +396,18 @@ export default class RegistersController {
 
   async resetPassword({ request, response }: HttpContext) {
     const { otp } = request.only(['otp'])
-
     try {
       const payload = await request.validateUsing(setPasswordValidator)
-      const user = await User.findOrFail('secureOtp', otp)
-      //vérification de la validation de l'otp
+      const user = await User.findByOrFail('secureOtp', otp)
       if (user.otpExpiredAt && user.otpExpiredAt < new Date()) {
         return response.badRequest({
-          message: 'Le code OTP a expiré. Veuillez en demander',
+          message: 'Code OTP invalide, expiré ou utilisateur non trouvé',
+          status: 400,
         })
       }
       user.password = payload.newPassword
-      user.secureOtp = null // Clear OTP after successful reset
-      user.otpExpiredAt = null // Clear OTP expiration time
+      user.secureOtp = null
+      user.otpExpiredAt = null
       await user.save()
       const accessToken = await generateAccessToken(user, {
         abilities: abilities[user.role],
