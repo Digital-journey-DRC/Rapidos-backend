@@ -465,4 +465,30 @@ export default class RegistersController {
       })
     }
   }
+
+  async showAllUserWithStatusPendning({ response, bouncer }: HttpContext) {
+    try {
+      if (await bouncer.denies('canAcceptDelivery')) {
+        return response.forbidden({
+          message: "Vous n'avez pas accès à cette fonctionnalité",
+          status: 403,
+        })
+      }
+      const users = await User.query().where('userStatus', UserStatus.PENDING)
+      return response.ok({
+        message: 'Utilisateurs avec statut en attente',
+        status: 200,
+        users: users.map((u) => u.serialize()),
+      })
+    } catch (error) {
+      logger.error('Erreur lors de la récupération des utilisateurs en attente', {
+        message: error.message,
+        stack: error.stack,
+      })
+      return response.internalServerError({
+        message: 'Erreur interne lors de la récupération des utilisateurs en attente',
+        status: 500,
+      })
+    }
+  }
 }

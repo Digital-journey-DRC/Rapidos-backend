@@ -138,3 +138,7 @@ router.post('/users/reset-password', [RegistersController, 'resetPassword'])
 router
   .get('/users/:userId/active-account', [RegistersController, 'activeUserAcount'])
   .use(middleware.auth({ guards: ['api'] }))
+
+router
+  .get('/users/get-all/status-pending', [RegistersController, 'showAllUserWithStatusPendning'])
+  .use(middleware.auth({ guards: ['api'] }))
