@@ -129,3 +129,8 @@ export const canUpdateStock = Bouncer.ability((user: User, producyUserId: number
 
   return false
 })
+
+export const canActiveUserAccount = Bouncer.ability((user: User) => {
+  if (user.role === 'admin') return true
+  return false
+})

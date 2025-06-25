@@ -418,4 +418,51 @@ export default class RegistersController {
       })
     }
   }
+
+  async activeUserAcount({ params, response, bouncer }: HttpContext) {
+    const { id } = params
+    try {
+      if (await bouncer.denies('canActiveUserAccount')) {
+        return response.forbidden({
+          message: "Vous n'êtes pas autorisé à activer ce compte",
+          status: 403,
+        })
+      }
+      const user = await User.findOrFail(id)
+      if (user.userStatus === UserStatus.ACTIVE) {
+        return response.ok({
+          message: 'Compte déjà actif',
+          status: 200,
+        })
+      }
+      user.userStatus = UserStatus.ACTIVE
+      await user.save()
+      return response.ok({
+        message: 'Compte activé avec succès',
+        status: 200,
+        user: user.serialize(),
+      })
+    } catch (error) {
+      if (error.code === 'E_ROW_NOT_FOUND') {
+        return response.notFound({
+          message: 'Utilisateur introuvable',
+          status: 404,
+        })
+      }
+      if (error.code === 'E_AUTHORIZATION_FAILURE') {
+        return response.forbidden({
+          message: "Vous n'êtes pas autorisé à activer ce compte",
+          status: 403,
+        })
+      }
+      logger.error('Erreur lors de l’activation du compte utilisateur', {
+        message: error.message,
+        stack: error.stack,
+      })
+      return response.internalServerError({
+        message: 'Erreur interne lors de l’activation du compte utilisateur',
+        status: 500,
+      })
+    }
+  }
 }

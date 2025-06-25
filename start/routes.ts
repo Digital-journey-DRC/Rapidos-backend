@@ -135,3 +135,6 @@ router
 
 router.post('/users/forgot-password', [RegistersController, 'forgotPassWord'])
 router.post('/users/reset-password', [RegistersController, 'resetPassword'])
+router
+  .get('/users/:userId/active-account', [RegistersController, 'activeUserAcount'])
+  .use(middleware.auth({ guards: ['api'] }))
