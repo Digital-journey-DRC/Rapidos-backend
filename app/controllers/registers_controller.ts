@@ -38,28 +38,8 @@ export default class RegistersController {
       // Set user OTP code and expiration time
       await createUser.setUserOtp(user, otpCode, otpExpiredAt)
 
-      // Configure nodemailer and send mail to user's email
-      // try {
-      //   await Mailservice.sendMail(user.email, otpCode)
-      // } catch (mailError) {
-      //   // Delete user if email sending fails
-      //   await user.delete()
-      //   logger.error("Erreur lors de l'envoi de l'email :", {
-      //     message: mailError.message,
-      //     stack: mailError.stack,
-      //     code: mailError.code,
-      //   })
-      // }
-
-      // try {
-      //   console.log('Envoi de l’OTP par WhatsApp', user.phone, otpCode)
-
-      //   await WhatsappService.sendOtp(user.phone, otpCode)
-      // } catch (error) {
-      //   console.error('Erreur lors de l’envoi WhatsApp:', error.response?.data || error.message)
-      //   throw error
-      // }
-      // Send response
+      // Send OTP code via SMS
+      await smsservice.envoyerSms(user.phone, user.secureOtp as number)
       return response.send({
         message: 'saisir le opt pour continuer',
         status: 201,
