@@ -10,6 +10,7 @@ import type { HasMany, HasOne } from '@adonisjs/lucid/types/relations'
 import Adresse from './adresse.js'
 import Wallet from './wallet.js'
 import AccessToken from './access_token.js'
+import { UserStatus } from '../Enum/user_status.js'
 
 const AuthFinder = withAuthFinder(() => hash.use('scrypt'), {
   uids: ['email', 'phone'],
@@ -52,6 +53,9 @@ export default class User extends compose(BaseModel, AuthFinder) {
 
   @column()
   declare termsAccepted: boolean
+
+  @column()
+  declare userStatus: UserStatus | null
 
   static accessTokens = DbAccessTokensProvider.forModel(User, {
     expiresIn: '30 days',

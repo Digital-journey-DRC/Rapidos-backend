@@ -14,6 +14,8 @@ import {
 } from '#validators/user'
 import type { HttpContext } from '@adonisjs/core/http'
 import logger from '@adonisjs/core/services/logger'
+import { UserRole } from '../Enum/user_role.js'
+import { UserStatus } from '../Enum/user_status.js'
 
 export default class RegistersController {
   async register({ request, response }: HttpContext) {
@@ -28,6 +30,7 @@ export default class RegistersController {
         lastName: payload.lastName,
         phone: payload.phone,
         role: payload.role,
+        userStatus: UserRole.Livreur ? UserStatus.PENDING : UserStatus.ACTIVE,
         termsAccepted: payload.termsAccepted,
       })
 
