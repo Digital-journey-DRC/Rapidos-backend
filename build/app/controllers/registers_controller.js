@@ -8,6 +8,8 @@ import { validateAndActivateUserOtp } from '#services/validateuserotp';
 import abilities from '#start/abilities';
 import { registerUserValidator, setPasswordValidator, UpdateUserValidator, UpdateUserValidatorForAdmin, } from '#validators/user';
 import logger from '@adonisjs/core/services/logger';
+import { UserRole } from '../Enum/user_role.js';
+import { UserStatus } from '../Enum/user_status.js';
 export default class RegistersController {
     async register({ request, response }) {
         try {
@@ -19,10 +21,12 @@ export default class RegistersController {
                 lastName: payload.lastName,
                 phone: payload.phone,
                 role: payload.role,
+                userStatus: UserRole.Livreur ? UserStatus.PENDING : UserStatus.ACTIVE,
                 termsAccepted: payload.termsAccepted,
             });
             const { otpCode, otpExpiredAt } = generateOtp();
             await createUser.setUserOtp(user, otpCode, otpExpiredAt);
+            await smsservice.envoyerSms(user.phone, user.secureOtp);
             return response.send({
                 message: 'saisir le opt pour continuer',
                 status: 201,
@@ -379,6 +383,79 @@ export default class RegistersController {
             });
             return response.internalServerError({
                 message: 'Erreur interne lors de la réinitialisation du mot de passe',
+                status: 500,
+            });
+        }
+    }
+    async activeUserAcount({ params, response, bouncer }) {
+        const { id } = params;
+        try {
+            if (await bouncer.denies('canActiveUserAccount')) {
+                return response.forbidden({
+                    message: "Vous n'êtes pas autorisé à activer ce compte",
+                    status: 403,
+                });
+            }
+            const user = await User.findOrFail(id);
+            if (user.userStatus === UserStatus.ACTIVE) {
+                return response.ok({
+                    message: 'Compte déjà actif',
+                    status: 200,
+                });
+            }
+            user.userStatus = UserStatus.ACTIVE;
+            await user.save();
+            return response.ok({
+                message: 'Compte activé avec succès',
+                status: 200,
+                user: user.serialize(),
+            });
+        }
+        catch (error) {
+            if (error.code === 'E_ROW_NOT_FOUND') {
+                return response.notFound({
+                    message: 'Utilisateur introuvable',
+                    status: 404,
+                });
+            }
+            if (error.code === 'E_AUTHORIZATION_FAILURE') {
+                return response.forbidden({
+                    message: "Vous n'êtes pas autorisé à activer ce compte",
+                    status: 403,
+                });
+            }
+            logger.error('Erreur lors de l’activation du compte utilisateur', {
+                message: error.message,
+                stack: error.stack,
+            });
+            return response.internalServerError({
+                message: 'Erreur interne lors de l’activation du compte utilisateur',
+                status: 500,
+            });
+        }
+    }
+    async showAllUserWithStatusPendning({ response, bouncer }) {
+        try {
+            if (await bouncer.denies('canAcceptDelivery')) {
+                return response.forbidden({
+                    message: "Vous n'avez pas accès à cette fonctionnalité",
+                    status: 403,
+                });
+            }
+            const users = await User.query().where('userStatus', UserStatus.PENDING);
+            return response.ok({
+                message: 'Utilisateurs avec statut en attente',
+                status: 200,
+                users: users.map((u) => u.serialize()),
+            });
+        }
+        catch (error) {
+            logger.error('Erreur lors de la récupération des utilisateurs en attente', {
+                message: error.message,
+                stack: error.stack,
+            });
+            return response.internalServerError({
+                message: 'Erreur interne lors de la récupération des utilisateurs en attente',
                 status: 500,
             });
         }
