@@ -92,7 +92,7 @@ export const canCommandeProduct = Bouncer.ability((user: User) => {
 
 export const canShowAllDelivery = Bouncer.ability(
   (user: User, commandes: Commande[], produits: Product[]) => {
-    if (user.role === 'admin' || user.role === 'livreur') {
+    if (user.role === 'admin' || (user.role === 'livreur' && user.userStatus === 'active')) {
       return true
     }
 
@@ -111,7 +111,7 @@ export const canShowAllDelivery = Bouncer.ability(
 )
 
 export const canAcceptDelivery = Bouncer.ability((user: User) => {
-  if (user.role === 'admin' || user.role === 'livreur') {
+  if (user.role === 'admin' || (user.role === 'livreur' && user.userStatus === 'active')) {
     return true
   }
   return false
@@ -127,5 +127,10 @@ export const canUpdateStock = Bouncer.ability((user: User, producyUserId: number
     return true
   }
 
+  return false
+})
+
+export const canActiveUserAccount = Bouncer.ability((user: User) => {
+  if (user.role === 'admin') return true
   return false
 })

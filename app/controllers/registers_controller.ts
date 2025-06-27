@@ -14,6 +14,8 @@ import {
 } from '#validators/user'
 import type { HttpContext } from '@adonisjs/core/http'
 import logger from '@adonisjs/core/services/logger'
+import { UserRole } from '../Enum/user_role.js'
+import { UserStatus } from '../Enum/user_status.js'
 
 export default class RegistersController {
   async register({ request, response }: HttpContext) {
@@ -28,6 +30,7 @@ export default class RegistersController {
         lastName: payload.lastName,
         phone: payload.phone,
         role: payload.role,
+        userStatus: UserRole.Livreur ? UserStatus.PENDING : UserStatus.ACTIVE,
         termsAccepted: payload.termsAccepted,
       })
 
@@ -38,28 +41,8 @@ export default class RegistersController {
       // Set user OTP code and expiration time
       await createUser.setUserOtp(user, otpCode, otpExpiredAt)
 
-      // Configure nodemailer and send mail to user's email
-      // try {
-      //   await Mailservice.sendMail(user.email, otpCode)
-      // } catch (mailError) {
-      //   // Delete user if email sending fails
-      //   await user.delete()
-      //   logger.error("Erreur lors de l'envoi de l'email :", {
-      //     message: mailError.message,
-      //     stack: mailError.stack,
-      //     code: mailError.code,
-      //   })
-      // }
-
-      // try {
-      //   console.log('Envoi de l’OTP par WhatsApp', user.phone, otpCode)
-
-      //   await WhatsappService.sendOtp(user.phone, otpCode)
-      // } catch (error) {
-      //   console.error('Erreur lors de l’envoi WhatsApp:', error.response?.data || error.message)
-      //   throw error
-      // }
-      // Send response
+      // Send OTP code via SMS
+      await smsservice.envoyerSms(user.phone, user.secureOtp as number)
       return response.send({
         message: 'saisir le opt pour continuer',
         status: 201,
@@ -431,6 +414,79 @@ export default class RegistersController {
       })
       return response.internalServerError({
         message: 'Erreur interne lors de la réinitialisation du mot de passe',
+        status: 500,
+      })
+    }
+  }
+
+  async activeUserAcount({ params, response, bouncer }: HttpContext) {
+    const { id } = params
+    try {
+      if (await bouncer.denies('canActiveUserAccount')) {
+        return response.forbidden({
+          message: "Vous n'êtes pas autorisé à activer ce compte",
+          status: 403,
+        })
+      }
+      const user = await User.findOrFail(id)
+      if (user.userStatus === UserStatus.ACTIVE) {
+        return response.ok({
+          message: 'Compte déjà actif',
+          status: 200,
+        })
+      }
+      user.userStatus = UserStatus.ACTIVE
+      await user.save()
+      return response.ok({
+        message: 'Compte activé avec succès',
+        status: 200,
+        user: user.serialize(),
+      })
+    } catch (error) {
+      if (error.code === 'E_ROW_NOT_FOUND') {
+        return response.notFound({
+          message: 'Utilisateur introuvable',
+          status: 404,
+        })
+      }
+      if (error.code === 'E_AUTHORIZATION_FAILURE') {
+        return response.forbidden({
+          message: "Vous n'êtes pas autorisé à activer ce compte",
+          status: 403,
+        })
+      }
+      logger.error('Erreur lors de l’activation du compte utilisateur', {
+        message: error.message,
+        stack: error.stack,
+      })
+      return response.internalServerError({
+        message: 'Erreur interne lors de l’activation du compte utilisateur',
+        status: 500,
+      })
+    }
+  }
+
+  async showAllUserWithStatusPendning({ response, bouncer }: HttpContext) {
+    try {
+      if (await bouncer.denies('canAcceptDelivery')) {
+        return response.forbidden({
+          message: "Vous n'avez pas accès à cette fonctionnalité",
+          status: 403,
+        })
+      }
+      const users = await User.query().where('userStatus', UserStatus.PENDING)
+      return response.ok({
+        message: 'Utilisateurs avec statut en attente',
+        status: 200,
+        users: users.map((u) => u.serialize()),
+      })
+    } catch (error) {
+      logger.error('Erreur lors de la récupération des utilisateurs en attente', {
+        message: error.message,
+        stack: error.stack,
+      })
+      return response.internalServerError({
+        message: 'Erreur interne lors de la récupération des utilisateurs en attente',
         status: 500,
       })
     }

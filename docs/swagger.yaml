@@ -1485,15 +1485,116 @@ paths:
                   status:
                     type: integer
                     example: 500
+  /users/{userId}/active-account:
+      get:
+        tags:
+          - Users
+        summary: Active le compte d'un utilisateur par son ID
+        security:
+          - bearerAuth: []
+        parameters:
+          - name: userId
+            in: path
+            required: true
+            schema:
+              type: integer
+            description: ID de l'utilisateur à activer
+        responses:
+          '200':
+            description: Compte activé avec succès ou déjà actif
+            content:
+              application/json:
+                schema:
+                  type: object
+                  properties:
+                    message:
+                      type: string
+                      example: Compte activé avec succès
+                    status:
+                      type: integer
+                      example: 200
+                    user:
+                      $ref: '#/components/schemas/User'
+          '403':
+            description: Accès interdit
+            content:
+              application/json:
+                schema:
+                  type: object
+                  properties:
+                    message:
+                      type: string
+                      example: Vous n'êtes pas autorisé à activer ce compte
+                    status:
+                      type: integer
+                      example: 403
+          '404':
+            description: Utilisateur introuvable
+            content:
+              application/json:
+                schema:
+                  type: object
+                  properties:
+                    message:
+                      type: string
+                      example: Utilisateur introuvable
+                    status:
+                      type: integer
+                      example: 404
+          '500':
+            description: Erreur serveur interne
 
-components:
-  securitySchemes:
-    bearerAuth:
-      type: http
-      scheme: bearer
-      bearerFormat: JWT
+  /users/get-all/status-pending:
+    get:
+      tags:
+        - Users
+      summary: Récupère tous les utilisateurs avec le statut "pending"
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Liste des utilisateurs en attente
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  users:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/User'
+        '403':
+          description: Accès interdit
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Accès interdit
+        '500':
+          description: Erreur serveur interne
+  components:
+    securitySchemes:
+      bearerAuth:
+        type: http
+        scheme: bearer
+        bearerFormat: JWT
 
   schemas:
+
+    UserStatus:
+      type: string
+      description: Statut de l'utilisateur
+      enum:
+      - active
+      - inactive
+      - banned
+      - pending
+      - suspended
+      - deleted
+
     User:
       type: object
       properties:

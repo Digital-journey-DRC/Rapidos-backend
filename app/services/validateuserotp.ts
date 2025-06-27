@@ -14,13 +14,15 @@ export async function validateAndActivateUserOtp(
       throw new AppError('Le code OTP est requis.', 400)
     }
 
-    const user = await User.findByOrFail('id', userId)
+    const user = await User.findOrFail(userId)
 
     if (!user) {
       throw new AppError('Utilisateur introuvable.', 404)
     }
 
-    if (user.secureOtp !== otp) {
+    const secureOtp = Number(user.secureOtp)
+
+    if (secureOtp !== otp) {
       throw new AppError('Code OTP invalide.', 400)
     }
 
