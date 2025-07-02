@@ -1,0 +1,30 @@
+name: CI/CD - deploy rapidos API
+on:
+  push:
+    branches: -master
+
+jobs:
+  buil-and-deploy:
+    name: Test & Deploy to production
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v2
+        with:
+          node-version: '22'
+
+      - name: Install dependencies
+        run: npm install
+
+      # - name : Run tests
+      #   run : npm test
+
+      - name: Deploy to production
+        run: pm2 restart all
+        env:
+          NODE_ENV: production
+          API_KEY: ${{ secrets.API_KEY }}
+          CLOUDINARY_URL: ${{ secrets.CLOUDINARY_URL }}
