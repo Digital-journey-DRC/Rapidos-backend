@@ -142,3 +142,5 @@ router
 router
   .get('/users/get-all/status-pending', [RegistersController, 'showAllUserWithStatusPendning'])
   .use(middleware.auth({ guards: ['api'] }))
+
+  router.post('/users/update-profil', [RegistersController, 'updateUserProfile']).use(middleware.auth({ guards: ['api'] }))

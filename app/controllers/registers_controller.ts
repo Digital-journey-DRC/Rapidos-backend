@@ -16,7 +16,6 @@ import type { HttpContext } from '@adonisjs/core/http'
 import logger from '@adonisjs/core/services/logger'
 import { UserRole } from '../Enum/user_role.js'
 import { UserStatus } from '../Enum/user_status.js'
-import { UploadedMedia } from '../types/products.js'
 import { uploadProfilePicture } from '#services/upload_profil'
 import Media from '#models/media'
 
