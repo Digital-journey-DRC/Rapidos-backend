@@ -501,6 +501,8 @@ export default class RegistersController {
       extnames: ['jpg', 'jpeg', 'png'],
     })
 
+    
+
     if (!avatar || !avatar.isValid || !avatar.tmpPath) {
       return response.badRequest({
         message: 'Fichier invalide ou manquant',
@@ -510,6 +512,7 @@ export default class RegistersController {
 
     try {
       const uploadedResult = await uploadProfilePicture(avatar.tmpPath)
+      
       const media = await Media.create({
         mediaUrl: uploadedResult.secure_url,
         mediaType: uploadedResult.format,
