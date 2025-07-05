@@ -506,6 +506,85 @@ paths:
                     type: integer
                     example: 500
 
+  /users/update-profil:
+    post:
+      tags:
+        - Profil
+      summary: Met à jour la photo de profil de l'utilisateur
+      description: Permet à un utilisateur authentifié de mettre à jour sa photo de profil en uploadant une nouvelle image
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - avatar
+              properties:
+                avatar:
+                  type: string
+                  format: binary
+                  description: Fichier image pour l'avatar (JPG, JPEG, PNG, max 2MB)
+      responses:
+        '200':
+          description: Profil mis à jour avec succès
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Profil mis à jour avec succès
+                  status:
+                    type: integer
+                    example: 200
+                  avatarUrl:
+                    type: string
+                    format: uri
+                    example: https://res.cloudinary.com/example/image/upload/v1625659200/profile_pictures/user_123.jpg
+        '400':
+          description: Fichier invalide ou manquant
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Fichier invalide ou manquant
+                  status:
+                    type: integer
+                    example: 400
+        '401':
+          description: Non autorisé - Token manquant ou invalide
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Token d'authentification manquant ou invalide
+                  status:
+                    type: integer
+                    example: 401
+        '500':
+          description: Erreur interne
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Erreur interne lors de la mise à jour du profil utilisateur
+                  status:
+                    type: integer
+                    example: 500
+
   /products/store:
     post:
       summary: Création d’un produit avec médias
@@ -1905,6 +1984,31 @@ paths:
     Devise:
       type: string
       enum: [FC, USD]
+
+    Profil:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        userId:
+          type: integer
+          example: 14
+        mediaId:
+          type: integer
+          example: 5
+        createdAt:
+          type: string
+          format: date-time
+          example: '2025-07-05T10:30:00.000+00:00'
+        updatedAt:
+          type: string
+          format: date-time
+          example: '2025-07-05T10:30:00.000+00:00'
+        user:
+          $ref: '#/components/schemas/User'
+        media:
+          $ref: '#/components/schemas/Media'
 
     CommandeProductResponse:
       type: object
