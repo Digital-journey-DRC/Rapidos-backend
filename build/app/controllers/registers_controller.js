@@ -10,6 +10,8 @@ import { registerUserValidator, setPasswordValidator, UpdateUserValidator, Updat
 import logger from '@adonisjs/core/services/logger';
 import { UserRole } from '../Enum/user_role.js';
 import { UserStatus } from '../Enum/user_status.js';
+import { uploadProfilePicture } from '#services/upload_profil';
+import Media from '#models/media';
 export default class RegistersController {
     async register({ request, response }) {
         try {
@@ -456,6 +458,53 @@ export default class RegistersController {
             });
             return response.internalServerError({
                 message: 'Erreur interne lors de la récupération des utilisateurs en attente',
+                status: 500,
+            });
+        }
+    }
+    async updateUserProfile({ request, response, auth }) {
+        const curentUser = auth.user;
+        const avatar = request.file('avatar', {
+            size: '2mb',
+            extnames: ['jpg', 'jpeg', 'png'],
+        });
+        if (!avatar || !avatar.isValid || !avatar.tmpPath) {
+            return response.badRequest({
+                message: 'Fichier invalide ou manquant',
+                status: 400,
+            });
+        }
+        try {
+            const uploadedResult = await uploadProfilePicture(avatar.tmpPath);
+            const media = await Media.create({
+                mediaUrl: uploadedResult.secure_url,
+                mediaType: uploadedResult.format,
+            });
+            await curentUser.related('profil').updateOrCreate({
+                userId: curentUser.id,
+            }, {
+                mediaId: media.id,
+            });
+            return response.ok({
+                message: 'Profil mis à jour avec succès',
+                status: 200,
+                avatarUrl: media.mediaUrl,
+            });
+        }
+        catch (error) {
+            if (error.code === 'E_VALIDATION_ERROR') {
+                return response.badRequest({
+                    message: 'Données invalides',
+                    errors: error.messages,
+                    status: 400,
+                });
+            }
+            logger.error('Erreur lors de la mise à jour du profil utilisateur', {
+                message: error.message,
+                stack: error.stack,
+            });
+            return response.internalServerError({
+                message: 'Erreur interne lors de la mise à jour du profil utilisateur',
                 status: 500,
             });
         }
