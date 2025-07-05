@@ -50,7 +50,7 @@ export const canCommandeProduct = Bouncer.ability((user) => {
     return false;
 });
 export const canShowAllDelivery = Bouncer.ability((user, commandes, produits) => {
-    if (user.role === 'admin' || user.role === 'livreur') {
+    if (user.role === 'admin' || (user.role === 'livreur' && user.userStatus === 'active')) {
         return true;
     }
     for (const commande of commandes) {
@@ -63,6 +63,26 @@ export const canShowAllDelivery = Bouncer.ability((user, commandes, produits) =>
             return true;
         }
     }
+    return false;
+});
+export const canAcceptDelivery = Bouncer.ability((user) => {
+    if (user.role === 'admin' || (user.role === 'livreur' && user.userStatus === 'active')) {
+        return true;
+    }
+    return false;
+});
+export const canUpdateStock = Bouncer.ability((user, producyUserId) => {
+    if (user.role === 'admin') {
+        return true;
+    }
+    if (user.role === 'vendeur' && user.id === producyUserId) {
+        return true;
+    }
+    return false;
+});
+export const canActiveUserAccount = Bouncer.ability((user) => {
+    if (user.role === 'admin')
+        return true;
     return false;
 });
 //# sourceMappingURL=main.js.map

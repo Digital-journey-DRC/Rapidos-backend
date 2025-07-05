@@ -3,10 +3,13 @@ import { getUpdatableFields } from '#services/datatoupdate';
 import { generateAccessToken } from '#services/generateaccesstoken';
 import { generateOtp } from '#services/generateotp';
 import { createUser } from '#services/setuserotp';
+import smsservice from '#services/smsservice';
 import { validateAndActivateUserOtp } from '#services/validateuserotp';
 import abilities from '#start/abilities';
-import { registerUserValidator, UpdateUserValidator, UpdateUserValidatorForAdmin, } from '#validators/user';
+import { registerUserValidator, setPasswordValidator, UpdateUserValidator, UpdateUserValidatorForAdmin, } from '#validators/user';
 import logger from '@adonisjs/core/services/logger';
+import { UserRole } from '../Enum/user_role.js';
+import { UserStatus } from '../Enum/user_status.js';
 export default class RegistersController {
     async register({ request, response }) {
         try {
@@ -18,10 +21,12 @@ export default class RegistersController {
                 lastName: payload.lastName,
                 phone: payload.phone,
                 role: payload.role,
+                userStatus: UserRole.Livreur ? UserStatus.PENDING : UserStatus.ACTIVE,
                 termsAccepted: payload.termsAccepted,
             });
             const { otpCode, otpExpiredAt } = generateOtp();
             await createUser.setUserOtp(user, otpCode, otpExpiredAt);
+            await smsservice.envoyerSms(user.phone, user.secureOtp);
             return response.send({
                 message: 'saisir le opt pour continuer',
                 status: 201,
@@ -306,6 +311,151 @@ export default class RegistersController {
             }
             return response.internalServerError({
                 message: 'Erreur interne lors de la récupération de l’utilisateur',
+                status: 500,
+            });
+        }
+    }
+    async forgotPassWord({ request, response }) {
+        const { phone } = request.only(['phone']);
+        try {
+            const user = await User.findByOrFail('phone', phone);
+            const { otpCode, otpExpiredAt } = generateOtp();
+            await createUser.setUserOtp(user, otpCode, otpExpiredAt);
+            await smsservice.envoyerSms(user.phone, user.secureOtp);
+            return response.ok({
+                message: 'Un code de réinitialisation a été envoyé à votre téléphone',
+                status: 200,
+            });
+        }
+        catch (error) {
+            if (error.code === 'E_ROW_NOT_FOUND') {
+                return response.notFound({
+                    message: 'Utilisateur introuvable',
+                    status: 404,
+                });
+            }
+            logger.error('Erreur lors de la demande de réinitialisation du mot de passe', {
+                message: error.message,
+                stack: error.stack,
+            });
+            return response.internalServerError({
+                message: 'Erreur interne lors de la demande de réinitialisation du mot de passe',
+                status: 500,
+            });
+        }
+    }
+    async resetPassword({ request, response }) {
+        const { otp } = request.only(['otp']);
+        try {
+            const payload = await request.validateUsing(setPasswordValidator);
+            const user = await User.findByOrFail('secureOtp', otp);
+            if (user.otpExpiredAt && user.otpExpiredAt < new Date()) {
+                return response.badRequest({
+                    message: 'Code OTP invalide, expiré ou utilisateur non trouvé',
+                    status: 400,
+                });
+            }
+            user.password = payload.newPassword;
+            user.secureOtp = null;
+            user.otpExpiredAt = null;
+            await user.save();
+            const accessToken = await generateAccessToken(user, {
+                abilities: abilities[user.role],
+            });
+            return response.ok({
+                message: 'Mot de passe réinitialisé avec succès',
+                status: 200,
+                accessToken: accessToken?.value.release(),
+                expiresIn: accessToken?.expiresAt,
+                userId: accessToken?.tokenableId,
+            });
+        }
+        catch (error) {
+            if (error.code === 'E_ROW_NOT_FOUND') {
+                return response.notFound({
+                    message: 'Utilisateur introuvable',
+                    status: 404,
+                });
+            }
+            logger.error('Erreur lors de la réinitialisation du mot de passe', {
+                message: error.message,
+                stack: error.stack,
+            });
+            return response.internalServerError({
+                message: 'Erreur interne lors de la réinitialisation du mot de passe',
+                status: 500,
+            });
+        }
+    }
+    async activeUserAcount({ params, response, bouncer }) {
+        const { id } = params;
+        try {
+            if (await bouncer.denies('canActiveUserAccount')) {
+                return response.forbidden({
+                    message: "Vous n'êtes pas autorisé à activer ce compte",
+                    status: 403,
+                });
+            }
+            const user = await User.findOrFail(id);
+            if (user.userStatus === UserStatus.ACTIVE) {
+                return response.ok({
+                    message: 'Compte déjà actif',
+                    status: 200,
+                });
+            }
+            user.userStatus = UserStatus.ACTIVE;
+            await user.save();
+            return response.ok({
+                message: 'Compte activé avec succès',
+                status: 200,
+                user: user.serialize(),
+            });
+        }
+        catch (error) {
+            if (error.code === 'E_ROW_NOT_FOUND') {
+                return response.notFound({
+                    message: 'Utilisateur introuvable',
+                    status: 404,
+                });
+            }
+            if (error.code === 'E_AUTHORIZATION_FAILURE') {
+                return response.forbidden({
+                    message: "Vous n'êtes pas autorisé à activer ce compte",
+                    status: 403,
+                });
+            }
+            logger.error('Erreur lors de l’activation du compte utilisateur', {
+                message: error.message,
+                stack: error.stack,
+            });
+            return response.internalServerError({
+                message: 'Erreur interne lors de l’activation du compte utilisateur',
+                status: 500,
+            });
+        }
+    }
+    async showAllUserWithStatusPendning({ response, bouncer }) {
+        try {
+            if (await bouncer.denies('canAcceptDelivery')) {
+                return response.forbidden({
+                    message: "Vous n'avez pas accès à cette fonctionnalité",
+                    status: 403,
+                });
+            }
+            const users = await User.query().where('userStatus', UserStatus.PENDING);
+            return response.ok({
+                message: 'Utilisateurs avec statut en attente',
+                status: 200,
+                users: users.map((u) => u.serialize()),
+            });
+        }
+        catch (error) {
+            logger.error('Erreur lors de la récupération des utilisateurs en attente', {
+                message: error.message,
+                stack: error.stack,
+            });
+            return response.internalServerError({
+                message: 'Erreur interne lors de la récupération des utilisateurs en attente',
                 status: 500,
             });
         }

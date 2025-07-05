@@ -64,7 +64,7 @@ router
     .get('/products/all-products', [ProductsController, 'showAllProducts'])
     .use(middleware.auth({ guards: ['api'] }));
 router
-    .get('/products/update/:productId', [ProductsController, 'updateProduct'])
+    .post('/products/update/:productId', [ProductsController, 'updateProduct'])
     .use(middleware.auth({ guards: ['api'] }));
 router
     .delete('/products/:productId', [ProductsController, 'deleteProduct'])
@@ -86,5 +86,22 @@ router
     .use(middleware.auth({ guards: ['api'] }));
 router
     .get('/vendeurs', [ProductsController, 'getVendeurAndTheirProducts'])
+    .use(middleware.auth({ guards: ['api'] }));
+router
+    .get('/commandes/acheteur', [CommandesController, 'getCommandeByAcheteur'])
+    .use(middleware.auth({ guards: ['api'] }));
+router
+    .get('/livraison/accept/:livraisonId', [LivraisonsController, 'accepteDelivery'])
+    .use(middleware.auth({ guards: ['api'] }));
+router
+    .post('/stock/:productId/update', [ProductsController, 'updateStockForProduct'])
+    .use(middleware.auth({ guards: ['api'] }));
+router.post('/users/forgot-password', [RegistersController, 'forgotPassWord']);
+router.post('/users/reset-password', [RegistersController, 'resetPassword']);
+router
+    .get('/users/:userId/active-account', [RegistersController, 'activeUserAcount'])
+    .use(middleware.auth({ guards: ['api'] }));
+router
+    .get('/users/get-all/status-pending', [RegistersController, 'showAllUserWithStatusPendning'])
     .use(middleware.auth({ guards: ['api'] }));
 //# sourceMappingURL=routes.js.map
