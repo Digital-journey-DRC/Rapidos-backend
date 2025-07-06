@@ -293,14 +293,61 @@ paths:
     get:
       tags:
         - Users
-      summary: Récupérer l'utilisateur connecté
+      summary: Récupérer l'utilisateur connecté avec sa photo de profil
+      description: Récupère les informations de l'utilisateur actuellement connecté ainsi que l'URL de sa photo de profil s'il en a une
       security:
         - bearerAuth: []
       responses:
         '200':
           description: Utilisateur récupéré avec succès
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Utilisateur récupéré avec succès
+                  status:
+                    type: integer
+                    example: 200
+                  data:
+                    type: object
+                    properties:
+                      user:
+                        $ref: '#/components/schemas/User'
+                      media:
+                        type: string
+                        format: uri
+                        nullable: true
+                        example: https://res.cloudinary.com/example/image/upload/v1625659200/profile_pictures/user_123.jpg
+                        description: URL de la photo de profil de l'utilisateur (null si aucune photo)
+        '401':
+          description: Non autorisé - Token manquant ou invalide
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Token d'authentification manquant ou invalide
+                  status:
+                    type: integer
+                    example: 401
         '500':
           description: Erreur interne
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Erreur interne lors de la récupération de l'utilisateur
+                  status:
+                    type: integer
+                    example: 500
 
   /users:
     get:
