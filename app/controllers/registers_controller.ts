@@ -278,7 +278,24 @@ export default class RegistersController {
   }
   async getUser({ response, auth }: HttpContext) {
     try {
-      const user = auth.user!
+      const currentUser = auth.user!
+      const userWithProfile = await User.query()
+        .where('id', currentUser.id)
+        .preload('profil', (query) => {
+          query.preload('media')
+        })
+        .firstOrFail()
+        
+      // Vérifier si le profil et les médias existent avant d'accéder à l'URL
+      let mediaUrl = null
+      if (userWithProfile.profil && userWithProfile.profil.media) {
+        mediaUrl = userWithProfile.profil.media.mediaUrl
+      }
+      
+      const user = {
+        user: currentUser,
+        media: mediaUrl,
+      }
       return response.ok({
         message: 'Utilisateur récupéré avec succès',
         status: 200,
