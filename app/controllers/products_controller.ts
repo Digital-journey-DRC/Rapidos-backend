@@ -298,6 +298,16 @@ export default class ProductsController {
   async getVendeurAndTheirProducts({ response }: HttpContext) {
     try {
       const vendeurs = await User.query().where('role', 'vendeur')
+      let media= null
+      for (const vendeur of vendeurs) {
+        const userWithProfile = await User.query()
+                .where('id', vendeur.id)
+                .preload('profil', (query) => {
+                  query.preload('media')
+                })
+                .firstOrFail()
+        media = userWithProfile.profil.media
+      }
       const vendeurWITHProduct = []
       for (const vendeur of vendeurs) {
         const product = await Product.query().where('vendeur_id', vendeur.id).preload('media')
@@ -308,6 +318,7 @@ export default class ProductsController {
         vendeurWITHProduct.push({
           vendeur,
           products: product,
+          media: media || null,
         })
       }
       return response.ok({ vendeurWITHProduct })
