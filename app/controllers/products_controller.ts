@@ -295,41 +295,54 @@ export default class ProductsController {
     }
   }
 
-  async getVendeurAndTheirProducts({ response }: HttpContext) {
-    try {
-      const vendeurs = await User.query().where('role', 'vendeur')
-      let media= null
-      for (const vendeur of vendeurs) {
+ async getVendeurAndTheirProducts({ response }: HttpContext) {
+  try {
+    const vendeurs = await User.query().where('role', 'vendeur')
+    const vendeurWITHProduct = []
+
+    for (const vendeur of vendeurs) {
+      // Récupérer les produits du vendeur
+      const products = await Product.query().where('vendeur_id', vendeur.id).preload('media')
+
+      if (!products || products.length === 0) {
+        continue
+      }
+
+      // Récupérer le profil et media du vendeur
+      let vendeurMedia = null
+      try {
         const userWithProfile = await User.query()
-                .where('id', vendeur.id)
-                .preload('profil', (query) => {
-                  query.preload('media')
-                })
-                .firstOrFail()
-        media = userWithProfile.profil.media
-      }
-      const vendeurWITHProduct = []
-      for (const vendeur of vendeurs) {
-        const product = await Product.query().where('vendeur_id', vendeur.id).preload('media')
+          .where('id', vendeur.id)
+          .preload('profil', (query) => {
+            query.preload('media')
+          })
+          .first()
 
-        if (!product || product.length === 0) {
-          continue
+        // Vérifier si le profil et media existent
+        if (userWithProfile?.profil?.media) {
+          vendeurMedia = userWithProfile.profil.media
         }
-        vendeurWITHProduct.push({
-          vendeur,
-          products: product,
-          media: media || null,
-        })
-      }
-      return response.ok({ vendeurWITHProduct })
-    } catch (error) {
-      if (error.code === 'E_ROW_NOT_FOUND') {
-        return response.status(404).json({ message: 'Aucun vendeur trouvé', error: error.message })
+      } catch (profileError) {
+        // Si erreur lors de la récupération du profil, continuer avec media = null
+        console.warn(`Erreur lors de la récupération du profil pour le vendeur ${vendeur.id}:`, profileError.message)
       }
 
-      return response.status(500).json({ message: 'Erreur serveur interne', error: error.message })
+      vendeurWITHProduct.push({
+        vendeur,
+        products,
+        media: vendeurMedia,
+      })
     }
+
+    return response.ok({ vendeurWITHProduct })
+  } catch (error) {
+    if (error.code === 'E_ROW_NOT_FOUND') {
+      return response.status(404).json({ message: 'Aucun vendeur trouvé', error: error.message })
+    }
+
+    return response.status(500).json({ message: 'Erreur serveur interne', error: error.message })
   }
+}
 
   async updateStockForProduct({ params, response, request, bouncer }: HttpContext) {
     const productId = params.productId
