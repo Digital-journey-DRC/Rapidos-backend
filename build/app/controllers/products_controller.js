@@ -262,26 +262,31 @@ export default class ProductsController {
     async getVendeurAndTheirProducts({ response }) {
         try {
             const vendeurs = await User.query().where('role', 'vendeur');
-            let media = null;
-            for (const vendeur of vendeurs) {
-                const userWithProfile = await User.query()
-                    .where('id', vendeur.id)
-                    .preload('profil', (query) => {
-                    query.preload('media');
-                })
-                    .firstOrFail();
-                media = userWithProfile.profil.media;
-            }
             const vendeurWITHProduct = [];
             for (const vendeur of vendeurs) {
-                const product = await Product.query().where('vendeur_id', vendeur.id).preload('media');
-                if (!product || product.length === 0) {
+                const products = await Product.query().where('vendeur_id', vendeur.id).preload('media');
+                if (!products || products.length === 0) {
                     continue;
+                }
+                let vendeurMedia = null;
+                try {
+                    const userWithProfile = await User.query()
+                        .where('id', vendeur.id)
+                        .preload('profil', (query) => {
+                        query.preload('media');
+                    })
+                        .first();
+                    if (userWithProfile?.profil?.media) {
+                        vendeurMedia = userWithProfile.profil.media;
+                    }
+                }
+                catch (profileError) {
+                    console.warn(`Erreur lors de la récupération du profil pour le vendeur ${vendeur.id}:`, profileError.message);
                 }
                 vendeurWITHProduct.push({
                     vendeur,
-                    products: product,
-                    media: media || null,
+                    products,
+                    media: vendeurMedia,
                 });
             }
             return response.ok({ vendeurWITHProduct });
