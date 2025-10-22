@@ -1,4 +1,4 @@
-import { LabelToProductCategory, ProductCategory } from '../Enum/product_category.js'
+import { LabelToProductCategory } from '../Enum/product_category.js'
 import { DataCategory } from '../types/products.js'
 
 export const LabelParseCategoryFromFrenchInEnglish = (data: DataCategory) => {
@@ -12,10 +12,10 @@ export const LabelParseCategoryFromFrenchInEnglish = (data: DataCategory) => {
   }
 
   // 4. Vérifie que la catégorie est bien dans l'enum
-  if (!Object.values(ProductCategory).includes(data.name)) {
-    return {
-      error: 'Catégorie invalide. Utilisez une valeur reconnue.',
-    }
-  }
+  // if (!Object.values(ProductCategory).includes(data.name)) {
+  //   return {
+  //     error: 'Catégorie invalide. Utilisez une valeur reconnue.',
+  //   }
+  // }
   return data
 }

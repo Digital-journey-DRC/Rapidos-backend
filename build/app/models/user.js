@@ -76,6 +76,10 @@ __decorate([
     __metadata("design:type", Boolean)
 ], User.prototype, "termsAccepted", void 0);
 __decorate([
+    column(),
+    __metadata("design:type", Object)
+], User.prototype, "userStatus", void 0);
+__decorate([
     hasOne(() => Profil, {
         foreignKey: 'userId',
         localKey: 'id',

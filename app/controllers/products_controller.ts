@@ -37,9 +37,15 @@ export default class ProductsController {
       const catData = await categoryValidator.validate(
         LabelParseCategoryFromFrenchInEnglish(dataForCategory)
       )
-      const category = await Category.findBy('name', catData.name)
+      
+      // Chercher la catégorie existante ou la créer automatiquement
+      let category = await Category.findBy('name', catData.name)
       if (!category) {
-        return response.status(404).json({ message: 'Catégorie non trouvée' })
+        // Créer automatiquement la catégorie si elle n'existe pas
+        category = await Category.create({
+          name: catData.name,
+          description: catData.description || `Catégorie ${catData.name}`,
+        })
       }
       const product = await Product.create({
         name: payload.name,
@@ -214,9 +220,15 @@ export default class ProductsController {
         return response.status(404).json({ message: 'Produit non trouvé' })
       }
       const payload = await request.validateUsing(createProductValidator)
-      const category = await Category.findBy('name', payload.category)
+      
+      // Chercher la catégorie existante ou la créer automatiquement
+      let category = await Category.findBy('name', payload.category)
       if (!category) {
-        return response.status(404).json({ message: 'Catégorie non trouvée' })
+        // Créer automatiquement la catégorie si elle n'existe pas
+        category = await Category.create({
+          name: payload.category,
+          description: `Catégorie ${payload.category}`,
+        })
       }
       product.name = payload.name
       product.description = payload.description

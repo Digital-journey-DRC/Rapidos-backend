@@ -130,5 +130,23 @@ export default class CommandesController {
             });
         }
     }
+    async getCommandeByAcheteur({ response, auth }) {
+        try {
+            const commandes = await CommandeProduct.query().preload('commande', (query) => {
+                query.where('userId', auth.user.id);
+            });
+            return response.ok({
+                message: 'Commandes récupérées avec succès',
+                commandes: commandes,
+            });
+        }
+        catch (error) {
+            console.error(error);
+            return response.internalServerError({
+                message: 'Erreur lors de la récupération des commandes',
+                error: error.message,
+            });
+        }
+    }
 }
 //# sourceMappingURL=commandes_controller.js.map

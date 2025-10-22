@@ -64,7 +64,7 @@ router
     .get('/products/all-products', [ProductsController, 'showAllProducts'])
     .use(middleware.auth({ guards: ['api'] }));
 router
-    .get('/products/update/:productId', [ProductsController, 'updateProduct'])
+    .post('/products/update/:productId', [ProductsController, 'updateProduct'])
     .use(middleware.auth({ guards: ['api'] }));
 router
     .delete('/products/:productId', [ProductsController, 'deleteProduct'])
@@ -87,4 +87,49 @@ router
 router
     .get('/vendeurs', [ProductsController, 'getVendeurAndTheirProducts'])
     .use(middleware.auth({ guards: ['api'] }));
+router
+    .get('/commandes/acheteur', [CommandesController, 'getCommandeByAcheteur'])
+    .use(middleware.auth({ guards: ['api'] }));
+router
+    .get('/livraison/accept/:livraisonId', [LivraisonsController, 'accepteDelivery'])
+    .use(middleware.auth({ guards: ['api'] }));
+router
+    .post('/stock/:productId/update', [ProductsController, 'updateStockForProduct'])
+    .use(middleware.auth({ guards: ['api'] }));
+router.post('/users/forgot-password', [RegistersController, 'forgotPassWord']);
+router.post('/users/reset-password', [RegistersController, 'resetPassword']);
+router
+    .get('/users/:userId/active-account', [RegistersController, 'activeUserAcount'])
+    .use(middleware.auth({ guards: ['api'] }));
+router
+    .get('/users/get-all/status-pending', [RegistersController, 'showAllUserWithStatusPendning'])
+    .use(middleware.auth({ guards: ['api'] }));
+router.post('/create-category-temp', async ({ request, response }) => {
+    try {
+        const data = request.only(['name', 'description']);
+        if (!data.name || data.name.trim().length < 2) {
+            return response.status(422).json({
+                message: 'Le nom de la catégorie doit contenir au moins 2 caractères'
+            });
+        }
+        const mockCategory = {
+            id: Math.floor(Math.random() * 1000),
+            name: data.name.trim(),
+            description: data.description?.trim() || `Catégorie ${data.name.trim()}`,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+        };
+        return response.status(201).json({
+            message: 'Catégorie créée avec succès (MODE TEST - sans base de données)',
+            category: mockCategory
+        });
+    }
+    catch (error) {
+        console.error('Erreur lors de la création de la catégorie:', error);
+        return response.status(500).json({
+            message: 'Erreur serveur interne',
+            error: error.message
+        });
+    }
+});
 //# sourceMappingURL=routes.js.map

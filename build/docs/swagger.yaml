@@ -362,6 +362,150 @@ paths:
         '500':
           description: Erreur interne
 
+  /users/forgot-password:
+    post:
+      tags:
+        - Authentification
+      summary: Demande de réinitialisation du mot de passe (envoi d'un OTP)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - phone
+              properties:
+                phone:
+                  type: string
+                  example: '+2250700000000'
+      responses:
+        '200':
+          description: OTP envoyé avec succès
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Un code de réinitialisation a été envoyé à votre téléphone
+                  status:
+                    type: integer
+                    example: 200
+        '404':
+          description: Utilisateur introuvable
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Utilisateur introuvable
+                  status:
+                    type: integer
+                    example: 404
+        '500':
+          description: Erreur interne
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Erreur interne lors de la demande de réinitialisation du mot de passe
+                  status:
+                    type: integer
+                    example: 500
+
+  /users/reset-password:
+    post:
+      tags:
+        - Authentification
+      summary: Réinitialise le mot de passe via OTP
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - otp
+                - newPassword
+                - confirmNewPassword
+              properties:
+                otp:
+                  type: string
+                  example: '123456'
+                newPassword:
+                  type: string
+                  example: MonNouve123!
+                confirmNewPassword:
+                  type: string
+                  example: MonNouve123!
+      responses:
+        '200':
+          description: Mot de passe réinitialisé avec succès
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Mot de passe réinitialisé avec succès
+                  status:
+                    type: integer
+                    example: 200
+                  accessToken:
+                    type: string
+                    example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+                  expiresIn:
+                    type: string
+                    format: date-time
+                    example: 2025-06-27T14:26:53.513Z
+                  userId:
+                    type: integer
+                    example: 18
+        '400':
+          description: OTP expiré ou invalide
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Le code OTP a expiré. Veuillez en demander
+        '404':
+          description: Utilisateur introuvable
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Utilisateur introuvable
+                  status:
+                    type: integer
+                    example: 404
+        '500':
+          description: Erreur interne
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Erreur interne lors de la réinitialisation du mot de passe
+                  status:
+                    type: integer
+                    example: 500
+
   /products/store:
     post:
       summary: Création d’un produit avec médias
@@ -450,13 +594,6 @@ paths:
       tags:
         - Products
       summary: Récupérer tous les produits d’un vendeur spécifique connecté
-      parameters:
-        - in: path
-          name: userId
-          required: true
-          schema:
-            type: integer
-          description: ID du vendeur
       security:
         - bearerAuth: []
       responses:
@@ -600,7 +737,7 @@ paths:
                     type: string
 
   /products/update/{productId}:
-    get:
+    post:
       tags:
         - Products
       summary: Met à jour un produit existant
@@ -691,6 +828,103 @@ paths:
         '500':
           description: Erreur serveur interne
 
+  /stock/{productId}/update:
+    post:
+      tags:
+        - Products
+      summary: Met à jour le stock d'un produit (ajoute la quantité reçue)
+      security:
+        - bearerAuth: [] # Nécessite un token JWT
+      parameters:
+        - name: productId
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: ID du produit à mettre à jour
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - stock
+              properties:
+                stock:
+                  type: integer
+                  example: 5
+                  description: Quantité à ajouter au stock actuel
+      responses:
+        '200':
+          description: Stock mis à jour avec succès
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Stock mis à jour avec succès
+                  product:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                        example: 30
+                      name:
+                        type: string
+                        example: savon mousse a main bain noir
+                      stock:
+                        type: integer
+                        example: 41
+        '403':
+          description: Vous n'êtes pas autorisé à faire cette action
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Vous n'êtes pas autorisé à faire cette action
+        '404':
+          description: Produit non trouvé
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Produit non trouvé
+                  error:
+                    type: string
+                    example: Produit non trouvé
+        '422':
+          description: Erreur de validation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Erreur de validation
+        '500':
+          description: Erreur serveur interne
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Erreur serveur interne
+                  error:
+                    type: string
+                    example: Détail de l'erreur serveur
+
   /category/store:
     post:
       tags:
@@ -704,13 +938,14 @@ paths:
           application/json:
             schema:
               type: object
+              required:
+                - name
               properties:
                 name:
                   type: string
                 description:
                   type: string
-                required:
-                  - name
+
       responses:
         '201':
           description: Catégorie créée avec succès
@@ -813,7 +1048,7 @@ paths:
                 - isPrincipal
                 - type
                 - pays
-                -commune
+                  -commune
                 - quartier
               properties:
                 produits:
@@ -1027,10 +1262,21 @@ paths:
     get:
       tags:
         - Livraisons
-      summary: Récupérer toutes les livraisons avec adresse et numéro de téléphone de l'acheteur
+      summary: Récupérer toutes les livraisons avec adresse, produits de la commande et numéro de téléphone de l'acheteur
       responses:
         '200':
           description: Liste des livraisons
+
+  /commandes/acheteur:
+    get:
+      tags:
+        - Commandes
+      summary: Récupère toutes les commandes passées par un acheteur
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Commandes récupérées avec succès
           content:
             application/json:
               schema:
@@ -1039,7 +1285,81 @@ paths:
                   livraison:
                     type: array
                     items:
-                      $ref: '#/components/schemas/Livraison'
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                        commandeId:
+                          type: integer
+                        adresseId:
+                          type: integer
+                        livreurId:
+                          type: integer
+                          nullable: true
+                        status:
+                          type: string
+                        codeLivraison:
+                          type: string
+                          nullable: true
+                        numeroSuivi:
+                          type: string
+                          nullable: true
+                        fraisLivraison:
+                          type: number
+                          nullable: true
+                        createdAt:
+                          type: string
+                          format: date-time
+                        updatedAt:
+                          type: string
+                          format: date-time
+                        adresse:
+                          type: object
+                          properties:
+                            id:
+                              type: integer
+                            avenue:
+                              type: string
+                            numero:
+                              type: string
+                            quartier:
+                              type: string
+                              nullable: true
+                            ville:
+                              type: string
+                        commande:
+                          type: object
+                          properties:
+                            id:
+                              type: integer
+                            userId:
+                              type: integer
+                            status:
+                              type: string
+                            totalPrice:
+                              type: number
+                            user:
+                              type: object
+                              properties:
+                                id:
+                                  type: integer
+                                firstName:
+                                  type: string
+                                lastName:
+                                  type: string
+                                phone:
+                                  type: string
+                            products:
+                              type: array
+                              items:
+                                type: object
+                                properties:
+                                  id:
+                                    type: integer
+                                  name:
+                                    type: string
+                                  price:
+                                    type: number
               example:
                 livraison:
                   - id: 1
@@ -1055,35 +1375,226 @@ paths:
                     adresse:
                       id: 3
                       avenue: "Avenue de l'ouest"
-                      ville: 'Kinshasa'
-                      pays: 'Congo'
-                      codePostale: '12345'
-                      isPrincipal: false
-                      userId: 14
-                      type: 'livraison'
-                      createdAt: '2025-05-25T17:30:44.371+00:00'
-                      updatedAt: '2025-05-25T17:30:44.371+00:00'
                       numero: '42B55'
+                      quartier: null
+                      ville: 'Kinshasa'
                     commande:
                       id: 19
                       userId: 14
-                      totalPrice: 2000
-                      createdAt: '2025-05-28T17:24:18.230+00:00'
-                      updatedAt: '2025-05-28T17:24:18.362+00:00'
                       status: 'en attente'
+                      totalPrice: 2000
                       user:
                         id: 14
                         firstName: 'STEVIE'
                         lastName: 'andia'
                         phone: '+243819493095'
-components:
-  securitySchemes:
-    bearerAuth:
-      type: http
-      scheme: bearer
-      bearerFormat: JWT
+                      products:
+                        - id: 22
+                          name: 'crème éclairessissantes'
+                          price: 1000
+                        - id: 23
+                          name: 'pomade1'
+                          price: 1000
+
+                    message:
+                      type: string
+                      example: Commandes récupérées avec succès
+                    commandes:
+                      type: array
+                      items:
+                        $ref: '#/components/schemas/CommandeProductResponse'
+
+        '403':
+          description: Accès interdit
+        '500':
+          description: Erreur serveur interne
+
+  /livraison/accept/{livraisonId}:
+    get:
+      tags:
+        - Livraisons
+      summary: Accepte une livraison et met à jour son statut (EN_ATTENTE → EN_COURS → LIVREE)
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: livraisonId
+          required: true
+          schema:
+            type: integer
+          description: ID de la livraison à mettre à jour
+      responses:
+        '200':
+          description: Livraison acceptée avec succès
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Livraison acceptée avec succès
+                  livraison:
+                    $ref: '#/components/schemas/Livraison'
+        '400':
+          description: Livraison déjà livrée ou requête invalide
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Cette livraison a déjà été livrée
+                  status:
+                    type: integer
+                    example: 400
+        '403':
+          description: Accès interdit
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Vous n'avez pas accès à cette fonctionnalité
+        '404':
+          description: Livraison non trouvée
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Livraison non trouvée
+                  status:
+                    type: integer
+                    example: 404
+        '500':
+          description: Erreur serveur interne
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Une erreur est survenue lors de l'acceptation de la livraison
+                  status:
+                    type: integer
+                    example: 500
+  /users/{userId}/active-account:
+      get:
+        tags:
+          - Users
+        summary: Active le compte d'un utilisateur par son ID
+        security:
+          - bearerAuth: []
+        parameters:
+          - name: userId
+            in: path
+            required: true
+            schema:
+              type: integer
+            description: ID de l'utilisateur à activer
+        responses:
+          '200':
+            description: Compte activé avec succès ou déjà actif
+            content:
+              application/json:
+                schema:
+                  type: object
+                  properties:
+                    message:
+                      type: string
+                      example: Compte activé avec succès
+                    status:
+                      type: integer
+                      example: 200
+                    user:
+                      $ref: '#/components/schemas/User'
+          '403':
+            description: Accès interdit
+            content:
+              application/json:
+                schema:
+                  type: object
+                  properties:
+                    message:
+                      type: string
+                      example: Vous n'êtes pas autorisé à activer ce compte
+                    status:
+                      type: integer
+                      example: 403
+          '404':
+            description: Utilisateur introuvable
+            content:
+              application/json:
+                schema:
+                  type: object
+                  properties:
+                    message:
+                      type: string
+                      example: Utilisateur introuvable
+                    status:
+                      type: integer
+                      example: 404
+          '500':
+            description: Erreur serveur interne
+
+  /users/get-all/status-pending:
+    get:
+      tags:
+        - Users
+      summary: Récupère tous les utilisateurs avec le statut "pending"
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Liste des utilisateurs en attente
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  users:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/User'
+        '403':
+          description: Accès interdit
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Accès interdit
+        '500':
+          description: Erreur serveur interne
+  components:
+    securitySchemes:
+      bearerAuth:
+        type: http
+        scheme: bearer
+        bearerFormat: JWT
 
   schemas:
+
+    UserStatus:
+      type: string
+      description: Statut de l'utilisateur
+      enum:
+      - active
+      - inactive
+      - banned
+      - pending
+      - suspended
+      - deleted
+
     User:
       type: object
       properties:
@@ -1308,12 +1819,6 @@ components:
         isPrincipal:
           type: boolean
           example: true
-        commune:
-          type: string
-          example: Gombe
-        quartier:
-          type: string
-          example: Quartier Central
         userId:
           type: integer
           example: 14
@@ -1400,3 +1905,35 @@ components:
     Devise:
       type: string
       enum: [FC, USD]
+
+    CommandeProductResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        commandeId:
+          type: integer
+          example: 1
+        productId:
+          type: integer
+          example: 3
+        quantity:
+          type: integer
+          example: 2
+        price:
+          type: number
+          example: 20
+        totalUnitaire:
+          type: number
+          example: 40
+        createdAt:
+          type: string
+          format: date-time
+          example: '2025-05-25T16:15:09.636+00:00'
+        updatedAt:
+          type: string
+          format: date-time
+          example: '2025-05-25T16:15:09.637+00:00'
+        commande:
+          $ref: '#/components/schemas/Commande'

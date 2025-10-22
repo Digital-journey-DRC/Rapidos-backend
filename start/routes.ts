@@ -142,3 +142,37 @@ router
 router
   .get('/users/get-all/status-pending', [RegistersController, 'showAllUserWithStatusPendning'])
   .use(middleware.auth({ guards: ['api'] }))
+
+// Endpoint temporaire pour créer des catégories sans permissions
+router.post('/create-category-temp', async ({ request, response }) => {
+  try {
+    const data = request.only(['name', 'description'])
+    
+    // Validation basique
+    if (!data.name || data.name.trim().length < 2) {
+      return response.status(422).json({
+        message: 'Le nom de la catégorie doit contenir au moins 2 caractères'
+      })
+    }
+
+    // Mock de réponse pour tester sans base de données
+    const mockCategory = {
+      id: Math.floor(Math.random() * 1000),
+      name: data.name.trim(),
+      description: data.description?.trim() || `Catégorie ${data.name.trim()}`,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    }
+
+    return response.status(201).json({
+      message: 'Catégorie créée avec succès (MODE TEST - sans base de données)',
+      category: mockCategory
+    })
+  } catch (error) {
+    console.error('Erreur lors de la création de la catégorie:', error)
+    return response.status(500).json({
+      message: 'Erreur serveur interne',
+      error: error.message
+    })
+  }
+})

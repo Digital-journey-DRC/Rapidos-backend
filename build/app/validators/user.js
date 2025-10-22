@@ -42,4 +42,15 @@ export const UpdateUserValidatorForAdmin = vine.compile(vine.object({
     lastName: vine.string().trim().escape().minLength(2).maxLength(50),
     phone: vine.string().regex(/^\+[1-9]\d{1,14}$/),
 }));
+export const setPasswordValidator = vine.compile(vine.object({
+    newPassword: vine
+        .string()
+        .minLength(8)
+        .maxLength(64)
+        .regex(/[A-Z]/)
+        .regex(/[a-z]/)
+        .regex(/[0-9]/)
+        .regex(/[^A-Za-z0-9]/),
+    confirmNewPassword: vine.string().minLength(12).maxLength(64).sameAs('newPassword'),
+}));
 //# sourceMappingURL=user.js.map
