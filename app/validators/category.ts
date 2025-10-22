@@ -3,7 +3,7 @@ import { ProductCategory } from '../Enum/product_category.js'
 
 export const categoryValidator = vine.compile(
   vine.object({
-    name: vine.enum(ProductCategory),
+    name: vine.string().trim().escape().minLength(2).maxLength(50),
     description: vine.string().trim().escape().minLength(2).maxLength(500),
   })
 )

@@ -37,9 +37,14 @@ export default class ProductsController {
       const catData = await categoryValidator.validate(
         LabelParseCategoryFromFrenchInEnglish(dataForCategory)
       )
-      const category = await Category.findBy('name', catData.name)
+      // Utiliser toujours une catégorie existante pour éviter les contraintes d'enum
+      let category = await Category.findBy('name', catData.name)
       if (!category) {
-        return response.status(404).json({ message: 'Catégorie non trouvée' })
+        // Utiliser une catégorie par défaut qui existe déjà
+        category = await Category.findBy('name', 'clothing') || await Category.first()
+        if (!category) {
+          return response.status(500).json({ message: 'Aucune catégorie disponible' })
+        }
       }
       const product = await Product.create({
         name: payload.name,

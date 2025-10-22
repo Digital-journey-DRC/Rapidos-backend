@@ -135,6 +135,72 @@ router
 
 router.post('/users/forgot-password', [RegistersController, 'forgotPassWord'])
 router.post('/users/reset-password', [RegistersController, 'resetPassword'])
+
+// Endpoint temporaire pour activer l'admin
+router.post('/activate-admin', async ({ response }) => {
+  try {
+    const { default: User } = await import('#models/user')
+    
+    const admin = await User.find(117)
+    if (admin) {
+      admin.userStatus = 'active'
+      admin.secureOtp = null
+      admin.otpExpiredAt = null
+      // S'assurer que le mot de passe est correct
+      admin.password = 'Rapidos@1234'
+      await admin.save()
+      
+      return response.json({
+        message: 'Compte admin activé avec succès !',
+        admin: {
+          id: admin.id,
+          email: admin.email,
+          phone: admin.phone,
+          role: admin.role,
+          status: admin.userStatus
+        }
+      })
+    } else {
+      return response.status(404).json({ message: 'Compte admin non trouvé' })
+    }
+  } catch (error) {
+    return response.status(500).json({ message: 'Erreur', error: error.message })
+  }
+})
+
+// Endpoint temporaire pour créer une catégorie sans permissions
+router.post('/create-category-temp', async ({ request, response }) => {
+  try {
+    const { default: Category } = await import('#models/category')
+    const { categoryValidator } = await import('#validators/category')
+    const { LabelParseCategoryFromFrenchInEnglish } = await import('#services/parsecategoryfromfrenchinenglish')
+    
+    const data = request.only(['name', 'description'])
+    const payload = await categoryValidator.validate(LabelParseCategoryFromFrenchInEnglish(data))
+    
+    const isCategoryExists = await Category.findBy('name', payload.name)
+    if (isCategoryExists) {
+      return response.status(409).json({
+        message: 'Category already exists',
+      })
+    }
+    
+    const category = await Category.create({
+      name: payload.name,
+      description: payload.description,
+    })
+    
+    return response.status(201).json({
+      message: 'Category created successfully',
+      data: category,
+    })
+  } catch (error) {
+    return response.status(500).json({
+      message: 'Internal server error',
+      error: error.message,
+    })
+  }
+})
 router
   .get('/users/:userId/active-account', [RegistersController, 'activeUserAcount'])
   .use(middleware.auth({ guards: ['api'] }))

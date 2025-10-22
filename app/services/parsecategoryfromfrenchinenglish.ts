@@ -11,11 +11,11 @@ export const LabelParseCategoryFromFrenchInEnglish = (data: DataCategory) => {
     data.name = translated
   }
 
-  // 4. Vérifie que la catégorie est bien dans l'enum
-  if (!Object.values(ProductCategory).includes(data.name)) {
-    return {
-      error: 'Catégorie invalide. Utilisez une valeur reconnue.',
-    }
-  }
+  // 4. Accepte toutes les catégories (plus de contraintes d'enum)
+  // if (!Object.values(ProductCategory).includes(data.name)) {
+  //   return {
+  //     error: 'Catégorie invalide. Utilisez une valeur reconnue.',
+  //   }
+  // }
   return data
 }

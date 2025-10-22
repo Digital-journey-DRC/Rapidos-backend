@@ -53,6 +53,7 @@ export enum ProductCategory {
   BOMBERS = 'bombers',
   BLAZERS = 'blazers',
   CARDIGANS = 'cardigans',
+  WEAVING = 'weaving',
 }
 
 export const ProductCategoryLabels: Record<ProductCategory, string> = {
@@ -110,6 +111,7 @@ export const ProductCategoryLabels: Record<ProductCategory, string> = {
   [ProductCategory.BOMBERS]: 'bombers',
   [ProductCategory.BLAZERS]: 'blazers',
   [ProductCategory.CARDIGANS]: 'cardigans',
+  [ProductCategory.WEAVING]: 'tissage',
 }
 
 // 🔁 Mapping inverse : français -> anglais
