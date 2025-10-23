@@ -127,35 +127,6 @@ router.post('/activate-admin', async ({ response }) => {
         return response.status(500).json({ message: 'Erreur', error: error.message });
     }
 });
-router.post('/create-category-temp', async ({ request, response }) => {
-    try {
-        const { default: Category } = await import('#models/category');
-        const { categoryValidator } = await import('#validators/category');
-        const { LabelParseCategoryFromFrenchInEnglish } = await import('#services/parsecategoryfromfrenchinenglish');
-        const data = request.only(['name', 'description']);
-        const payload = await categoryValidator.validate(LabelParseCategoryFromFrenchInEnglish(data));
-        const isCategoryExists = await Category.findBy('name', payload.name);
-        if (isCategoryExists) {
-            return response.status(409).json({
-                message: 'Category already exists',
-            });
-        }
-        const category = await Category.create({
-            name: payload.name,
-            description: payload.description,
-        });
-        return response.status(201).json({
-            message: 'Category created successfully',
-            data: category,
-        });
-    }
-    catch (error) {
-        return response.status(500).json({
-            message: 'Internal server error',
-            error: error.message,
-        });
-    }
-});
 router
     .get('/users/:userId/active-account', [RegistersController, 'activeUserAcount'])
     .use(middleware.auth({ guards: ['api'] }));
@@ -163,35 +134,4 @@ router
     .get('/users/get-all/status-pending', [RegistersController, 'showAllUserWithStatusPendning'])
     .use(middleware.auth({ guards: ['api'] }));
 router.post('/users/update-profil', [RegistersController, 'updateUserProfile']).use(middleware.auth({ guards: ['api'] }));
-router.post('/create-category-temp', async ({ request, response }) => {
-    try {
-        const { default: Category } = await import('#models/category');
-        const { name, description } = request.only(['name', 'description']);
-        if (!name) {
-            return response.status(400).json({ message: 'Le nom de la catégorie est requis' });
-        }
-        const existingCategory = await Category.findBy('name', name);
-        if (existingCategory) {
-            return response.status(409).json({
-                message: 'Cette catégorie existe déjà',
-                category: existingCategory
-            });
-        }
-        const category = await Category.create({
-            name: name,
-            description: description || `Catégorie ${name}`
-        });
-        return response.status(201).json({
-            message: 'Catégorie créée avec succès',
-            category: category
-        });
-    }
-    catch (error) {
-        console.error('Erreur lors de la création de la catégorie:', error);
-        return response.status(500).json({
-            message: 'Erreur serveur interne',
-            error: error.message
-        });
-    }
-});
 //# sourceMappingURL=routes.js.map

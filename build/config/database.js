@@ -15,6 +15,15 @@ const dbConfig = defineConfig({
                     rejectUnauthorized: false,
                 },
             },
+            pool: {
+                min: 2,
+                max: 10,
+                acquireTimeoutMillis: 60000,
+                createTimeoutMillis: 30000,
+                idleTimeoutMillis: 30000,
+                reapIntervalMillis: 1000,
+                createRetryIntervalMillis: 200,
+            },
             migrations: {
                 naturalSort: true,
                 paths: ['database/migrations'],
