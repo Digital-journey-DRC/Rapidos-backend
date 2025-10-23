@@ -219,8 +219,6 @@ export default class ProductsController {
         return response.status(404).json({ message: 'Produit non trouvé' })
       }
       const payload = await request.validateUsing(createProductValidator)
-      
-      // Gérer la catégorie pour la mise à jour
       let category
       if (payload.category) {
         category = await Category.findBy('name', payload.category)

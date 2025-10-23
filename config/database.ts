@@ -14,7 +14,17 @@ const dbConfig = defineConfig({
         database: env.get('DB_DATABASE'),
         ssl: {
           rejectUnauthorized: false,
+          // require: true,
         },
+      },
+      pool: {
+        min: 2,
+        max: 10,
+        acquireTimeoutMillis: 60000,
+        createTimeoutMillis: 30000,
+        idleTimeoutMillis: 30000,
+        reapIntervalMillis: 1000,
+        createRetryIntervalMillis: 200,
       },
 
       migrations: {
