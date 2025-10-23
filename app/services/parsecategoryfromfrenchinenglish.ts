@@ -1,4 +1,4 @@
-import { LabelToProductCategory, ProductCategory } from '../Enum/product_category.js'
+import { LabelToProductCategory } from '../Enum/product_category.js'
 import { DataCategory } from '../types/products.js'
 
 export const LabelParseCategoryFromFrenchInEnglish = (data: DataCategory) => {

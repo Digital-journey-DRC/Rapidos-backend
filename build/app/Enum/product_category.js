@@ -54,6 +54,7 @@ export var ProductCategory;
     ProductCategory["BOMBERS"] = "bombers";
     ProductCategory["BLAZERS"] = "blazers";
     ProductCategory["CARDIGANS"] = "cardigans";
+    ProductCategory["WEAVING"] = "weaving";
 })(ProductCategory || (ProductCategory = {}));
 export const ProductCategoryLabels = {
     [ProductCategory.ELECTRONICS]: 'électronique',
@@ -110,6 +111,7 @@ export const ProductCategoryLabels = {
     [ProductCategory.BOMBERS]: 'bombers',
     [ProductCategory.BLAZERS]: 'blazers',
     [ProductCategory.CARDIGANS]: 'cardigans',
+    [ProductCategory.WEAVING]: 'tissage',
 };
 export const LabelToProductCategory = Object.fromEntries(Object.entries(ProductCategoryLabels).map(([key, label]) => [
     label.toLowerCase(),

@@ -37,14 +37,14 @@ export default class ProductsController {
       const catData = await categoryValidator.validate(
         LabelParseCategoryFromFrenchInEnglish(dataForCategory)
       )
-      // Utiliser toujours une catégorie existante pour éviter les contraintes d'enum
+      // Chercher la catégorie ou la créer automatiquement si elle n'existe pas
       let category = await Category.findBy('name', catData.name)
       if (!category) {
-        // Utiliser une catégorie par défaut qui existe déjà
-        category = await Category.findBy('name', 'clothing') || await Category.first()
-        if (!category) {
-          return response.status(500).json({ message: 'Aucune catégorie disponible' })
-        }
+        // Créer automatiquement la catégorie si elle n'existe pas
+        category = await Category.create({
+          name: catData.name,
+          description: catData.description || `Catégorie ${catData.name}`,
+        })
       }
       const product = await Product.create({
         name: payload.name,
@@ -219,15 +219,26 @@ export default class ProductsController {
         return response.status(404).json({ message: 'Produit non trouvé' })
       }
       const payload = await request.validateUsing(createProductValidator)
-      const category = await Category.findBy('name', payload.category)
-      if (!category) {
-        return response.status(404).json({ message: 'Catégorie non trouvée' })
+      
+      // Gérer la catégorie pour la mise à jour
+      let category
+      if (payload.category) {
+        category = await Category.findBy('name', payload.category)
+        if (!category) {
+          // Créer automatiquement la catégorie si elle n'existe pas
+          category = await Category.create({
+            name: payload.category,
+            description: `Catégorie ${payload.category}`,
+          })
+        }
       }
       product.name = payload.name
       product.description = payload.description
       product.price = payload.price
       product.stock = payload.stock
-      product.categorieId = category.id
+      if (category) {
+        product.categorieId = category.id
+      }
       await product.save()
       // Gestion des médias
       const productMedia = request.files('medias')

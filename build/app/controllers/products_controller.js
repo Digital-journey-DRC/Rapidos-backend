@@ -27,9 +27,12 @@ export default class ProductsController {
             const vendeurId = user.id;
             const payload = await request.validateUsing(createProductValidator);
             const catData = await categoryValidator.validate(LabelParseCategoryFromFrenchInEnglish(dataForCategory));
-            const category = await Category.findBy('name', catData.name);
+            let category = await Category.findBy('name', catData.name);
             if (!category) {
-                return response.status(404).json({ message: 'Catégorie non trouvée' });
+                category = await Category.create({
+                    name: catData.name,
+                    description: catData.description || `Catégorie ${catData.name}`,
+                });
             }
             const product = await Product.create({
                 name: payload.name,
@@ -185,15 +188,23 @@ export default class ProductsController {
                 return response.status(404).json({ message: 'Produit non trouvé' });
             }
             const payload = await request.validateUsing(createProductValidator);
-            const category = await Category.findBy('name', payload.category);
-            if (!category) {
-                return response.status(404).json({ message: 'Catégorie non trouvée' });
+            let category;
+            if (payload.category) {
+                category = await Category.findBy('name', payload.category);
+                if (!category) {
+                    category = await Category.create({
+                        name: payload.category,
+                        description: `Catégorie ${payload.category}`,
+                    });
+                }
             }
             product.name = payload.name;
             product.description = payload.description;
             product.price = payload.price;
             product.stock = payload.stock;
-            product.categorieId = category.id;
+            if (category) {
+                product.categorieId = category.id;
+            }
             await product.save();
             const productMedia = request.files('medias');
             const { medias, errors } = await manageUploadProductMedias(productMedia);

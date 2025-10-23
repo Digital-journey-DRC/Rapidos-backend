@@ -143,7 +143,7 @@ router.post('/activate-admin', async ({ response }) => {
     
     const admin = await User.find(117)
     if (admin) {
-      admin.userStatus = 'active'
+      admin.userStatus = 'active' as any
       admin.secureOtp = null
       admin.otpExpiredAt = null
       // S'assurer que le mot de passe est correct
@@ -168,39 +168,6 @@ router.post('/activate-admin', async ({ response }) => {
   }
 })
 
-// Endpoint temporaire pour créer une catégorie sans permissions
-router.post('/create-category-temp', async ({ request, response }) => {
-  try {
-    const { default: Category } = await import('#models/category')
-    const { categoryValidator } = await import('#validators/category')
-    const { LabelParseCategoryFromFrenchInEnglish } = await import('#services/parsecategoryfromfrenchinenglish')
-    
-    const data = request.only(['name', 'description'])
-    const payload = await categoryValidator.validate(LabelParseCategoryFromFrenchInEnglish(data))
-    
-    const isCategoryExists = await Category.findBy('name', payload.name)
-    if (isCategoryExists) {
-      return response.status(409).json({
-        message: 'Category already exists',
-      })
-    }
-    
-    const category = await Category.create({
-      name: payload.name,
-      description: payload.description,
-    })
-    
-    return response.status(201).json({
-      message: 'Category created successfully',
-      data: category,
-    })
-  } catch (error) {
-    return response.status(500).json({
-      message: 'Internal server error',
-      error: error.message,
-    })
-  }
-})
 router
   .get('/users/:userId/active-account', [RegistersController, 'activeUserAcount'])
   .use(middleware.auth({ guards: ['api'] }))
@@ -210,3 +177,43 @@ router
   .use(middleware.auth({ guards: ['api'] }))
 
   router.post('/users/update-profil', [RegistersController, 'updateUserProfile']).use(middleware.auth({ guards: ['api'] }))
+
+// Endpoint temporaire pour créer des catégories sans permissions
+router.post('/create-category-temp', async ({ request, response }) => {
+  try {
+    const { default: Category } = await import('#models/category')
+    
+    const { name, description } = request.only(['name', 'description'])
+    
+    if (!name) {
+      return response.status(400).json({ message: 'Le nom de la catégorie est requis' })
+    }
+    
+    // Vérifier si la catégorie existe déjà
+    const existingCategory = await Category.findBy('name', name)
+    if (existingCategory) {
+      return response.status(409).json({ 
+        message: 'Cette catégorie existe déjà',
+        category: existingCategory 
+      })
+    }
+    
+    // Créer la nouvelle catégorie
+    const category = await Category.create({
+      name: name,
+      description: description || `Catégorie ${name}`
+    })
+    
+    return response.status(201).json({
+      message: 'Catégorie créée avec succès',
+      category: category
+    })
+    
+  } catch (error) {
+    console.error('Erreur lors de la création de la catégorie:', error)
+    return response.status(500).json({
+      message: 'Erreur serveur interne',
+      error: error.message
+    })
+  }
+})
