@@ -68,8 +68,9 @@ export default class ProductsController {
         })
       }
 
-      // Récupérer le produit avec ses médias
+      // Récupérer le produit avec ses médias et catégorie
       await product.load('media')
+      await product.load('category')
 
       if (errors.length > 0) {
         return response.status(207).json({
@@ -128,7 +129,7 @@ export default class ProductsController {
 
   async getAllProducts({ response }: HttpContext) {
     try {
-      const products = await Product.query().preload('media')
+      const products = await Product.query().preload('media').preload('category')
 
       if (products.length === 0) {
         return response.status(404).json({ message: 'Produit non trouvé' })
@@ -145,7 +146,7 @@ export default class ProductsController {
 
   async showAllProducts({ response, auth }: HttpContext) {
     try {
-      const products = await Product.query().where('vendeur_id', auth.user!.id).preload('media')
+      const products = await Product.query().where('vendeur_id', auth.user!.id).preload('media').preload('category')
 
       if (products.length === 0) {
         return response.status(404).json({ message: 'Produit non trouvé' })
@@ -186,10 +187,11 @@ export default class ProductsController {
   }
 
   async getProductById({ params, response }: HttpContext) {
-    const { id } = params
+    const { productId, id } = params
+    const productIdValue = productId || id
     try {
       const product = await Product.query()
-        .where('id', id)
+        .where('id', productIdValue)
         .preload('media')
         .preload('category')
         .preload('commandes')

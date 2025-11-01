@@ -71,7 +71,9 @@ __decorate([
     __metadata("design:type", Object)
 ], Product.prototype, "media", void 0);
 __decorate([
-    belongsTo(() => Category),
+    belongsTo(() => Category, {
+        foreignKey: 'categorieId',
+    }),
     __metadata("design:type", Object)
 ], Product.prototype, "category", void 0);
 //# sourceMappingURL=product.js.map

@@ -50,6 +50,8 @@ export default class Product extends BaseModel {
   @hasOne(() => Media)
   declare media: HasOne<typeof Media>
 
-  @belongsTo(() => Category)
+  @belongsTo(() => Category, {
+    foreignKey: 'categorieId',
+  })
   declare category: BelongsTo<typeof Category>
 }

@@ -52,6 +52,7 @@ export default class ProductsController {
                 });
             }
             await product.load('media');
+            await product.load('category');
             if (errors.length > 0) {
                 return response.status(207).json({
                     message: "Produit créé, mais certaines images n'ont pas pu être uploadées.",
@@ -103,7 +104,7 @@ export default class ProductsController {
     }
     async getAllProducts({ response }) {
         try {
-            const products = await Product.query().preload('media');
+            const products = await Product.query().preload('media').preload('category');
             if (products.length === 0) {
                 return response.status(404).json({ message: 'Produit non trouvé' });
             }
@@ -118,7 +119,7 @@ export default class ProductsController {
     }
     async showAllProducts({ response, auth }) {
         try {
-            const products = await Product.query().where('vendeur_id', auth.user.id).preload('media');
+            const products = await Product.query().where('vendeur_id', auth.user.id).preload('media').preload('category');
             if (products.length === 0) {
                 return response.status(404).json({ message: 'Produit non trouvé' });
             }
@@ -156,10 +157,11 @@ export default class ProductsController {
         }
     }
     async getProductById({ params, response }) {
-        const { id } = params;
+        const { productId, id } = params;
+        const productIdValue = productId || id;
         try {
             const product = await Product.query()
-                .where('id', id)
+                .where('id', productIdValue)
                 .preload('media')
                 .preload('category')
                 .preload('commandes');
