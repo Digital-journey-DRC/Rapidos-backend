@@ -79,7 +79,7 @@ router
   .use(middleware.auth({ guards: ['api'] }))
 
 router
-  .get('/products/category/:categoryId', [ProductsController, 'getProductById'])
+  .get('/products/category/:categoryId', [ProductsController, 'getProductByCategory'])
   .use(middleware.auth({ guards: ['api'] }))
 
 router

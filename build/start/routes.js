@@ -55,7 +55,7 @@ router
     .get('/products/get-products/:productId', [ProductsController, 'getProductById'])
     .use(middleware.auth({ guards: ['api'] }));
 router
-    .get('/products/category/:categoryId', [ProductsController, 'getProductById'])
+    .get('/products/category/:categoryId', [ProductsController, 'getProductByCategory'])
     .use(middleware.auth({ guards: ['api'] }));
 router
     .get('/category/get-all', [CategoryController, 'getAllCategory'])
