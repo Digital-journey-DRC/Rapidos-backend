@@ -3,7 +3,6 @@ import Media from '#models/media'
 import Product from '#models/product'
 import User from '#models/user'
 import { manageUploadProductMedias } from '#services/managemedias'
-import { LabelParseCategoryFromFrenchInEnglish } from '#services/parsecategoryfromfrenchinenglish'
 import { categoryValidator } from '#validators/category'
 
 import { createProductValidator, validateProductStock } from '#validators/products'
@@ -34,9 +33,8 @@ export default class ProductsController {
 
       const vendeurId = user.id
       const payload = await request.validateUsing(createProductValidator)
-      const catData = await categoryValidator.validate(
-        LabelParseCategoryFromFrenchInEnglish(dataForCategory)
-      )
+      // Garder le nom original sans conversion
+      const catData = await categoryValidator.validate(dataForCategory)
       // Chercher la catégorie ou la créer automatiquement si elle n'existe pas
       let category = await Category.findBy('name', catData.name)
       if (!category) {

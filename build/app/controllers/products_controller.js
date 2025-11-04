@@ -3,7 +3,6 @@ import Media from '#models/media';
 import Product from '#models/product';
 import User from '#models/user';
 import { manageUploadProductMedias } from '#services/managemedias';
-import { LabelParseCategoryFromFrenchInEnglish } from '#services/parsecategoryfromfrenchinenglish';
 import { categoryValidator } from '#validators/category';
 import { createProductValidator, validateProductStock } from '#validators/products';
 import logger from '@adonisjs/core/services/logger';
@@ -26,7 +25,7 @@ export default class ProductsController {
             };
             const vendeurId = user.id;
             const payload = await request.validateUsing(createProductValidator);
-            const catData = await categoryValidator.validate(LabelParseCategoryFromFrenchInEnglish(dataForCategory));
+            const catData = await categoryValidator.validate(dataForCategory);
             let category = await Category.findBy('name', catData.name);
             if (!category) {
                 category = await Category.create({
