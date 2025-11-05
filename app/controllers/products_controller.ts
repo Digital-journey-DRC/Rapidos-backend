@@ -289,15 +289,16 @@ export default class ProductsController {
   async deleteProduct({ params, response, bouncer }: HttpContext) {
     const { productId } = params
     try {
-      if (await bouncer.denies('canUpdateOrDeleteProduct', productId)) {
+      // Récupérer le produit d'abord pour obtenir le vendeurId
+      const product = await Product.findOrFail(productId)
+      
+      // Vérifier les permissions avec le vendeurId du produit
+      if (await bouncer.denies('canUpdateOrDeleteProduct', product.vendeurId)) {
         return response
           .status(403)
           .json({ message: "Vous n'êtes pas autorisé à faire cette action" })
       }
-      const product = await Product.findOrFail(productId)
-      if (!product) {
-        return response.status(404).json({ message: 'Produit non trouvé' })
-      }
+      
       await product.delete()
       return response.status(200).json({ message: 'Produit supprimé avec succès', status: true })
     } catch (error) {
