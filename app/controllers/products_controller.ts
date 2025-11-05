@@ -370,7 +370,8 @@ export default class ProductsController {
           .json({ message: "Vous n'êtes pas autorisé à faire cette action" })
       }
 
-      product.stock += payload.stock
+      // Remplacement du stock (pas d'addition)
+      product.stock = payload.stock
       await product.save()
       return response.status(200).json({
         message: 'Stock mis à jour avec succès',
