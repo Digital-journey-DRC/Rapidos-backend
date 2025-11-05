@@ -252,14 +252,11 @@ export default class ProductsController {
     async deleteProduct({ params, response, bouncer }) {
         const { productId } = params;
         try {
-            if (await bouncer.denies('canUpdateOrDeleteProduct', productId)) {
+            const product = await Product.findOrFail(productId);
+            if (await bouncer.denies('canUpdateOrDeleteProduct', product.vendeurId)) {
                 return response
                     .status(403)
                     .json({ message: "Vous n'êtes pas autorisé à faire cette action" });
-            }
-            const product = await Product.findOrFail(productId);
-            if (!product) {
-                return response.status(404).json({ message: 'Produit non trouvé' });
             }
             await product.delete();
             return response.status(200).json({ message: 'Produit supprimé avec succès', status: true });
@@ -320,7 +317,7 @@ export default class ProductsController {
                     .status(403)
                     .json({ message: "Vous n'êtes pas autorisé à faire cette action" });
             }
-            product.stock += payload.stock;
+            product.stock = payload.stock;
             await product.save();
             return response.status(200).json({
                 message: 'Stock mis à jour avec succès',
