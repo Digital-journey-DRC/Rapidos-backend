@@ -8,11 +8,12 @@ var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
 import { DateTime } from 'luxon';
-import { BaseModel, belongsTo, column, hasOne, manyToMany } from '@adonisjs/lucid/orm';
+import { BaseModel, belongsTo, column, hasMany, hasOne, manyToMany } from '@adonisjs/lucid/orm';
 import Media from './media.js';
 import User from './user.js';
 import Commande from './commande.js';
 import Category from './category.js';
+import Promotion from './promotion.js';
 export default class Product extends BaseModel {
 }
 __decorate([
@@ -76,4 +77,10 @@ __decorate([
     }),
     __metadata("design:type", Object)
 ], Product.prototype, "category", void 0);
+__decorate([
+    hasMany(() => Promotion, {
+        foreignKey: 'productId',
+    }),
+    __metadata("design:type", Object)
+], Product.prototype, "promotions", void 0);
 //# sourceMappingURL=product.js.map

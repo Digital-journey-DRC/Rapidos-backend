@@ -5,6 +5,7 @@ const ProductsController = () => import('#controllers/products_controller');
 const CategoryController = () => import('#controllers/categories_controller');
 const CommandesController = () => import('#controllers/commandes_controller');
 const LivraisonsController = () => import('#controllers/livraisons_controller');
+const PromotionsController = () => import('#controllers/promotions_controller');
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import YAML from 'yamljs';
@@ -96,8 +97,25 @@ router
 router
     .post('/stock/:productId/update', [ProductsController, 'updateStockForProduct'])
     .use(middleware.auth({ guards: ['api'] }));
+router.get('/promotions/create-table', [PromotionsController, 'createTable']);
+router
+    .get('/promotions', [PromotionsController, 'index'])
+    .use(middleware.auth({ guards: ['api'] }));
+router
+    .get('/promotions/:id', [PromotionsController, 'show'])
+    .use(middleware.auth({ guards: ['api'] }));
+router
+    .post('/promotions', [PromotionsController, 'store'])
+    .use(middleware.auth({ guards: ['api'] }));
+router
+    .put('/promotions/:id', [PromotionsController, 'update'])
+    .use(middleware.auth({ guards: ['api'] }));
+router
+    .delete('/promotions/:id', [PromotionsController, 'destroy'])
+    .use(middleware.auth({ guards: ['api'] }));
 router.post('/users/forgot-password', [RegistersController, 'forgotPassWord']);
 router.post('/users/reset-password', [RegistersController, 'resetPassword']);
+router.get('/create-promotions-table', [PromotionsController, 'createTable']);
 router.post('/activate-admin', async ({ response }) => {
     try {
         const { default: User } = await import('#models/user');
@@ -134,4 +152,6 @@ router
     .get('/users/get-all/status-pending', [RegistersController, 'showAllUserWithStatusPendning'])
     .use(middleware.auth({ guards: ['api'] }));
 router.post('/users/update-profil', [RegistersController, 'updateUserProfile']).use(middleware.auth({ guards: ['api'] }));
+const MigrationController = () => import('#controllers/migration_controller');
+router.get('/migration/create-promotions-table', [MigrationController, 'createPromotionsTable']);
 //# sourceMappingURL=routes.js.map

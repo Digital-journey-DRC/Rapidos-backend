@@ -1,10 +1,11 @@
 import { DateTime } from 'luxon'
-import { BaseModel, belongsTo, column, hasOne, manyToMany } from '@adonisjs/lucid/orm'
+import { BaseModel, belongsTo, column, hasMany, hasOne, manyToMany } from '@adonisjs/lucid/orm'
 import Media from './media.js'
-import type { BelongsTo, HasOne, ManyToMany } from '@adonisjs/lucid/types/relations'
+import type { BelongsTo, HasMany, HasOne, ManyToMany } from '@adonisjs/lucid/types/relations'
 import User from './user.js'
 import Commande from './commande.js'
 import Category from './category.js'
+import Promotion from './promotion.js'
 
 export default class Product extends BaseModel {
   @column({ isPrimary: true })
@@ -54,4 +55,9 @@ export default class Product extends BaseModel {
     foreignKey: 'categorieId',
   })
   declare category: BelongsTo<typeof Category>
+
+  @hasMany(() => Promotion, {
+    foreignKey: 'productId',
+  })
+  declare promotions: HasMany<typeof Promotion>
 }

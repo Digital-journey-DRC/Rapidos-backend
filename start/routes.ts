@@ -5,6 +5,7 @@ const ProductsController = () => import('#controllers/products_controller')
 const CategoryController = () => import('#controllers/categories_controller')
 const CommandesController = () => import('#controllers/commandes_controller')
 const LivraisonsController = () => import('#controllers/livraisons_controller')
+const PromotionsController = () => import('#controllers/promotions_controller')
 
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
@@ -133,8 +134,40 @@ router
   .post('/stock/:productId/update', [ProductsController, 'updateStockForProduct'])
   .use(middleware.auth({ guards: ['api'] }))
 
+// Routes pour les promotions
+// GET /promotions/create-table - Crée la table promotions (DOIT être avant /promotions/:id)
+router.get('/promotions/create-table', [PromotionsController, 'createTable'])
+
+// GET /promotions - Récupère tous les produits en promotion
+router
+  .get('/promotions', [PromotionsController, 'index'])
+  .use(middleware.auth({ guards: ['api'] }))
+
+// GET /promotions/:id - Récupère une promotion spécifique
+router
+  .get('/promotions/:id', [PromotionsController, 'show'])
+  .use(middleware.auth({ guards: ['api'] }))
+
+// POST /promotions - Crée une nouvelle promotion (pour le marchand)
+router
+  .post('/promotions', [PromotionsController, 'store'])
+  .use(middleware.auth({ guards: ['api'] }))
+
+// PUT /promotions/:id - Met à jour une promotion
+router
+  .put('/promotions/:id', [PromotionsController, 'update'])
+  .use(middleware.auth({ guards: ['api'] }))
+
+// DELETE /promotions/:id - Supprime une promotion
+router
+  .delete('/promotions/:id', [PromotionsController, 'destroy'])
+  .use(middleware.auth({ guards: ['api'] }))
+
 router.post('/users/forgot-password', [RegistersController, 'forgotPassWord'])
 router.post('/users/reset-password', [RegistersController, 'resetPassword'])
+
+// Endpoint temporaire pour créer la table promotions (sans authentification)
+router.get('/create-promotions-table', [PromotionsController, 'createTable'])
 
 // Endpoint temporaire pour activer l'admin
 router.post('/activate-admin', async ({ response }) => {
@@ -177,3 +210,7 @@ router
   .use(middleware.auth({ guards: ['api'] }))
 
   router.post('/users/update-profil', [RegistersController, 'updateUserProfile']).use(middleware.auth({ guards: ['api'] }))
+
+// Route temporaire pour créer la table promotions (GET pour faciliter avec curl)
+const MigrationController = () => import('#controllers/migration_controller')
+router.get('/migration/create-promotions-table', [MigrationController, 'createPromotionsTable'])
