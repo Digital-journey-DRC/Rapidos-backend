@@ -103,7 +103,14 @@ export default class ProductsController {
     }
     async getAllProducts({ response }) {
         try {
-            const products = await Product.query().preload('media').preload('category');
+            const products = await Product.query()
+                .preload('media')
+                .preload('category')
+                .preload('vendeur', (query) => {
+                    query.preload('profil', (profilQuery) => {
+                        profilQuery.preload('media');
+                    });
+                });
             if (products.length === 0) {
                 return response.status(404).json({ message: 'Produit non trouvé' });
             }
@@ -303,6 +310,55 @@ export default class ProductsController {
         catch (error) {
             if (error.code === 'E_ROW_NOT_FOUND') {
                 return response.status(404).json({ message: 'Aucun vendeur trouvé', error: error.message });
+            }
+            return response.status(500).json({ message: 'Erreur serveur interne', error: error.message });
+        }
+    }
+    async getVendeurById({ response, params }) {
+        try {
+            const vendeurId = params.id;
+            const vendeur = await User.query()
+                .where('id', vendeurId)
+                .where('role', 'vendeur')
+                .preload('profil', (query) => {
+                    query.preload('media');
+                })
+                .preload('horairesOuverture')
+                .first();
+            if (!vendeur) {
+                return response.status(404).json({ message: 'Vendeur non trouvé' });
+            }
+            const products = await Product.query()
+                .where('vendeur_id', vendeur.id)
+                .preload('media')
+                .preload('category');
+            let vendeurMedia = null;
+            if (vendeur.profil?.media) {
+                vendeurMedia = vendeur.profil.media;
+            }
+            return response.ok({
+                message: 'Vendeur récupéré avec succès',
+                vendeur: {
+                    id: vendeur.id,
+                    firstName: vendeur.firstName,
+                    lastName: vendeur.lastName,
+                    email: vendeur.email,
+                    phone: vendeur.phone,
+                    role: vendeur.role,
+                    userStatus: vendeur.userStatus,
+                    createdAt: vendeur.createdAt,
+                    updatedAt: vendeur.updatedAt,
+                },
+                profil: vendeur.profil,
+                media: vendeurMedia,
+                horairesOuverture: vendeur.horairesOuverture || [],
+                products: products,
+                totalProducts: products.length,
+            });
+        }
+        catch (error) {
+            if (error.code === 'E_ROW_NOT_FOUND') {
+                return response.status(404).json({ message: 'Vendeur non trouvé', error: error.message });
             }
             return response.status(500).json({ message: 'Erreur serveur interne', error: error.message });
         }

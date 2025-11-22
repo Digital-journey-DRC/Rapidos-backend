@@ -10,6 +10,7 @@ import type { HasMany, HasOne } from '@adonisjs/lucid/types/relations'
 import Adresse from './adresse.js'
 import Wallet from './wallet.js'
 import AccessToken from './access_token.js'
+import HoraireOuverture from './horaire_ouverture.js'
 import { UserStatus } from '../Enum/user_status.js'
 
 const AuthFinder = withAuthFinder(() => hash.use('scrypt'), {
@@ -75,4 +76,9 @@ export default class User extends compose(BaseModel, AuthFinder) {
 
   @hasMany(() => AccessToken)
   declare accessTokens: HasMany<typeof AccessToken>
+
+  @hasMany(() => HoraireOuverture, {
+    foreignKey: 'vendeurId',
+  })
+  declare horairesOuverture: HasMany<typeof HoraireOuverture>
 }

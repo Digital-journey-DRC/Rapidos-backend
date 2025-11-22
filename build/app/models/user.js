@@ -18,6 +18,7 @@ import Profil from './profil.js';
 import Adresse from './adresse.js';
 import Wallet from './wallet.js';
 import AccessToken from './access_token.js';
+import HoraireOuverture from './horaire_ouverture.js';
 const AuthFinder = withAuthFinder(() => hash.use('scrypt'), {
     uids: ['email', 'phone'],
     passwordColumnName: 'password',
@@ -98,4 +99,10 @@ __decorate([
     hasMany(() => AccessToken),
     __metadata("design:type", Object)
 ], User.prototype, "accessTokens", void 0);
+__decorate([
+    hasMany(() => HoraireOuverture, {
+        foreignKey: 'vendeurId',
+    }),
+    __metadata("design:type", Object)
+], User.prototype, "horairesOuverture", void 0);
 //# sourceMappingURL=user.js.map

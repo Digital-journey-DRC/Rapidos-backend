@@ -6,6 +6,7 @@ const CategoryController = () => import('#controllers/categories_controller');
 const CommandesController = () => import('#controllers/commandes_controller');
 const LivraisonsController = () => import('#controllers/livraisons_controller');
 const PromotionsController = () => import('#controllers/promotions_controller');
+const HorairesOuvertureController = () => import('#controllers/horaires_ouverture_controller');
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import YAML from 'yamljs';
@@ -22,6 +23,7 @@ router.get('/', async () => {
         hello: 'hello wellcome rapidos api',
     };
 });
+router.get('/vendeurs/horaires/create-table', [HorairesOuvertureController, 'createTable']);
 router.post('/register', [RegistersController, 'register']);
 router.post('/verify-otp/:userId', [RegistersController, 'verifyOtp']);
 router.post('/login', [RegistersController, 'login']);
@@ -87,6 +89,25 @@ router
     .use(middleware.auth({ guards: ['api'] }));
 router
     .get('/vendeurs', [ProductsController, 'getVendeurAndTheirProducts'])
+    .use(middleware.auth({ guards: ['api'] }));
+// Horaires d'ouverture - Routes spécifiques AVANT les routes avec paramètres
+router
+    .post('/vendeurs/horaires', [HorairesOuvertureController, 'store'])
+    .use(middleware.auth({ guards: ['api'] }));
+router
+    .get('/vendeurs/horaires', [HorairesOuvertureController, 'index'])
+    .use(middleware.auth({ guards: ['api'] }));
+router
+    .get('/vendeurs/horaires/:jour', [HorairesOuvertureController, 'show'])
+    .use(middleware.auth({ guards: ['api'] }));
+router
+    .put('/vendeurs/horaires/:jour', [HorairesOuvertureController, 'update'])
+    .use(middleware.auth({ guards: ['api'] }));
+router
+    .delete('/vendeurs/horaires/:jour', [HorairesOuvertureController, 'destroy'])
+    .use(middleware.auth({ guards: ['api'] }));
+router
+    .get('/vendeurs/:id', [ProductsController, 'getVendeurById'])
     .use(middleware.auth({ guards: ['api'] }));
 router
     .get('/commandes/acheteur', [CommandesController, 'getCommandeByAcheteur'])
