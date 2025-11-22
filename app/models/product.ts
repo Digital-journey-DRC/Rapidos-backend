@@ -35,7 +35,9 @@ export default class Product extends BaseModel {
   @column.dateTime({ autoCreate: true, autoUpdate: true })
   declare updatedAt: DateTime
 
-  @belongsTo(() => User)
+  @belongsTo(() => User, {
+    foreignKey: 'vendeurId',
+  })
   declare vendeur: BelongsTo<typeof User>
 
   @manyToMany(() => Commande, {

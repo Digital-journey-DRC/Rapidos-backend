@@ -53,7 +53,9 @@ __decorate([
     __metadata("design:type", DateTime)
 ], Product.prototype, "updatedAt", void 0);
 __decorate([
-    belongsTo(() => User),
+    belongsTo(() => User, {
+        foreignKey: 'vendeurId',
+    }),
     __metadata("design:type", Object)
 ], Product.prototype, "vendeur", void 0);
 __decorate([
