@@ -486,7 +486,14 @@ export default class ProductsController {
           .where('stock', '>', 0)
           .preload('media')
           .preload('category')
-          .preload('vendeur')
+          .preload('vendeur', (query) => {
+            query.preload('profil', (profilQuery) => {
+              profilQuery.preload('media')
+            })
+          })
+          .preload('promotions', (promotionQuery) => {
+            promotionQuery.where('delaiPromotion', '>', new Date().toISOString())
+          })
           .limit(5)
 
         return response.status(200).json({
@@ -522,7 +529,14 @@ export default class ProductsController {
           .where('stock', '>', 0)
           .preload('media')
           .preload('category')
-          .preload('vendeur')
+          .preload('vendeur', (query) => {
+            query.preload('profil', (profilQuery) => {
+              profilQuery.preload('media')
+            })
+          })
+          .preload('promotions', (promotionQuery) => {
+            promotionQuery.where('delaiPromotion', '>', new Date().toISOString())
+          })
           .limit(5)
 
         return response.status(200).json({
@@ -584,7 +598,14 @@ export default class ProductsController {
             .where('stock', '>', 0) // Seulement les produits en stock
             .preload('media')
             .preload('category')
-            .preload('vendeur')
+            .preload('vendeur', (query) => {
+              query.preload('profil', (profilQuery) => {
+                profilQuery.preload('media')
+              })
+            })
+            .preload('promotions', (promotionQuery) => {
+              promotionQuery.where('delaiPromotion', '>', new Date().toISOString())
+            })
             .limit(5 - recommendedProducts.length)
 
           for (const product of productsInCategory) {
@@ -604,7 +625,14 @@ export default class ProductsController {
           .where('stock', '>', 0)
           .preload('media')
           .preload('category')
-          .preload('vendeur')
+          .preload('vendeur', (query) => {
+            query.preload('profil', (profilQuery) => {
+              profilQuery.preload('media')
+            })
+          })
+          .preload('promotions', (promotionQuery) => {
+            promotionQuery.where('delaiPromotion', '>', new Date().toISOString())
+          })
           .limit(remainingCount)
 
         recommendedProducts.push(...additionalProducts)
