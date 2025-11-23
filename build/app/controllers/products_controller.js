@@ -413,11 +413,7 @@ export default class ProductsController {
                     .where('stock', '>', 0)
                     .preload('media')
                     .preload('category')
-                    .preload('vendeur', (query) => {
-                    query.preload('profil', (profilQuery) => {
-                        profilQuery.preload('media');
-                    });
-                })
+                    .preload('vendeur')
                     .limit(5);
                 return response.status(200).json({
                     message: 'Produits recommandés récupérés avec succès',
@@ -425,24 +421,29 @@ export default class ProductsController {
                     count: randomProducts.length,
                 });
             }
-            const thirtyDaysAgo = new Date();
-            thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-            const userEvents = await ProductEvent.query()
-                .where('userId', userId)
-                .where('createdAt', '>=', thirtyDaysAgo.toISOString())
-                .whereNotNull('productCategoryId')
-                .orderBy('createdAt', 'desc')
-                .limit(100);
+            let userEvents = [];
+            try {
+                const thirtyDaysAgo = new Date();
+                thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+                userEvents = await ProductEvent.query()
+                    .where('userId', userId)
+                    .where('createdAt', '>=', thirtyDaysAgo.toISOString())
+                    .whereNotNull('productCategoryId')
+                    .orderBy('createdAt', 'desc')
+                    .limit(100);
+            }
+            catch (error) {
+                logger.warn('Impossible de récupérer les événements, utilisation de produits aléatoires', {
+                    error: error.message,
+                });
+                userEvents = [];
+            }
             if (userEvents.length === 0) {
                 const randomProducts = await Product.query()
                     .where('stock', '>', 0)
                     .preload('media')
                     .preload('category')
-                    .preload('vendeur', (query) => {
-                    query.preload('profil', (profilQuery) => {
-                        profilQuery.preload('media');
-                    });
-                })
+                    .preload('vendeur')
                     .limit(5);
                 return response.status(200).json({
                     message: 'Produits recommandés récupérés avec succès',
@@ -497,11 +498,7 @@ export default class ProductsController {
                         .where('stock', '>', 0)
                         .preload('media')
                         .preload('category')
-                        .preload('vendeur', (query) => {
-                        query.preload('profil', (profilQuery) => {
-                            profilQuery.preload('media');
-                        });
-                    })
+                        .preload('vendeur')
                         .limit(5 - recommendedProducts.length);
                     for (const product of productsInCategory) {
                         if (recommendedProducts.length >= 5)
@@ -518,11 +515,7 @@ export default class ProductsController {
                     .where('stock', '>', 0)
                     .preload('media')
                     .preload('category')
-                    .preload('vendeur', (query) => {
-                    query.preload('profil', (profilQuery) => {
-                        profilQuery.preload('media');
-                    });
-                })
+                    .preload('vendeur')
                     .limit(remainingCount);
                 recommendedProducts.push(...additionalProducts);
             }

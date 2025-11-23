@@ -486,11 +486,7 @@ export default class ProductsController {
           .where('stock', '>', 0)
           .preload('media')
           .preload('category')
-          .preload('vendeur', (query) => {
-            query.preload('profil', (profilQuery) => {
-              profilQuery.preload('media')
-            })
-          })
+          .preload('vendeur')
           .limit(5)
 
         return response.status(200).json({
@@ -501,15 +497,24 @@ export default class ProductsController {
       }
 
       // Récupérer les événements de l'utilisateur (30 derniers jours)
-      const thirtyDaysAgo = new Date()
-      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
+      let userEvents: ProductEvent[] = []
+      try {
+        const thirtyDaysAgo = new Date()
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
 
-      const userEvents = await ProductEvent.query()
-        .where('userId', userId)
-        .where('createdAt', '>=', thirtyDaysAgo.toISOString())
-        .whereNotNull('productCategoryId')
-        .orderBy('createdAt', 'desc')
-        .limit(100)
+        userEvents = await ProductEvent.query()
+          .where('userId', userId)
+          .where('createdAt', '>=', thirtyDaysAgo.toISOString())
+          .whereNotNull('productCategoryId')
+          .orderBy('createdAt', 'desc')
+          .limit(100)
+      } catch (error) {
+        // Si la table n'existe pas ou erreur de connexion, continuer avec userEvents = []
+        logger.warn('Impossible de récupérer les événements, utilisation de produits aléatoires', {
+          error: error.message,
+        })
+        userEvents = []
+      }
 
       // Si pas d'événements, retourner 5 produits aléatoires en stock
       if (userEvents.length === 0) {
@@ -517,11 +522,7 @@ export default class ProductsController {
           .where('stock', '>', 0)
           .preload('media')
           .preload('category')
-          .preload('vendeur', (query) => {
-            query.preload('profil', (profilQuery) => {
-              profilQuery.preload('media')
-            })
-          })
+          .preload('vendeur')
           .limit(5)
 
         return response.status(200).json({
@@ -583,11 +584,7 @@ export default class ProductsController {
             .where('stock', '>', 0) // Seulement les produits en stock
             .preload('media')
             .preload('category')
-            .preload('vendeur', (query) => {
-              query.preload('profil', (profilQuery) => {
-                profilQuery.preload('media')
-              })
-            })
+            .preload('vendeur')
             .limit(5 - recommendedProducts.length)
 
           for (const product of productsInCategory) {
@@ -607,11 +604,7 @@ export default class ProductsController {
           .where('stock', '>', 0)
           .preload('media')
           .preload('category')
-          .preload('vendeur', (query) => {
-            query.preload('profil', (profilQuery) => {
-              profilQuery.preload('media')
-            })
-          })
+          .preload('vendeur')
           .limit(remainingCount)
 
         recommendedProducts.push(...additionalProducts)
