@@ -6,4 +6,4 @@ export var EventType;
     EventType["PURCHASE"] = "purchase";
     EventType["SEARCH"] = "search";
 })(EventType || (EventType = {}));
-
+//# sourceMappingURL=event_type.js.map

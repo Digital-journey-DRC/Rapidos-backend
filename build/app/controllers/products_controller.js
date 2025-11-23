@@ -2,8 +2,10 @@ import Category from '#models/category';
 import Media from '#models/media';
 import Product from '#models/product';
 import User from '#models/user';
+import ProductEvent from '#models/product_event';
 import { manageUploadProductMedias } from '#services/managemedias';
 import { categoryValidator } from '#validators/category';
+import { EventType } from '../Enum/event_type.js';
 import { createProductValidator, validateProductStock } from '#validators/products';
 import logger from '@adonisjs/core/services/logger';
 export default class ProductsController {
@@ -107,10 +109,10 @@ export default class ProductsController {
                 .preload('media')
                 .preload('category')
                 .preload('vendeur', (query) => {
-                    query.preload('profil', (profilQuery) => {
-                        profilQuery.preload('media');
-                    });
+                query.preload('profil', (profilQuery) => {
+                    profilQuery.preload('media');
                 });
+            });
             if (products.length === 0) {
                 return response.status(404).json({ message: 'Produit non trouvé' });
             }
@@ -170,8 +172,9 @@ export default class ProductsController {
                 .where('id', productIdValue)
                 .preload('media')
                 .preload('category')
-                .preload('commandes');
-            if (product.length === 0) {
+                .preload('commandes')
+                .first();
+            if (!product) {
                 return response.status(404).json({ message: 'Produit non trouvé' });
             }
             return response.status(200).json({ product });
@@ -321,8 +324,8 @@ export default class ProductsController {
                 .where('id', vendeurId)
                 .where('role', 'vendeur')
                 .preload('profil', (query) => {
-                    query.preload('media');
-                })
+                query.preload('media');
+            })
                 .preload('horairesOuverture')
                 .first();
             if (!vendeur) {
@@ -400,6 +403,144 @@ export default class ProductsController {
             }
             console.error(error);
             return response.status(500).json({ message: 'Erreur serveur interne', error: error.message });
+        }
+    }
+    async getRecommendedProducts({ response, auth }) {
+        try {
+            const userId = auth.user?.id;
+            if (!userId) {
+                const randomProducts = await Product.query()
+                    .where('stock', '>', 0)
+                    .preload('media')
+                    .preload('category')
+                    .preload('vendeur', (query) => {
+                    query.preload('profil', (profilQuery) => {
+                        profilQuery.preload('media');
+                    });
+                })
+                    .limit(5);
+                return response.status(200).json({
+                    message: 'Produits recommandés récupérés avec succès',
+                    products: randomProducts,
+                    count: randomProducts.length,
+                });
+            }
+            const thirtyDaysAgo = new Date();
+            thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+            const userEvents = await ProductEvent.query()
+                .where('userId', userId)
+                .where('createdAt', '>=', thirtyDaysAgo.toISOString())
+                .whereNotNull('productCategoryId')
+                .orderBy('createdAt', 'desc')
+                .limit(100);
+            if (userEvents.length === 0) {
+                const randomProducts = await Product.query()
+                    .where('stock', '>', 0)
+                    .preload('media')
+                    .preload('category')
+                    .preload('vendeur', (query) => {
+                    query.preload('profil', (profilQuery) => {
+                        profilQuery.preload('media');
+                    });
+                })
+                    .limit(5);
+                return response.status(200).json({
+                    message: 'Produits recommandés récupérés avec succès',
+                    products: randomProducts,
+                    count: randomProducts.length,
+                });
+            }
+            const categoryScores = {};
+            const viewedProductIds = new Set();
+            const purchasedProductIds = new Set();
+            for (const event of userEvents) {
+                if (event.productCategoryId) {
+                    let weight = 1;
+                    if (event.eventType === EventType.VIEW_PRODUCT) {
+                        weight = 1;
+                        if (event.productId)
+                            viewedProductIds.add(event.productId);
+                    }
+                    else if (event.eventType === EventType.ADD_TO_CART) {
+                        weight = 2;
+                        if (event.productId)
+                            viewedProductIds.add(event.productId);
+                    }
+                    else if (event.eventType === EventType.ADD_TO_WISHLIST) {
+                        weight = 2;
+                        if (event.productId)
+                            viewedProductIds.add(event.productId);
+                    }
+                    else if (event.eventType === EventType.PURCHASE) {
+                        weight = 5;
+                        if (event.productId) {
+                            viewedProductIds.add(event.productId);
+                            purchasedProductIds.add(event.productId);
+                        }
+                    }
+                    categoryScores[event.productCategoryId] =
+                        (categoryScores[event.productCategoryId] || 0) + weight;
+                }
+            }
+            const sortedCategories = Object.entries(categoryScores)
+                .sort(([, a], [, b]) => b - a)
+                .map(([categoryId]) => parseInt(categoryId));
+            const recommendedProducts = [];
+            const excludedProductIds = Array.from(viewedProductIds);
+            if (sortedCategories.length > 0) {
+                for (const categoryId of sortedCategories) {
+                    if (recommendedProducts.length >= 5)
+                        break;
+                    const productsInCategory = await Product.query()
+                        .where('categorieId', categoryId)
+                        .whereNotIn('id', excludedProductIds)
+                        .where('stock', '>', 0)
+                        .preload('media')
+                        .preload('category')
+                        .preload('vendeur', (query) => {
+                        query.preload('profil', (profilQuery) => {
+                            profilQuery.preload('media');
+                        });
+                    })
+                        .limit(5 - recommendedProducts.length);
+                    for (const product of productsInCategory) {
+                        if (recommendedProducts.length >= 5)
+                            break;
+                        recommendedProducts.push(product);
+                        excludedProductIds.push(product.id);
+                    }
+                }
+            }
+            if (recommendedProducts.length < 5) {
+                const remainingCount = 5 - recommendedProducts.length;
+                const additionalProducts = await Product.query()
+                    .whereNotIn('id', excludedProductIds)
+                    .where('stock', '>', 0)
+                    .preload('media')
+                    .preload('category')
+                    .preload('vendeur', (query) => {
+                    query.preload('profil', (profilQuery) => {
+                        profilQuery.preload('media');
+                    });
+                })
+                    .limit(remainingCount);
+                recommendedProducts.push(...additionalProducts);
+            }
+            return response.status(200).json({
+                message: 'Produits recommandés récupérés avec succès',
+                products: recommendedProducts.slice(0, 5),
+                count: Math.min(recommendedProducts.length, 5),
+            });
+        }
+        catch (error) {
+            logger.error('Erreur lors de la récupération des produits recommandés', {
+                error: error.message,
+                stack: error.stack,
+            });
+            return response.status(500).json({
+                message: 'Erreur serveur interne',
+                error: error.message,
+            });
         }
     }
 }

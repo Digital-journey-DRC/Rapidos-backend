@@ -46,25 +46,28 @@ export class AnalyticsService {
             throw error;
         }
     }
-    static async logViewProduct(userId, productId) {
+    static async logViewProduct(userId, productId, metadata) {
         return this.logEvent({
             userId,
             productId,
             eventType: EventType.VIEW_PRODUCT,
+            metadata,
         });
     }
-    static async logAddToCart(userId, productId) {
+    static async logAddToCart(userId, productId, metadata) {
         return this.logEvent({
             userId,
             productId,
             eventType: EventType.ADD_TO_CART,
+            metadata,
         });
     }
-    static async logAddToWishlist(userId, productId) {
+    static async logAddToWishlist(userId, productId, metadata) {
         return this.logEvent({
             userId,
             productId,
             eventType: EventType.ADD_TO_WISHLIST,
+            metadata,
         });
     }
     static async logPurchase(userId, productId, metadata) {
@@ -75,12 +78,13 @@ export class AnalyticsService {
             metadata,
         });
     }
-    static async logSearch(userId, searchQuery) {
+    static async logSearch(userId, searchQuery, metadata) {
         return this.logEvent({
             userId,
             eventType: EventType.SEARCH,
             searchQuery,
+            metadata,
         });
     }
 }
-
+//# sourceMappingURL=analytics_service.js.map

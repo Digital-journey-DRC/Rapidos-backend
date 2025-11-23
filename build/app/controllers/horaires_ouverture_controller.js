@@ -1,5 +1,4 @@
 import HoraireOuverture from '#models/horaire_ouverture';
-import User from '#models/user';
 import { UserRole } from '../Enum/user_role.js';
 import { createHoraireOuvertureValidator, updateHoraireOuvertureValidator } from '#validators/horaire_ouverture';
 export default class HorairesOuvertureController {
@@ -206,4 +205,4 @@ export default class HorairesOuvertureController {
         }
     }
 }
-
+//# sourceMappingURL=horaires_ouverture_controller.js.map

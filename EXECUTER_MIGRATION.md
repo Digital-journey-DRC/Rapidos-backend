@@ -35,3 +35,5 @@ CREATE TABLE IF NOT EXISTS promotions (
 Le fichier SQL est disponible dans: `create_promotions_table.sql`
 
 
+
+

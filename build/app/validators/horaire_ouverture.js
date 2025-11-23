@@ -10,4 +10,4 @@ export const updateHoraireOuvertureValidator = vine.compile(vine.object({
     heureFermeture: vine.string().regex(/^([0-1][0-9]|2[0-3]):[0-5][0-9]$/).optional(),
     estOuvert: vine.boolean().optional(),
 }));
-
+//# sourceMappingURL=horaire_ouverture.js.map

@@ -24,9 +24,13 @@ router.get('/', async () => {
         hello: 'hello wellcome rapidos api',
     };
 });
-router.get('/vendeurs/horaires/create-table', [HorairesOuvertureController, 'createTable']);
 router.post('/api/events', [EventsController, 'store']);
 router.post('/analytics/events', [EventsController, 'store']);
+router.post('/api/events/view-product', [EventsController, 'logViewProduct']);
+router.post('/api/events/add-to-cart', [EventsController, 'logAddToCart']);
+router.post('/api/events/add-to-wishlist', [EventsController, 'logAddToWishlist']);
+router.post('/api/events/purchase', [EventsController, 'logPurchase']);
+router.post('/api/events/search', [EventsController, 'logSearch']);
 router.get('/api/events/create-table', [EventsController, 'createTable']);
 router.post('/register', [RegistersController, 'register']);
 router.post('/verify-otp/:userId', [RegistersController, 'verifyOtp']);
@@ -54,6 +58,9 @@ router
     .use(middleware.auth({ guards: ['api'] }));
 router
     .get('/products/all', [ProductsController, 'getAllProducts'])
+    .use(middleware.auth({ guards: ['api'] }));
+router
+    .get('/products/recommended', [ProductsController, 'getRecommendedProducts'])
     .use(middleware.auth({ guards: ['api'] }));
 router
     .get('/products/adm/all', [ProductsController, 'showAllProducts'])
@@ -94,7 +101,6 @@ router
 router
     .get('/vendeurs', [ProductsController, 'getVendeurAndTheirProducts'])
     .use(middleware.auth({ guards: ['api'] }));
-// Horaires d'ouverture - Routes spécifiques AVANT les routes avec paramètres
 router
     .post('/vendeurs/horaires', [HorairesOuvertureController, 'store'])
     .use(middleware.auth({ guards: ['api'] }));
@@ -110,6 +116,7 @@ router
 router
     .delete('/vendeurs/horaires/:jour', [HorairesOuvertureController, 'destroy'])
     .use(middleware.auth({ guards: ['api'] }));
+router.get('/vendeurs/horaires/create-table', [HorairesOuvertureController, 'createTable']);
 router
     .get('/vendeurs/:id', [ProductsController, 'getVendeurById'])
     .use(middleware.auth({ guards: ['api'] }));

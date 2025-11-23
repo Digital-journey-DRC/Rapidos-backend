@@ -1,5 +1,5 @@
 import { AnalyticsService } from '#services/analytics_service';
-import { createProductEventValidator } from '#validators/product_event';
+import { createProductEventValidator, viewProductEventValidator, addToCartEventValidator, addToWishlistEventValidator, purchaseEventValidator, searchEventValidator, } from '#validators/product_event';
 import { EventType } from '../Enum/event_type.js';
 import logger from '@adonisjs/core/services/logger';
 export default class EventsController {
@@ -58,6 +58,184 @@ export default class EventsController {
             });
         }
     }
+    async logViewProduct({ request, response, auth }) {
+        try {
+            const payload = await request.validateUsing(viewProductEventValidator);
+            const userId = auth.user?.id || null;
+            const event = await AnalyticsService.logViewProduct(userId, payload.productId, payload.metadata);
+            return response.status(201).json({
+                message: 'Événement view_product enregistré avec succès',
+                event: {
+                    id: event.id,
+                    userId: event.userId,
+                    productId: event.productId,
+                    productCategoryId: event.productCategoryId,
+                    productCategoryName: event.productCategoryName,
+                    eventType: event.eventType,
+                    metadata: event.metadata,
+                    createdAt: event.createdAt,
+                },
+            });
+        }
+        catch (error) {
+            if (error.code === 'E_VALIDATION_FAILURE') {
+                return response.status(422).json({
+                    message: 'Données invalides',
+                    errors: error.messages,
+                });
+            }
+            logger.error('Erreur lors de l\'enregistrement de view_product', {
+                error: error.message,
+                stack: error.stack,
+            });
+            return response.status(500).json({
+                message: 'Erreur serveur interne',
+                error: error.message,
+            });
+        }
+    }
+    async logAddToCart({ request, response, auth }) {
+        try {
+            const payload = await request.validateUsing(addToCartEventValidator);
+            const userId = auth.user?.id || null;
+            const event = await AnalyticsService.logAddToCart(userId, payload.productId, payload.metadata);
+            return response.status(201).json({
+                message: 'Événement add_to_cart enregistré avec succès',
+                event: {
+                    id: event.id,
+                    userId: event.userId,
+                    productId: event.productId,
+                    productCategoryId: event.productCategoryId,
+                    productCategoryName: event.productCategoryName,
+                    eventType: event.eventType,
+                    metadata: event.metadata,
+                    createdAt: event.createdAt,
+                },
+            });
+        }
+        catch (error) {
+            if (error.code === 'E_VALIDATION_FAILURE') {
+                return response.status(422).json({
+                    message: 'Données invalides',
+                    errors: error.messages,
+                });
+            }
+            logger.error('Erreur lors de l\'enregistrement de add_to_cart', {
+                error: error.message,
+                stack: error.stack,
+            });
+            return response.status(500).json({
+                message: 'Erreur serveur interne',
+                error: error.message,
+            });
+        }
+    }
+    async logAddToWishlist({ request, response, auth }) {
+        try {
+            const payload = await request.validateUsing(addToWishlistEventValidator);
+            const userId = auth.user?.id || null;
+            const event = await AnalyticsService.logAddToWishlist(userId, payload.productId, payload.metadata);
+            return response.status(201).json({
+                message: 'Événement add_to_wishlist enregistré avec succès',
+                event: {
+                    id: event.id,
+                    userId: event.userId,
+                    productId: event.productId,
+                    productCategoryId: event.productCategoryId,
+                    productCategoryName: event.productCategoryName,
+                    eventType: event.eventType,
+                    metadata: event.metadata,
+                    createdAt: event.createdAt,
+                },
+            });
+        }
+        catch (error) {
+            if (error.code === 'E_VALIDATION_FAILURE') {
+                return response.status(422).json({
+                    message: 'Données invalides',
+                    errors: error.messages,
+                });
+            }
+            logger.error('Erreur lors de l\'enregistrement de add_to_wishlist', {
+                error: error.message,
+                stack: error.stack,
+            });
+            return response.status(500).json({
+                message: 'Erreur serveur interne',
+                error: error.message,
+            });
+        }
+    }
+    async logPurchase({ request, response, auth }) {
+        try {
+            const payload = await request.validateUsing(purchaseEventValidator);
+            const userId = auth.user?.id || null;
+            const event = await AnalyticsService.logPurchase(userId, payload.productId, payload.metadata);
+            return response.status(201).json({
+                message: 'Événement purchase enregistré avec succès',
+                event: {
+                    id: event.id,
+                    userId: event.userId,
+                    productId: event.productId,
+                    productCategoryId: event.productCategoryId,
+                    productCategoryName: event.productCategoryName,
+                    eventType: event.eventType,
+                    metadata: event.metadata,
+                    createdAt: event.createdAt,
+                },
+            });
+        }
+        catch (error) {
+            if (error.code === 'E_VALIDATION_FAILURE') {
+                return response.status(422).json({
+                    message: 'Données invalides',
+                    errors: error.messages,
+                });
+            }
+            logger.error('Erreur lors de l\'enregistrement de purchase', {
+                error: error.message,
+                stack: error.stack,
+            });
+            return response.status(500).json({
+                message: 'Erreur serveur interne',
+                error: error.message,
+            });
+        }
+    }
+    async logSearch({ request, response, auth }) {
+        try {
+            const payload = await request.validateUsing(searchEventValidator);
+            const userId = auth.user?.id || null;
+            const event = await AnalyticsService.logSearch(userId, payload.searchQuery, payload.metadata);
+            return response.status(201).json({
+                message: 'Événement search enregistré avec succès',
+                event: {
+                    id: event.id,
+                    userId: event.userId,
+                    eventType: event.eventType,
+                    searchQuery: event.searchQuery,
+                    metadata: event.metadata,
+                    createdAt: event.createdAt,
+                },
+            });
+        }
+        catch (error) {
+            if (error.code === 'E_VALIDATION_FAILURE') {
+                return response.status(422).json({
+                    message: 'Données invalides',
+                    errors: error.messages,
+                });
+            }
+            logger.error('Erreur lors de l\'enregistrement de search', {
+                error: error.message,
+                stack: error.stack,
+            });
+            return response.status(500).json({
+                message: 'Erreur serveur interne',
+                error: error.message,
+            });
+        }
+    }
     async createTable({ response }) {
         try {
             const db = await import('@adonisjs/lucid/services/db');
@@ -95,4 +273,4 @@ export default class EventsController {
         }
     }
 }
-
+//# sourceMappingURL=events_controller.js.map

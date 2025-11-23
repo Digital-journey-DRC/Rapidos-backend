@@ -481,8 +481,9 @@ export default class ProductsController {
       const userId = auth.user?.id
 
       if (!userId) {
-        // Si pas d'utilisateur connecté, retourner 5 produits aléatoires
+        // Si pas d'utilisateur connecté, retourner 5 produits aléatoires en stock
         const randomProducts = await Product.query()
+          .where('stock', '>', 0)
           .preload('media')
           .preload('category')
           .preload('vendeur', (query) => {
@@ -504,15 +505,16 @@ export default class ProductsController {
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
 
       const userEvents = await ProductEvent.query()
-        .where('user_id', userId)
-        .where('created_at', '>=', thirtyDaysAgo.toISOString())
-        .whereNotNull('product_category_id')
-        .orderBy('created_at', 'desc')
+        .where('userId', userId)
+        .where('createdAt', '>=', thirtyDaysAgo.toISOString())
+        .whereNotNull('productCategoryId')
+        .orderBy('createdAt', 'desc')
         .limit(100)
 
-      // Si pas d'événements, retourner des produits aléatoires
+      // Si pas d'événements, retourner 5 produits aléatoires en stock
       if (userEvents.length === 0) {
         const randomProducts = await Product.query()
+          .where('stock', '>', 0)
           .preload('media')
           .preload('category')
           .preload('vendeur', (query) => {
@@ -569,31 +571,35 @@ export default class ProductsController {
       const recommendedProducts: Product[] = []
       const excludedProductIds = Array.from(viewedProductIds)
 
-      // Pour chaque catégorie (par ordre de préférence)
-      for (const categoryId of sortedCategories) {
-        if (recommendedProducts.length >= 5) break
-
-        const productsInCategory = await Product.query()
-          .where('categorieId', categoryId)
-          .whereNotIn('id', excludedProductIds)
-          .where('stock', '>', 0) // Seulement les produits en stock
-          .preload('media')
-          .preload('category')
-          .preload('vendeur', (query) => {
-            query.preload('profil', (profilQuery) => {
-              profilQuery.preload('media')
-            })
-          })
-          .limit(5 - recommendedProducts.length)
-
-        for (const product of productsInCategory) {
+      // Si on a des catégories préférées, chercher des produits dans ces catégories
+      if (sortedCategories.length > 0) {
+        // Pour chaque catégorie (par ordre de préférence)
+        for (const categoryId of sortedCategories) {
           if (recommendedProducts.length >= 5) break
-          recommendedProducts.push(product)
-          excludedProductIds.push(product.id)
+
+          const productsInCategory = await Product.query()
+            .where('categorieId', categoryId)
+            .whereNotIn('id', excludedProductIds)
+            .where('stock', '>', 0) // Seulement les produits en stock
+            .preload('media')
+            .preload('category')
+            .preload('vendeur', (query) => {
+              query.preload('profil', (profilQuery) => {
+                profilQuery.preload('media')
+              })
+            })
+            .limit(5 - recommendedProducts.length)
+
+          for (const product of productsInCategory) {
+            if (recommendedProducts.length >= 5) break
+            recommendedProducts.push(product)
+            excludedProductIds.push(product.id)
+          }
         }
       }
 
-      // Si on n'a pas assez de produits, compléter avec des produits aléatoires d'autres catégories
+      // Si on n'a pas assez de produits (pas de catégories ou pas assez de produits dans les catégories),
+      // compléter avec des produits aléatoires en stock
       if (recommendedProducts.length < 5) {
         const remainingCount = 5 - recommendedProducts.length
         const additionalProducts = await Product.query()
@@ -613,7 +619,7 @@ export default class ProductsController {
 
       return response.status(200).json({
         message: 'Produits recommandés récupérés avec succès',
-        products: recommendedProducts.slice(0, 5), // S'assurer qu'on retourne exactement 5
+        products: recommendedProducts.slice(0, 5), // S'assurer qu'on retourne au maximum 5 produits
         count: Math.min(recommendedProducts.length, 5),
       })
     } catch (error) {

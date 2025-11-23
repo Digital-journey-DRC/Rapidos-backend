@@ -31,9 +31,6 @@ router.get('/', async () => {
   }
 })
 
-// Route temporaire pour créer la table horaires_ouverture (sans auth)
-router.get('/vendeurs/horaires/create-table', [HorairesOuvertureController, 'createTable'])
-
 // Analytics / Events - Accessible sans auth (userId peut être null)
 router.post('/api/events', [EventsController, 'store'])
 router.post('/analytics/events', [EventsController, 'store'])

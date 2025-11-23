@@ -1,5 +1,4 @@
 import HoraireOuverture from '#models/horaire_ouverture'
-import User from '#models/user'
 import { UserRole } from '../Enum/user_role.js'
 import { createHoraireOuvertureValidator, updateHoraireOuvertureValidator } from '#validators/horaire_ouverture'
 import type { HttpContext } from '@adonisjs/core/http'
