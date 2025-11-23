@@ -7,6 +7,7 @@ const CommandesController = () => import('#controllers/commandes_controller')
 const LivraisonsController = () => import('#controllers/livraisons_controller')
 const PromotionsController = () => import('#controllers/promotions_controller')
 const HorairesOuvertureController = () => import('#controllers/horaires_ouverture_controller')
+const EventsController = () => import('#controllers/events_controller')
 
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
@@ -32,6 +33,20 @@ router.get('/', async () => {
 
 // Route temporaire pour créer la table horaires_ouverture (sans auth)
 router.get('/vendeurs/horaires/create-table', [HorairesOuvertureController, 'createTable'])
+
+// Analytics / Events - Accessible sans auth (userId peut être null)
+router.post('/api/events', [EventsController, 'store'])
+router.post('/analytics/events', [EventsController, 'store'])
+
+// Endpoints spécifiques pour chaque type d'événement
+router.post('/api/events/view-product', [EventsController, 'logViewProduct'])
+router.post('/api/events/add-to-cart', [EventsController, 'logAddToCart'])
+router.post('/api/events/add-to-wishlist', [EventsController, 'logAddToWishlist'])
+router.post('/api/events/purchase', [EventsController, 'logPurchase'])
+router.post('/api/events/search', [EventsController, 'logSearch'])
+
+// Route temporaire pour créer la table product_events
+router.get('/api/events/create-table', [EventsController, 'createTable'])
 
 router.post('/register', [RegistersController, 'register'])
 
@@ -69,9 +84,14 @@ router
   .get('/products/boutique/:userId', [ProductsController, 'getAllProductByUser'])
   .use(middleware.auth({ guards: ['api'] }))
 
-// 2. Récupérer tous les produits d’un vendeur donné (admin uniquement, via email dans le body)
+// 2. Récupérer tous les produits d'un vendeur donné (admin uniquement, via email dans le body)
 router
   .get('/products/all', [ProductsController, 'getAllProducts'])
+  .use(middleware.auth({ guards: ['api'] }))
+
+// Produits recommandés basés sur les événements de l'acheteur
+router
+  .get('/products/recommended', [ProductsController, 'getRecommendedProducts'])
   .use(middleware.auth({ guards: ['api'] }))
 
 // 3. Voir tous les produits (admin uniquement)

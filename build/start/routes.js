@@ -7,6 +7,7 @@ const CommandesController = () => import('#controllers/commandes_controller');
 const LivraisonsController = () => import('#controllers/livraisons_controller');
 const PromotionsController = () => import('#controllers/promotions_controller');
 const HorairesOuvertureController = () => import('#controllers/horaires_ouverture_controller');
+const EventsController = () => import('#controllers/events_controller');
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import YAML from 'yamljs';
@@ -24,6 +25,9 @@ router.get('/', async () => {
     };
 });
 router.get('/vendeurs/horaires/create-table', [HorairesOuvertureController, 'createTable']);
+router.post('/api/events', [EventsController, 'store']);
+router.post('/analytics/events', [EventsController, 'store']);
+router.get('/api/events/create-table', [EventsController, 'createTable']);
 router.post('/register', [RegistersController, 'register']);
 router.post('/verify-otp/:userId', [RegistersController, 'verifyOtp']);
 router.post('/login', [RegistersController, 'login']);
