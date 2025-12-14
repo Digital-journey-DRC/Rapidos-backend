@@ -1,0 +1,88 @@
+================================================================================
+TEST - UPLOAD D'IMAGES UNSPLASH VERS CLOUDINARY
+================================================================================
+
+Le système fonctionne comme suit :
+1. Vous envoyez une URL Unsplash (ex: https://images.unsplash.com/...)
+2. Le système télécharge l'image depuis Unsplash
+3. L'image est uploadée sur Cloudinary
+4. SEULEMENT l'URL Cloudinary est stockée en base de données
+5. Les URLs Cloudinary sont affichées dans les réponses
+
+================================================================================
+EXEMPLE DE TEST
+================================================================================
+
+1. Créer un produit avec URL Unsplash:
+----------------------------------------
+curl -X POST http://localhost:3333/products/store \
+  -H 'Authorization: Bearer YOUR_TOKEN' \
+  -F 'name=Produit Test' \
+  -F 'description=Description' \
+  -F 'price=25000' \
+  -F 'stock=15' \
+  -F 'category=Test Category' \
+  -F 'image=https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=400&h=400&fit=crop'
+
+2. Vérifier la réponse:
+----------------------------------------
+La réponse contiendra:
+{
+  "product": {
+    "id": 1,
+    "name": "Produit Test",
+    ...
+  },
+  "medias": [
+    {
+      "id": 1,
+      "mediaUrl": "https://res.cloudinary.com/dnn2ght5x/image/upload/v.../products/...",
+      "mediaType": "jpg"
+    }
+  ]
+}
+
+Note: L'URL stockée sera une URL Cloudinary, PAS une URL Unsplash.
+
+3. Vérifier l'affichage:
+----------------------------------------
+GET /products/all retournera:
+{
+  "products": [
+    {
+      "id": 1,
+      "name": "Produit Test",
+      "image": "https://res.cloudinary.com/dnn2ght5x/image/upload/v.../products/...",
+      "images": []
+    }
+  ]
+}
+
+Toutes les URLs affichées seront des URLs Cloudinary.
+
+================================================================================
+FONCTIONNEMENT TECHNIQUE
+================================================================================
+
+1. Détection: Si le champ 'image' est une string (URL), le système utilise 
+   uploadProductImageFromUrl()
+
+2. Téléchargement: L'image est téléchargée depuis l'URL avec axios
+
+3. Upload Cloudinary: L'image est convertie en base64 et uploadée sur Cloudinary
+
+4. Stockage: Seule l'URL Cloudinary (result.secure_url) est stockée en base
+
+5. Affichage: Les endpoints affichent les URLs Cloudinary stockées
+
+================================================================================
+CONFIRMATION
+================================================================================
+
+✅ Les URLs Unsplash sont automatiquement converties en URLs Cloudinary
+✅ Seules les URLs Cloudinary sont stockées en base de données
+✅ Tous les endpoints affichent les URLs Cloudinary
+✅ Aucune URL Unsplash n'est stockée ou affichée
+
+================================================================================
+

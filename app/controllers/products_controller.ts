@@ -58,16 +58,17 @@ export default class ProductsController {
 
       // Gestion des images (image principale + images supplémentaires)
       // Support à la fois de l'ancienne méthode (medias) et de la nouvelle (image, image1, image2, image3, image4)
-      const image = request.file('image')
-      const image1 = request.file('image1')
-      const image2 = request.file('image2')
-      const image3 = request.file('image3')
-      const image4 = request.file('image4')
+      // Supporte aussi les URLs d'images (ex: Unsplash) en plus des fichiers
+      const image = request.file('image') || request.input('image') // Fichier ou URL
+      const image1 = request.file('image1') || request.input('image1') // Fichier ou URL
+      const image2 = request.file('image2') || request.input('image2') // Fichier ou URL
+      const image3 = request.file('image3') || request.input('image3') // Fichier ou URL
+      const image4 = request.file('image4') || request.input('image4') // Fichier ou URL
       const productMedia = request.files('medias') // Ancienne méthode pour compatibilité
 
       let errors: any[] = []
 
-      // Si on utilise la nouvelle méthode (image, image1, etc.)
+      // Si on utilise la nouvelle méthode (image, image1, etc.) - supporte fichiers ET URLs
       if (image || image1 || image2 || image3 || image4) {
         const {
           image: uploadedImage,
@@ -174,15 +175,47 @@ export default class ProductsController {
   async getAllProductByUser({ params, response }: HttpContext) {
     const { userId } = params
     try {
-      const product = await Product.query()
+      const products = await Product.query()
+        .select(['id', 'name', 'description', 'price', 'stock'])
         .where('vendeur_id', userId)
-        .preload('media')
         .preload('category')
-        .preload('commandes')
-      if (product.length === 0) {
+        .preload('vendeur')
+      
+      if (products.length === 0) {
         return response.status(404).json({ message: 'Produit non trouvé' })
       }
-      return response.status(200).json({ product })
+
+      // Formater exactement comme getAllProducts (même structure)
+      const productsFormatted = await Promise.all(
+        products.map(async (product) => {
+          // Récupérer tous les médias du produit (utiliser product_id pour correspondre à la colonne DB)
+          const allMedias = await Media.query()
+            .where('product_id', product.id)
+            .orderBy('created_at', 'asc')
+
+          // Image principale (première image ou null)
+          const mainImage = allMedias.length > 0 ? allMedias[0].mediaUrl : null
+
+          // Tableau des images supplémentaires (toutes sauf la première)
+          const images = allMedias.length > 1 ? allMedias.slice(1).map((media) => media.mediaUrl) : []
+
+          // Utiliser serialize() puis extraire uniquement les champs souhaités
+          const serialized = product.serialize()
+          return {
+            id: serialized.id,
+            name: serialized.name,
+            description: serialized.description,
+            price: serialized.price,
+            stock: serialized.stock,
+            category: serialized.category,
+            image: mainImage, // Image principale Cloudinary
+            images: images, // Tableau des images supplémentaires Cloudinary
+            vendeur: serialized.vendeur,
+          }
+        })
+      )
+
+      return response.status(200).json({ products: productsFormatted })
     } catch (error) {
       if (error.code === 'E_ROW_NOT_FOUND') {
         return response.status(404).json({ message: 'Produit non trouvé', error: error.message })
@@ -269,13 +302,45 @@ export default class ProductsController {
       }
       const products = await Product.query()
         .where('categorieId', categoryId)
-        .preload('media')
         .preload('category')
+        .preload('vendeur')
         .preload('commandes')
+      
       if (products.length === 0) {
         return response.status(404).json({ message: 'Produit non trouvé' })
       }
-      return response.status(200).json({ products })
+
+      // Formater les produits avec les images Cloudinary
+      const productsFormatted = await Promise.all(
+        products.map(async (product) => {
+          // Récupérer tous les médias du produit
+          const allMedias = await Media.query()
+            .where('product_id', product.id)
+            .orderBy('created_at', 'asc')
+
+          // Image principale (première image ou null)
+          const mainImage = allMedias.length > 0 ? allMedias[0].mediaUrl : null
+
+          // Tableau des images supplémentaires (toutes sauf la première)
+          const images = allMedias.length > 1 ? allMedias.slice(1).map((media) => media.mediaUrl) : []
+
+          const serialized = product.serialize()
+          return {
+            id: serialized.id,
+            name: serialized.name,
+            description: serialized.description,
+            price: serialized.price,
+            stock: serialized.stock,
+            category: serialized.category,
+            image: mainImage, // Image principale Cloudinary
+            images: images, // Tableau des images supplémentaires Cloudinary
+            vendeur: serialized.vendeur,
+            commandes: serialized.commandes,
+          }
+        })
+      )
+
+      return response.status(200).json({ products: productsFormatted })
     } catch (error) {
       if (error.code === 'E_ROW_NOT_FOUND') {
         return response.status(404).json({ message: 'Produit non trouvé', error: error.message })
@@ -291,8 +356,8 @@ export default class ProductsController {
     try {
       const product = await Product.query()
         .where('id', productIdValue)
-        .preload('media')
         .preload('category')
+        .preload('vendeur')
         .preload('commandes')
         .first()
       
@@ -300,7 +365,33 @@ export default class ProductsController {
         return response.status(404).json({ message: 'Produit non trouvé' })
       }
 
-      return response.status(200).json({ product })
+      // Récupérer tous les médias du produit
+      const allMedias = await Media.query()
+        .where('product_id', product.id)
+        .orderBy('created_at', 'asc')
+
+      // Image principale (première image ou null)
+      const mainImage = allMedias.length > 0 ? allMedias[0].mediaUrl : null
+
+      // Tableau des images supplémentaires (toutes sauf la première)
+      const images = allMedias.length > 1 ? allMedias.slice(1).map((media) => media.mediaUrl) : []
+
+      // Formater le produit avec les images Cloudinary
+      const serialized = product.serialize()
+      const productFormatted = {
+        id: serialized.id,
+        name: serialized.name,
+        description: serialized.description,
+        price: serialized.price,
+        stock: serialized.stock,
+        category: serialized.category,
+        image: mainImage, // Image principale Cloudinary
+        images: images, // Tableau des images supplémentaires Cloudinary
+        vendeur: serialized.vendeur,
+        commandes: serialized.commandes,
+      }
+
+      return response.status(200).json({ product: productFormatted })
     } catch (error) {
       if (error.code === 'E_ROW_NOT_FOUND') {
         return response.status(404).json({ message: 'Produit non trouvé', error: error.message })
