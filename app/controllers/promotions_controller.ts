@@ -87,11 +87,20 @@ export default class PromotionsController {
         })
       }
 
+      const now = DateTime.now().toISO()
+      
       const promotions = await Promotion.query()
         .preload('product', (productQuery) => {
           productQuery.preload('media').preload('category').preload('vendeur')
         })
-        .where('delaiPromotion', '>', new Date().toISOString())
+        .where('delaiPromotion', '>', now)
+        .where((query) => {
+          // Si dateDebutPromotion est null, la promotion a déjà commencé
+          // Sinon, vérifier que la date de début est passée ou égale à maintenant
+          query
+            .whereNull('dateDebutPromotion')
+            .orWhere('dateDebutPromotion', '<=', now)
+        })
         .orderBy('createdAt', 'desc')
 
       if (promotions.length === 0) {
@@ -169,8 +178,18 @@ export default class PromotionsController {
         })
       }
 
+      const now = DateTime.now().toISO()
+      
       const promotion = await Promotion.query()
         .where('id', id)
+        .where('delaiPromotion', '>', now)
+        .where((query) => {
+          // Si dateDebutPromotion est null, la promotion a déjà commencé
+          // Sinon, vérifier que la date de début est passée ou égale à maintenant
+          query
+            .whereNull('dateDebutPromotion')
+            .orWhere('dateDebutPromotion', '<=', now)
+        })
         .preload('product', (productQuery) => {
           productQuery.preload('media').preload('category').preload('vendeur')
         })
@@ -266,9 +285,17 @@ export default class PromotionsController {
       }
 
       // Vérifier qu'il n'existe pas déjà une promotion active pour ce produit
+      const now = DateTime.now().toISO()
       const existingPromotion = await Promotion.query()
         .where('productId', payload.productId)
-        .where('delaiPromotion', '>', new Date().toISOString())
+        .where('delaiPromotion', '>', now)
+        .where((query) => {
+          // Si dateDebutPromotion est null, la promotion a déjà commencé
+          // Sinon, vérifier que la date de début est passée ou égale à maintenant
+          query
+            .whereNull('dateDebutPromotion')
+            .orWhere('dateDebutPromotion', '<=', now)
+        })
         .first()
 
       if (existingPromotion) {
