@@ -196,7 +196,6 @@ export default class ProductsController {
     try {
       const products = await Product.query()
         .select(['id', 'name', 'description', 'price', 'stock'])
-        .preload('media')
         .preload('category')
         .preload('vendeur')
 
@@ -205,20 +204,32 @@ export default class ProductsController {
       }
 
       // Formater exactement comme dans les promotions (même structure)
-      const productsFormatted = products.map((product) => {
-        // Utiliser serialize() puis extraire uniquement les champs souhaités
-        const serialized = product.serialize()
-        return {
-          id: serialized.id,
-          name: serialized.name,
-          description: serialized.description,
-          price: serialized.price,
-          stock: serialized.stock,
-          category: serialized.category,
-          media: serialized.media,
-          vendeur: serialized.vendeur,
-        }
-      })
+      const productsFormatted = await Promise.all(
+        products.map(async (product) => {
+          // Récupérer tous les médias du produit
+          const allMedias = await Media.query().where('productId', product.id).orderBy('createdAt', 'asc')
+
+          // Image principale (première image ou null)
+          const mainImage = allMedias.length > 0 ? allMedias[0].mediaUrl : null
+
+          // Tableau des images supplémentaires (toutes sauf la première)
+          const images = allMedias.length > 1 ? allMedias.slice(1).map((media) => media.mediaUrl) : []
+
+          // Utiliser serialize() puis extraire uniquement les champs souhaités
+          const serialized = product.serialize()
+          return {
+            id: serialized.id,
+            name: serialized.name,
+            description: serialized.description,
+            price: serialized.price,
+            stock: serialized.stock,
+            category: serialized.category,
+            image: mainImage, // Image principale
+            images: images, // Tableau des images supplémentaires
+            vendeur: serialized.vendeur,
+          }
+        })
+      )
 
       return response.status(200).json({ products: productsFormatted })
     } catch (error) {
