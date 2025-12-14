@@ -132,16 +132,51 @@ export default class ProductsController {
       const products = await Product.query()
         .preload('media')
         .preload('category')
-        .preload('vendeur', (query) => {
-          query.preload('profil', (profilQuery) => {
-            profilQuery.preload('media')
-          })
-        })
+        .preload('vendeur')
 
       if (products.length === 0) {
         return response.status(404).json({ message: 'Produit non trouvé' })
       }
-      return response.status(200).json({ products })
+
+      // Formater les produits comme dans les promotions (sans le profil du vendeur)
+      const productsFormatted = products.map((product) => {
+        // Formater le vendeur sans le champ profil (comme dans promotions)
+        let vendeur = null
+        if (product.vendeur) {
+          const vendeurData = product.vendeur.toJSON()
+          vendeur = {
+            id: vendeurData.id,
+            firstName: vendeurData.firstName,
+            lastName: vendeurData.lastName,
+            email: vendeurData.email,
+            phone: vendeurData.phone,
+            secureOtp: vendeurData.secureOtp,
+            otpExpiredAt: vendeurData.otpExpiredAt,
+            termsAccepted: vendeurData.termsAccepted,
+            role: vendeurData.role,
+            createdAt: vendeurData.createdAt,
+            updatedAt: vendeurData.updatedAt,
+            userStatus: vendeurData.userStatus,
+          }
+        }
+
+        return {
+          id: product.id,
+          name: product.name,
+          description: product.description,
+          price: product.price,
+          stock: product.stock,
+          vendeurId: product.vendeurId,
+          categorieId: product.categorieId,
+          createdAt: product.createdAt,
+          updatedAt: product.updatedAt,
+          category: product.category,
+          media: product.media,
+          vendeur: vendeur,
+        }
+      })
+
+      return response.status(200).json({ products: productsFormatted })
     } catch (error) {
       if (error.code === 'E_ROW_NOT_FOUND') {
         return response.status(404).json({ message: 'Produit non trouvé', error: error.message })
@@ -486,20 +521,54 @@ export default class ProductsController {
           .where('stock', '>', 0)
           .preload('media')
           .preload('category')
-          .preload('vendeur', (query) => {
-            query.preload('profil', (profilQuery) => {
-              profilQuery.preload('media')
-            })
-          })
+          .preload('vendeur')
           .preload('promotions', (promotionQuery) => {
             promotionQuery.where('delaiPromotion', '>', new Date().toISOString())
           })
           .limit(5)
 
+        // Formater les produits comme dans les promotions (sans le profil du vendeur)
+        const productsFormatted = randomProducts.map((product) => {
+          // Formater le vendeur sans le champ profil (comme dans promotions)
+          let vendeur = null
+          if (product.vendeur) {
+            vendeur = {
+              id: product.vendeur.id,
+              firstName: product.vendeur.firstName,
+              lastName: product.vendeur.lastName,
+              email: product.vendeur.email,
+              phone: product.vendeur.phone,
+              secureOtp: product.vendeur.secureOtp,
+              otpExpiredAt: product.vendeur.otpExpiredAt,
+              termsAccepted: product.vendeur.termsAccepted,
+              role: product.vendeur.role,
+              createdAt: product.vendeur.createdAt,
+              updatedAt: product.vendeur.updatedAt,
+              userStatus: product.vendeur.userStatus,
+            }
+          }
+
+          return {
+            id: product.id,
+            name: product.name,
+            description: product.description,
+            price: product.price,
+            stock: product.stock,
+            vendeurId: product.vendeurId,
+            categorieId: product.categorieId,
+            createdAt: product.createdAt,
+            updatedAt: product.updatedAt,
+            category: product.category,
+            media: product.media,
+            promotions: product.promotions,
+            vendeur: vendeur,
+          }
+        })
+
         return response.status(200).json({
           message: 'Produits recommandés récupérés avec succès',
-          products: randomProducts,
-          count: randomProducts.length,
+          products: productsFormatted,
+          count: productsFormatted.length,
         })
       }
 
@@ -529,20 +598,54 @@ export default class ProductsController {
           .where('stock', '>', 0)
           .preload('media')
           .preload('category')
-          .preload('vendeur', (query) => {
-            query.preload('profil', (profilQuery) => {
-              profilQuery.preload('media')
-            })
-          })
+          .preload('vendeur')
           .preload('promotions', (promotionQuery) => {
             promotionQuery.where('delaiPromotion', '>', new Date().toISOString())
           })
           .limit(5)
 
+        // Formater les produits comme dans les promotions (sans le profil du vendeur)
+        const productsFormatted = randomProducts.map((product) => {
+          // Formater le vendeur sans le champ profil (comme dans promotions)
+          let vendeur = null
+          if (product.vendeur) {
+            vendeur = {
+              id: product.vendeur.id,
+              firstName: product.vendeur.firstName,
+              lastName: product.vendeur.lastName,
+              email: product.vendeur.email,
+              phone: product.vendeur.phone,
+              secureOtp: product.vendeur.secureOtp,
+              otpExpiredAt: product.vendeur.otpExpiredAt,
+              termsAccepted: product.vendeur.termsAccepted,
+              role: product.vendeur.role,
+              createdAt: product.vendeur.createdAt,
+              updatedAt: product.vendeur.updatedAt,
+              userStatus: product.vendeur.userStatus,
+            }
+          }
+
+          return {
+            id: product.id,
+            name: product.name,
+            description: product.description,
+            price: product.price,
+            stock: product.stock,
+            vendeurId: product.vendeurId,
+            categorieId: product.categorieId,
+            createdAt: product.createdAt,
+            updatedAt: product.updatedAt,
+            category: product.category,
+            media: product.media,
+            promotions: product.promotions,
+            vendeur: vendeur,
+          }
+        })
+
         return response.status(200).json({
           message: 'Produits recommandés récupérés avec succès',
-          products: randomProducts,
-          count: randomProducts.length,
+          products: productsFormatted,
+          count: productsFormatted.length,
         })
       }
 
@@ -598,14 +701,10 @@ export default class ProductsController {
           .where('stock', '>', 0) // Seulement les produits en stock
           .preload('media')
           .preload('category')
-          .preload('vendeur', (query) => {
-            query.preload('profil', (profilQuery) => {
-              profilQuery.preload('media')
-            })
+          .preload('vendeur')
+          .preload('promotions', (promotionQuery) => {
+            promotionQuery.where('delaiPromotion', '>', new Date().toISOString())
           })
-            .preload('promotions', (promotionQuery) => {
-              promotionQuery.where('delaiPromotion', '>', new Date().toISOString())
-            })
           .limit(5 - recommendedProducts.length)
 
         for (const product of productsInCategory) {
@@ -625,11 +724,7 @@ export default class ProductsController {
           .where('stock', '>', 0)
           .preload('media')
           .preload('category')
-          .preload('vendeur', (query) => {
-            query.preload('profil', (profilQuery) => {
-              profilQuery.preload('media')
-            })
-          })
+          .preload('vendeur')
           .preload('promotions', (promotionQuery) => {
             promotionQuery.where('delaiPromotion', '>', new Date().toISOString())
           })
@@ -638,10 +733,49 @@ export default class ProductsController {
         recommendedProducts.push(...additionalProducts)
       }
 
+      // Formater les produits comme dans les promotions (sans le profil du vendeur)
+      const productsFormatted = recommendedProducts.slice(0, 5).map((product) => {
+        // Formater le vendeur sans le champ profil (comme dans promotions)
+        let vendeur = null
+        if (product.vendeur) {
+          const vendeurData = product.vendeur.toJSON()
+          vendeur = {
+            id: vendeurData.id,
+            firstName: vendeurData.firstName,
+            lastName: vendeurData.lastName,
+            email: vendeurData.email,
+            phone: vendeurData.phone,
+            secureOtp: vendeurData.secureOtp,
+            otpExpiredAt: vendeurData.otpExpiredAt,
+            termsAccepted: vendeurData.termsAccepted,
+            role: vendeurData.role,
+            createdAt: vendeurData.createdAt,
+            updatedAt: vendeurData.updatedAt,
+            userStatus: vendeurData.userStatus,
+          }
+        }
+
+        return {
+          id: product.id,
+          name: product.name,
+          description: product.description,
+          price: product.price,
+          stock: product.stock,
+          vendeurId: product.vendeurId,
+          categorieId: product.categorieId,
+          createdAt: product.createdAt,
+          updatedAt: product.updatedAt,
+          category: product.category,
+          media: product.media,
+          promotions: product.promotions,
+          vendeur: vendeur,
+        }
+      })
+
       return response.status(200).json({
         message: 'Produits recommandés récupérés avec succès',
-        products: recommendedProducts.slice(0, 5), // S'assurer qu'on retourne au maximum 5 produits
-        count: Math.min(recommendedProducts.length, 5),
+        products: productsFormatted,
+        count: productsFormatted.length,
       })
     } catch (error) {
       logger.error('Erreur lors de la récupération des produits recommandés', {
