@@ -195,6 +195,7 @@ export default class ProductsController {
   async getAllProducts({ response }: HttpContext) {
     try {
       const products = await Product.query()
+        .select(['id', 'name', 'description', 'price', 'stock'])
         .preload('media')
         .preload('category')
         .preload('vendeur')
@@ -203,41 +204,19 @@ export default class ProductsController {
         return response.status(404).json({ message: 'Produit non trouvé' })
       }
 
-      // Formater les produits comme dans les promotions (sans le profil du vendeur)
+      // Formater exactement comme dans les promotions (même structure)
       const productsFormatted = products.map((product) => {
-        // Formater le vendeur sans le champ profil (comme dans promotions)
-        let vendeur = null
-        if (product.vendeur) {
-          const vendeurData = product.vendeur.toJSON()
-          vendeur = {
-            id: vendeurData.id,
-            firstName: vendeurData.firstName,
-            lastName: vendeurData.lastName,
-            email: vendeurData.email,
-            phone: vendeurData.phone,
-            secureOtp: vendeurData.secureOtp,
-            otpExpiredAt: vendeurData.otpExpiredAt,
-            termsAccepted: vendeurData.termsAccepted,
-            role: vendeurData.role,
-            createdAt: vendeurData.createdAt,
-            updatedAt: vendeurData.updatedAt,
-            userStatus: vendeurData.userStatus,
-          }
-        }
-
+        // Utiliser serialize() puis extraire uniquement les champs souhaités
+        const serialized = product.serialize()
         return {
-          id: product.id,
-          name: product.name,
-          description: product.description,
-          price: product.price,
-          stock: product.stock,
-          vendeurId: product.vendeurId,
-          categorieId: product.categorieId,
-          createdAt: product.createdAt,
-          updatedAt: product.updatedAt,
-          category: product.category,
-          media: product.media,
-          vendeur: vendeur,
+          id: serialized.id,
+          name: serialized.name,
+          description: serialized.description,
+          price: serialized.price,
+          stock: serialized.stock,
+          category: serialized.category,
+          media: serialized.media,
+          vendeur: serialized.vendeur,
         }
       })
 
@@ -650,51 +629,19 @@ export default class ProductsController {
       if (!userId) {
         // Si pas d'utilisateur connecté, retourner 5 produits aléatoires en stock
         const randomProducts = await Product.query()
+          .select(['id', 'name', 'description', 'price', 'stock'])
           .where('stock', '>', 0)
           .preload('media')
           .preload('category')
           .preload('vendeur')
-          .preload('promotions', (promotionQuery) => {
-            promotionQuery.where('delaiPromotion', '>', new Date().toISOString())
-          })
           .limit(5)
 
-        // Formater les produits comme dans les promotions (sans le profil du vendeur)
+        // Formater exactement comme dans les promotions (même structure)
         const productsFormatted = randomProducts.map((product) => {
-          // Formater le vendeur sans le champ profil (comme dans promotions)
-          let vendeur = null
-          if (product.vendeur) {
-            vendeur = {
-              id: product.vendeur.id,
-              firstName: product.vendeur.firstName,
-              lastName: product.vendeur.lastName,
-              email: product.vendeur.email,
-              phone: product.vendeur.phone,
-              secureOtp: product.vendeur.secureOtp,
-              otpExpiredAt: product.vendeur.otpExpiredAt,
-              termsAccepted: product.vendeur.termsAccepted,
-              role: product.vendeur.role,
-              createdAt: product.vendeur.createdAt,
-              updatedAt: product.vendeur.updatedAt,
-              userStatus: product.vendeur.userStatus,
-            }
-          }
-
-          return {
-            id: product.id,
-            name: product.name,
-            description: product.description,
-            price: product.price,
-            stock: product.stock,
-            vendeurId: product.vendeurId,
-            categorieId: product.categorieId,
-            createdAt: product.createdAt,
-            updatedAt: product.updatedAt,
-            category: product.category,
-            media: product.media,
-            promotions: product.promotions,
-            vendeur: vendeur,
-          }
+          // Utiliser serialize() puis extraire uniquement les champs souhaités
+          const serialized = product.serialize()
+          const { categorieId, vendeurId, createdAt, updatedAt, promotions, ...rest } = serialized
+          return rest
         })
 
         return response.status(200).json({
@@ -727,51 +674,19 @@ export default class ProductsController {
       // Si pas d'événements, retourner 5 produits aléatoires en stock
       if (userEvents.length === 0) {
         const randomProducts = await Product.query()
+          .select(['id', 'name', 'description', 'price', 'stock'])
           .where('stock', '>', 0)
           .preload('media')
           .preload('category')
           .preload('vendeur')
-          .preload('promotions', (promotionQuery) => {
-            promotionQuery.where('delaiPromotion', '>', new Date().toISOString())
-          })
           .limit(5)
 
-        // Formater les produits comme dans les promotions (sans le profil du vendeur)
+        // Formater exactement comme dans les promotions (même structure)
         const productsFormatted = randomProducts.map((product) => {
-          // Formater le vendeur sans le champ profil (comme dans promotions)
-          let vendeur = null
-          if (product.vendeur) {
-            vendeur = {
-              id: product.vendeur.id,
-              firstName: product.vendeur.firstName,
-              lastName: product.vendeur.lastName,
-              email: product.vendeur.email,
-              phone: product.vendeur.phone,
-              secureOtp: product.vendeur.secureOtp,
-              otpExpiredAt: product.vendeur.otpExpiredAt,
-              termsAccepted: product.vendeur.termsAccepted,
-              role: product.vendeur.role,
-              createdAt: product.vendeur.createdAt,
-              updatedAt: product.vendeur.updatedAt,
-              userStatus: product.vendeur.userStatus,
-            }
-          }
-
-          return {
-            id: product.id,
-            name: product.name,
-            description: product.description,
-            price: product.price,
-            stock: product.stock,
-            vendeurId: product.vendeurId,
-            categorieId: product.categorieId,
-            createdAt: product.createdAt,
-            updatedAt: product.updatedAt,
-            category: product.category,
-            media: product.media,
-            promotions: product.promotions,
-            vendeur: vendeur,
-          }
+          // Utiliser serialize() puis extraire uniquement les champs souhaités
+          const serialized = product.serialize()
+          const { categorieId, vendeurId, createdAt, updatedAt, promotions, ...rest } = serialized
+          return rest
         })
 
         return response.status(200).json({
@@ -828,15 +743,13 @@ export default class ProductsController {
         if (recommendedProducts.length >= 5) break
 
         const productsInCategory = await Product.query()
+          .select(['id', 'name', 'description', 'price', 'stock'])
           .where('categorieId', categoryId)
           .whereNotIn('id', excludedProductIds)
-          .where('stock', '>', 0) // Seulement les produits en stock
+          .where('stock', '>', 0)
           .preload('media')
           .preload('category')
           .preload('vendeur')
-          .preload('promotions', (promotionQuery) => {
-            promotionQuery.where('delaiPromotion', '>', new Date().toISOString())
-          })
           .limit(5 - recommendedProducts.length)
 
         for (const product of productsInCategory) {
@@ -852,58 +765,26 @@ export default class ProductsController {
       if (recommendedProducts.length < 5) {
         const remainingCount = 5 - recommendedProducts.length
         const additionalProducts = await Product.query()
+          .select(['id', 'name', 'description', 'price', 'stock'])
           .whereNotIn('id', excludedProductIds)
           .where('stock', '>', 0)
           .preload('media')
           .preload('category')
           .preload('vendeur')
-          .preload('promotions', (promotionQuery) => {
-            promotionQuery.where('delaiPromotion', '>', new Date().toISOString())
-          })
           .limit(remainingCount)
 
         recommendedProducts.push(...additionalProducts)
       }
 
-      // Formater les produits comme dans les promotions (sans le profil du vendeur)
+      // Formater exactement comme dans les promotions (même structure)
       const productsFormatted = recommendedProducts.slice(0, 5).map((product) => {
-        // Formater le vendeur sans le champ profil (comme dans promotions)
-        let vendeur = null
-        if (product.vendeur) {
-          const vendeurData = product.vendeur.toJSON()
-          vendeur = {
-            id: vendeurData.id,
-            firstName: vendeurData.firstName,
-            lastName: vendeurData.lastName,
-            email: vendeurData.email,
-            phone: vendeurData.phone,
-            secureOtp: vendeurData.secureOtp,
-            otpExpiredAt: vendeurData.otpExpiredAt,
-            termsAccepted: vendeurData.termsAccepted,
-            role: vendeurData.role,
-            createdAt: vendeurData.createdAt,
-            updatedAt: vendeurData.updatedAt,
-            userStatus: vendeurData.userStatus,
-          }
-        }
-
-        return {
-          id: product.id,
-          name: product.name,
-          description: product.description,
-          price: product.price,
-          stock: product.stock,
-          vendeurId: product.vendeurId,
-          categorieId: product.categorieId,
-          createdAt: product.createdAt,
-          updatedAt: product.updatedAt,
-          category: product.category,
-          media: product.media,
-          promotions: product.promotions,
-          vendeur: vendeur,
-        }
+        // Utiliser serialize() puis extraire uniquement les champs souhaités
+        const serialized = product.serialize()
+        const { categorieId, vendeurId, createdAt, updatedAt, promotions, ...rest } = serialized
+        return rest
       })
 
+      // Sérialiser manuellement pour éviter la sérialisation automatique de Lucid
       return response.status(200).json({
         message: 'Produits recommandés récupérés avec succès',
         products: productsFormatted,

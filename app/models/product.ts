@@ -23,16 +23,16 @@ export default class Product extends BaseModel {
   @column()
   declare stock: number
 
-  @column()
+  @column({ serializeAs: null })
   declare categorieId: number
 
-  @column()
+  @column({ serializeAs: null })
   declare vendeurId: number
 
-  @column.dateTime({ autoCreate: true })
+  @column.dateTime({ autoCreate: true, serializeAs: null })
   declare createdAt: DateTime
 
-  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  @column.dateTime({ autoCreate: true, autoUpdate: true, serializeAs: null })
   declare updatedAt: DateTime
 
   @belongsTo(() => User, {
@@ -60,6 +60,7 @@ export default class Product extends BaseModel {
 
   @hasMany(() => Promotion, {
     foreignKey: 'productId',
+    serializeAs: null,
   })
   declare promotions: HasMany<typeof Promotion>
 }
