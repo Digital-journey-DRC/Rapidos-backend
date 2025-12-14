@@ -206,8 +206,10 @@ export default class ProductsController {
       // Formater exactement comme dans les promotions (même structure)
       const productsFormatted = await Promise.all(
         products.map(async (product) => {
-          // Récupérer tous les médias du produit
-          const allMedias = await Media.query().where('productId', product.id).orderBy('createdAt', 'asc')
+          // Récupérer tous les médias du produit (utiliser product_id pour correspondre à la colonne DB)
+          const allMedias = await Media.query()
+            .where('product_id', product.id)
+            .orderBy('created_at', 'asc')
 
           // Image principale (première image ou null)
           const mainImage = allMedias.length > 0 ? allMedias[0].mediaUrl : null
