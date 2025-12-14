@@ -117,6 +117,7 @@ export default class PromotionsController {
           // Autres informations
           libelle: promotion.libelle,
           likes: promotion.likes || 0,
+          dateDebutPromotion: promotion.dateDebutPromotion,
           delaiPromotion: promotion.delaiPromotion,
           nouveauPrix: promotion.nouveauPrix,
           ancienPrix: promotion.ancienPrix,
@@ -190,6 +191,7 @@ export default class PromotionsController {
         images: images,
         libelle: promotion.libelle,
         likes: promotion.likes || 0,
+        dateDebutPromotion: promotion.dateDebutPromotion,
         delaiPromotion: promotion.delaiPromotion,
         nouveauPrix: promotion.nouveauPrix,
         ancienPrix: promotion.ancienPrix,
@@ -323,6 +325,7 @@ export default class PromotionsController {
         image4: uploadedImage4 || null,
         libelle: payload.libelle,
         likes: payload.likes || 0,
+        dateDebutPromotion: payload.dateDebutPromotion ? DateTime.fromJSDate(payload.dateDebutPromotion) : null,
         delaiPromotion: DateTime.fromJSDate(payload.delaiPromotion),
         nouveauPrix: payload.nouveauPrix,
         ancienPrix: payload.ancienPrix,
@@ -349,6 +352,7 @@ export default class PromotionsController {
         images: images,
         libelle: promotion.libelle,
         likes: promotion.likes || 0,
+        dateDebutPromotion: promotion.dateDebutPromotion,
         delaiPromotion: promotion.delaiPromotion,
         nouveauPrix: promotion.nouveauPrix,
         ancienPrix: promotion.ancienPrix,
@@ -392,6 +396,7 @@ export default class PromotionsController {
         images: imagesArray,
         libelle: promotion.libelle,
         likes: promotion.likes || 0,
+        dateDebutPromotion: promotion.dateDebutPromotion,
         delaiPromotion: promotion.delaiPromotion,
         nouveauPrix: promotion.nouveauPrix,
         ancienPrix: promotion.ancienPrix,
@@ -548,6 +553,9 @@ export default class PromotionsController {
       }
 
       // Convertir delaiPromotion en DateTime si présent
+      if (payload.dateDebutPromotion) {
+        updateData.dateDebutPromotion = DateTime.fromJSDate(payload.dateDebutPromotion)
+      }
       if (payload.delaiPromotion) {
         updateData.delaiPromotion = DateTime.fromJSDate(payload.delaiPromotion)
       }
@@ -574,6 +582,7 @@ export default class PromotionsController {
         images: imagesUpdate,
         libelle: promotion.libelle,
         likes: promotion.likes || 0,
+        dateDebutPromotion: promotion.dateDebutPromotion,
         delaiPromotion: promotion.delaiPromotion,
         nouveauPrix: promotion.nouveauPrix,
         ancienPrix: promotion.ancienPrix,

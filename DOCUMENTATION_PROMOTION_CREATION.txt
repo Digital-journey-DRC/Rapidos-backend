@@ -1,0 +1,428 @@
+================================================================================
+DOCUMENTATION - CRÉATION DE PROMOTION AVEC PHOTOS
+================================================================================
+
+DESCRIPTION
+-----------
+Cette documentation explique comment créer une promotion pour un produit avec 
+la possibilité d'uploader jusqu'à 5 images (1 principale obligatoire + 4 
+supplémentaires optionnelles).
+
+================================================================================
+ENDPOINT: CRÉER UNE PROMOTION
+================================================================================
+
+URL: POST /promotions
+Authentification: REQUISE (Bearer Token)
+Rôle requis: Vendeur uniquement
+
+DESCRIPTION:
+Crée une nouvelle promotion pour un produit. Les images sont uploadées sur 
+Cloudinary et les URLs sont stockées en base de données.
+
+================================================================================
+FORMAT DE LA REQUÊTE
+================================================================================
+
+Content-Type: multipart/form-data
+
+CHAMPS OBLIGATOIRES:
+--------------------
+- productId (number): ID du produit à mettre en promotion
+- libelle (string): Libellé/description de la promotion (2-200 caractères)
+- delaiPromotion (string): Date de fin de la promotion (format ISO 8601)
+  Exemple: "2025-01-25T23:59:59.000Z"
+- nouveauPrix (number): Nouveau prix promotionnel (doit être < ancienPrix)
+- ancienPrix (number): Ancien prix du produit
+- image (file): Image principale de la promotion (OBLIGATOIRE)
+
+CHAMPS OPTIONNELS:
+------------------
+- dateDebutPromotion (string): Date de début de la promotion (format ISO 8601)
+  Exemple: "2025-01-20T10:00:00.000Z"
+  Si non fourni, la promotion commence immédiatement
+- likes (number): Nombre de likes initial (défaut: 0)
+- image1 (file): Première image supplémentaire
+- image2 (file): Deuxième image supplémentaire
+- image3 (file): Troisième image supplémentaire
+- image4 (file): Quatrième image supplémentaire
+
+VALIDATIONS:
+------------
+- L'utilisateur doit être connecté et être un vendeur
+- Le produit doit exister et appartenir au vendeur connecté
+- Il ne doit pas y avoir de promotion active existante pour ce produit
+- nouveauPrix doit être strictement inférieur à ancienPrix
+- L'image principale (image) est obligatoire et doit être valide
+- Les images supplémentaires sont optionnelles
+
+================================================================================
+RÉPONSE SUCCÈS (201 Created)
+================================================================================
+
+{
+  "message": "Promotion créée avec succès",
+  "promotion": {
+    "id": 1,
+    "productId": 1,
+    "image": "https://res.cloudinary.com/.../promotions/image1.jpg",
+    "images": [
+      "https://res.cloudinary.com/.../promotions/image2.jpg",
+      "https://res.cloudinary.com/.../promotions/image3.jpg",
+      "https://res.cloudinary.com/.../promotions/image4.jpg",
+      "https://res.cloudinary.com/.../promotions/image5.jpg"
+    ],
+    "libelle": "Promotion spéciale",
+    "likes": 0,
+    "dateDebutPromotion": "2025-01-20T10:00:00.000Z",
+    "delaiPromotion": "2025-01-25T23:59:59.000Z",
+    "nouveauPrix": 15000,
+    "ancienPrix": 20000,
+    "product": {
+      "id": 1,
+      "name": "Produit exemple",
+      "description": "Description du produit",
+      "price": 20000,
+      "stock": 50,
+      "category": { ... },
+      "media": { ... },
+      "vendeur": { ... }
+    },
+    "createdAt": "2025-01-20T10:00:00.000Z",
+    "updatedAt": "2025-01-20T10:00:00.000Z"
+  }
+}
+
+RÉPONSE PARTIELLE (207 Multi-Status):
+Si certaines images secondaires n'ont pas pu être uploadées, la promotion est 
+créée mais un warning est retourné :
+
+{
+  "message": "Promotion créée avec succès, mais certaines images secondaires 
+              n'ont pas pu être uploadées",
+  "promotion": { ... },
+  "errors": [
+    {
+      "error": "Erreur d'upload",
+      "clientName": "image2.jpg",
+      "field": "image2"
+    }
+  ]
+}
+
+================================================================================
+RÉPONSES D'ERREUR
+================================================================================
+
+400 Bad Request:
+- Données invalides (validation échouée)
+
+401 Unauthorized:
+- Token d'authentification manquant ou invalide
+- Message: "Vous n'êtes pas autorisé à faire cette action"
+
+403 Forbidden:
+- L'utilisateur n'est pas un vendeur
+  Message: "Seuls les vendeurs peuvent créer des promotions"
+- Le produit n'appartient pas au vendeur
+  Message: "Vous n'êtes pas autorisé à créer une promotion pour ce produit"
+
+409 Conflict:
+- Une promotion active existe déjà pour ce produit
+  Message: "Une promotion active existe déjà pour ce produit"
+
+422 Unprocessable Entity:
+- L'image principale est manquante ou invalide
+  Message: "L'image principale est requise"
+- Erreur lors de l'upload de l'image principale
+  Message: "Erreur lors de l'upload de l'image principale"
+- Le nouveau prix doit être inférieur à l'ancien prix
+  Message: "Le nouveau prix doit être inférieur à l'ancien prix"
+
+500 Internal Server Error:
+- Erreur serveur interne
+
+================================================================================
+EXEMPLES D'UTILISATION
+================================================================================
+
+1. AVEC JAVASCRIPT/FETCH:
+--------------------------
+
+const formData = new FormData();
+formData.append('productId', '1');
+formData.append('libelle', 'Promotion spéciale');
+formData.append('dateDebutPromotion', '2025-01-20T10:00:00.000Z');
+formData.append('delaiPromotion', '2025-01-25T23:59:59.000Z');
+formData.append('nouveauPrix', '15000');
+formData.append('ancienPrix', '20000');
+formData.append('likes', '0');
+formData.append('image', imageFile); // File object - OBLIGATOIRE
+formData.append('image1', image1File); // File object - optionnel
+formData.append('image2', image2File); // File object - optionnel
+formData.append('image3', image3File); // File object - optionnel
+formData.append('image4', image4File); // File object - optionnel
+
+const response = await fetch('http://localhost:3333/promotions', {
+  method: 'POST',
+  headers: {
+    'Authorization': `Bearer ${token}`
+    // NE PAS mettre 'Content-Type': 'multipart/form-data'
+    // Le navigateur le fait automatiquement avec FormData
+  },
+  body: formData
+});
+
+const data = await response.json();
+console.log(data);
+
+2. AVEC AXIOS:
+--------------
+
+import axios from 'axios';
+
+const formData = new FormData();
+formData.append('productId', '1');
+formData.append('libelle', 'Promotion spéciale');
+formData.append('dateDebutPromotion', '2025-01-20T10:00:00.000Z');
+formData.append('delaiPromotion', '2025-01-25T23:59:59.000Z');
+formData.append('nouveauPrix', '15000');
+formData.append('ancienPrix', '20000');
+formData.append('likes', '0');
+formData.append('image', imageFile);
+formData.append('image1', image1File);
+formData.append('image2', image2File);
+
+const response = await axios.post('http://localhost:3333/promotions', formData, {
+  headers: {
+    'Authorization': `Bearer ${token}`,
+    'Content-Type': 'multipart/form-data'
+  }
+});
+
+console.log(response.data);
+
+3. AVEC REACT (exemple complet):
+--------------------------------
+
+import React, { useState } from 'react';
+
+function CreatePromotion() {
+  const [formData, setFormData] = useState({
+    productId: '',
+    libelle: '',
+    dateDebutPromotion: '',
+    delaiPromotion: '',
+    nouveauPrix: '',
+    ancienPrix: '',
+    likes: '0'
+  });
+  const [images, setImages] = useState({
+    image: null,
+    image1: null,
+    image2: null,
+    image3: null,
+    image4: null
+  });
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    
+    const data = new FormData();
+    data.append('productId', formData.productId);
+    data.append('libelle', formData.libelle);
+    data.append('dateDebutPromotion', formData.dateDebutPromotion);
+    data.append('delaiPromotion', formData.delaiPromotion);
+    data.append('nouveauPrix', formData.nouveauPrix);
+    data.append('ancienPrix', formData.ancienPrix);
+    data.append('likes', formData.likes);
+    
+    // Image principale (obligatoire)
+    if (images.image) {
+      data.append('image', images.image);
+    }
+    
+    // Images supplémentaires (optionnelles)
+    if (images.image1) data.append('image1', images.image1);
+    if (images.image2) data.append('image2', images.image2);
+    if (images.image3) data.append('image3', images.image3);
+    if (images.image4) data.append('image4', images.image4);
+
+    try {
+      const response = await fetch('http://localhost:3333/promotions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: data
+      });
+
+      const result = await response.json();
+      
+      if (response.ok || response.status === 207) {
+        console.log('Promotion créée:', result.promotion);
+        // Gérer le succès
+      } else {
+        console.error('Erreur:', result.message);
+        // Gérer l'erreur
+      }
+    } catch (error) {
+      console.error('Erreur réseau:', error);
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit}>
+      <input
+        type="number"
+        placeholder="Product ID"
+        value={formData.productId}
+        onChange={(e) => setFormData({...formData, productId: e.target.value})}
+        required
+      />
+      <input
+        type="text"
+        placeholder="Libellé"
+        value={formData.libelle}
+        onChange={(e) => setFormData({...formData, libelle: e.target.value})}
+        required
+      />
+      <input
+        type="datetime-local"
+        placeholder="Date de début"
+        value={formData.dateDebutPromotion}
+        onChange={(e) => setFormData({...formData, dateDebutPromotion: e.target.value})}
+      />
+      <input
+        type="datetime-local"
+        placeholder="Date de fin"
+        value={formData.delaiPromotion}
+        onChange={(e) => setFormData({...formData, delaiPromotion: e.target.value})}
+        required
+      />
+      <input
+        type="number"
+        placeholder="Nouveau prix"
+        value={formData.nouveauPrix}
+        onChange={(e) => setFormData({...formData, nouveauPrix: e.target.value})}
+        required
+      />
+      <input
+        type="number"
+        placeholder="Ancien prix"
+        value={formData.ancienPrix}
+        onChange={(e) => setFormData({...formData, ancienPrix: e.target.value})}
+        required
+      />
+      
+      {/* Image principale (obligatoire) */}
+      <input
+        type="file"
+        accept="image/*"
+        onChange={(e) => setImages({...images, image: e.target.files[0]})}
+        required
+      />
+      
+      {/* Images supplémentaires (optionnelles) */}
+      <input
+        type="file"
+        accept="image/*"
+        onChange={(e) => setImages({...images, image1: e.target.files[0]})}
+      />
+      <input
+        type="file"
+        accept="image/*"
+        onChange={(e) => setImages({...images, image2: e.target.files[0]})}
+      />
+      <input
+        type="file"
+        accept="image/*"
+        onChange={(e) => setImages({...images, image3: e.target.files[0]})}
+      />
+      <input
+        type="file"
+        accept="image/*"
+        onChange={(e) => setImages({...images, image4: e.target.files[0]})}
+      />
+      
+      <button type="submit">Créer la promotion</button>
+    </form>
+  );
+}
+
+4. AVEC CURL (pour tests):
+--------------------------
+
+curl -X POST http://localhost:3333/promotions \
+  -H 'Authorization: Bearer YOUR_TOKEN' \
+  -F 'productId=1' \
+  -F 'libelle=Promotion spéciale' \
+  -F 'dateDebutPromotion=2025-01-20T10:00:00.000Z' \
+  -F 'delaiPromotion=2025-01-25T23:59:59.000Z' \
+  -F 'nouveauPrix=15000' \
+  -F 'ancienPrix=20000' \
+  -F 'likes=0' \
+  -F 'image=@/chemin/vers/image1.jpg' \
+  -F 'image1=@/chemin/vers/image2.jpg' \
+  -F 'image2=@/chemin/vers/image3.jpg' \
+  -F 'image3=@/chemin/vers/image4.jpg' \
+  -F 'image4=@/chemin/vers/image5.jpg'
+
+================================================================================
+NOTES IMPORTANTES
+================================================================================
+
+1. FORMAT DES DATES:
+   - Utiliser le format ISO 8601: "YYYY-MM-DDTHH:mm:ss.sssZ"
+   - Exemple: "2025-01-20T10:00:00.000Z"
+   - Pour les inputs HTML datetime-local, convertir au format ISO avant l'envoi
+
+2. UPLOAD D'IMAGES:
+   - L'image principale (image) est OBLIGATOIRE
+   - Les images supplémentaires (image1-4) sont optionnelles
+   - Formats acceptés: jpg, jpeg, png, gif, webp (selon configuration Cloudinary)
+   - Les images sont automatiquement uploadées sur Cloudinary
+   - Les URLs retournées sont des URLs Cloudinary sécurisées (HTTPS)
+
+3. VALIDATION DES PRIX:
+   - nouveauPrix DOIT être strictement inférieur à ancienPrix
+   - Les deux champs sont obligatoires
+
+4. GESTION DES ERREURS:
+   - Toujours vérifier le status code de la réponse
+   - Status 207 signifie succès partiel (certaines images n'ont pas pu être uploadées)
+   - Vérifier le champ "errors" dans la réponse pour les détails
+
+5. AUTHENTIFICATION:
+   - Le token doit être inclus dans le header Authorization
+   - Format: "Bearer {token}"
+   - L'utilisateur doit avoir le rôle "Vendeur"
+
+6. LIMITES:
+   - Un produit ne peut avoir qu'une seule promotion active à la fois
+   - Une promotion est considérée active si sa date de fin (delaiPromotion) 
+     est dans le futur
+
+================================================================================
+STRUCTURE DE LA RÉPONSE
+================================================================================
+
+La réponse contient un objet "promotion" avec:
+- id: ID de la promotion créée
+- productId: ID du produit
+- image: URL de l'image principale
+- images: Tableau des URLs des images supplémentaires (peut être vide)
+- libelle: Libellé de la promotion
+- likes: Nombre de likes
+- dateDebutPromotion: Date de début (peut être null)
+- delaiPromotion: Date de fin
+- nouveauPrix: Prix promotionnel
+- ancienPrix: Ancien prix
+- product: Objet complet du produit avec ses relations (category, media, vendeur)
+- createdAt: Date de création
+- updatedAt: Date de mise à jour
+
+================================================================================
+FIN DE LA DOCUMENTATION
+================================================================================
+

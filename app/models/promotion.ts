@@ -32,6 +32,9 @@ export default class Promotion extends BaseModel {
   declare likes: number
 
   @column.dateTime()
+  declare dateDebutPromotion: DateTime | null
+
+  @column.dateTime()
   declare delaiPromotion: DateTime
 
   @column()
