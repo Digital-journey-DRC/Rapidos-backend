@@ -506,15 +506,15 @@ export default class ProductsController {
       // Récupérer les événements de l'utilisateur (30 derniers jours)
       let userEvents: ProductEvent[] = []
       try {
-        const thirtyDaysAgo = new Date()
-        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
+      const thirtyDaysAgo = new Date()
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
 
         userEvents = await ProductEvent.query()
           .where('userId', userId)
           .where('createdAt', '>=', thirtyDaysAgo.toISOString())
           .whereNotNull('productCategoryId')
           .orderBy('createdAt', 'desc')
-          .limit(100)
+        .limit(100)
       } catch (error) {
         // Si la table n'existe pas ou erreur de connexion, continuer avec userEvents = []
         logger.warn('Impossible de récupérer les événements, utilisation de produits aléatoires', {
@@ -588,30 +588,30 @@ export default class ProductsController {
 
       // Si on a des catégories préférées, chercher des produits dans ces catégories
       if (sortedCategories.length > 0) {
-        // Pour chaque catégorie (par ordre de préférence)
-        for (const categoryId of sortedCategories) {
-          if (recommendedProducts.length >= 5) break
+      // Pour chaque catégorie (par ordre de préférence)
+      for (const categoryId of sortedCategories) {
+        if (recommendedProducts.length >= 5) break
 
-          const productsInCategory = await Product.query()
-            .where('categorieId', categoryId)
-            .whereNotIn('id', excludedProductIds)
-            .where('stock', '>', 0) // Seulement les produits en stock
-            .preload('media')
-            .preload('category')
-            .preload('vendeur', (query) => {
-              query.preload('profil', (profilQuery) => {
-                profilQuery.preload('media')
-              })
+        const productsInCategory = await Product.query()
+          .where('categorieId', categoryId)
+          .whereNotIn('id', excludedProductIds)
+          .where('stock', '>', 0) // Seulement les produits en stock
+          .preload('media')
+          .preload('category')
+          .preload('vendeur', (query) => {
+            query.preload('profil', (profilQuery) => {
+              profilQuery.preload('media')
             })
+          })
             .preload('promotions', (promotionQuery) => {
               promotionQuery.where('delaiPromotion', '>', new Date().toISOString())
             })
-            .limit(5 - recommendedProducts.length)
+          .limit(5 - recommendedProducts.length)
 
-          for (const product of productsInCategory) {
-            if (recommendedProducts.length >= 5) break
-            recommendedProducts.push(product)
-            excludedProductIds.push(product.id)
+        for (const product of productsInCategory) {
+          if (recommendedProducts.length >= 5) break
+          recommendedProducts.push(product)
+          excludedProductIds.push(product.id)
           }
         }
       }
