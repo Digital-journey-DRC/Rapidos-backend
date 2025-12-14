@@ -4,6 +4,7 @@ import Product from '#models/product'
 import User from '#models/user'
 import ProductEvent from '#models/product_event'
 import { manageUploadProductMedias } from '#services/managemedias'
+import { manageUploadProductImages } from '#services/manageproductimages'
 import { categoryValidator } from '#validators/category'
 import { EventType } from '../Enum/event_type.js'
 
@@ -55,17 +56,81 @@ export default class ProductsController {
         vendeurId,
       })
 
-      // Gestion des médias
-      const productMedia = request.files('medias')
-      const { medias, errors } = await manageUploadProductMedias(productMedia)
+      // Gestion des images (image principale + images supplémentaires)
+      // Support à la fois de l'ancienne méthode (medias) et de la nouvelle (image, image1, image2, image3, image4)
+      const image = request.file('image')
+      const image1 = request.file('image1')
+      const image2 = request.file('image2')
+      const image3 = request.file('image3')
+      const image4 = request.file('image4')
+      const productMedia = request.files('medias') // Ancienne méthode pour compatibilité
 
-      // Enregistrement des médias en base
-      for (const media of medias) {
-        await product.related('media').create({
-          mediaUrl: media.mediaUrl,
-          mediaType: media.mediaType,
-          productId: product.id,
-        })
+      let errors: any[] = []
+
+      // Si on utilise la nouvelle méthode (image, image1, etc.)
+      if (image || image1 || image2 || image3 || image4) {
+        const {
+          image: uploadedImage,
+          image1: uploadedImage1,
+          image2: uploadedImage2,
+          image3: uploadedImage3,
+          image4: uploadedImage4,
+          errors: uploadErrors,
+        } = await manageUploadProductImages(image || null, image1 || null, image2 || null, image3 || null, image4 || null)
+
+        errors = uploadErrors
+
+        // Enregistrement de l'image principale
+        if (uploadedImage) {
+          await product.related('media').create({
+            mediaUrl: uploadedImage.imageUrl,
+            mediaType: uploadedImage.imageType,
+            productId: product.id,
+          })
+        }
+
+        // Enregistrement des images supplémentaires
+        if (uploadedImage1) {
+          await product.related('media').create({
+            mediaUrl: uploadedImage1.imageUrl,
+            mediaType: uploadedImage1.imageType,
+            productId: product.id,
+          })
+        }
+        if (uploadedImage2) {
+          await product.related('media').create({
+            mediaUrl: uploadedImage2.imageUrl,
+            mediaType: uploadedImage2.imageType,
+            productId: product.id,
+          })
+        }
+        if (uploadedImage3) {
+          await product.related('media').create({
+            mediaUrl: uploadedImage3.imageUrl,
+            mediaType: uploadedImage3.imageType,
+            productId: product.id,
+          })
+        }
+        if (uploadedImage4) {
+          await product.related('media').create({
+            mediaUrl: uploadedImage4.imageUrl,
+            mediaType: uploadedImage4.imageType,
+            productId: product.id,
+          })
+        }
+      } else if (productMedia && productMedia.length > 0) {
+        // Ancienne méthode pour compatibilité
+        const { medias, errors: mediasErrors } = await manageUploadProductMedias(productMedia)
+        errors = mediasErrors
+
+        // Enregistrement des médias en base
+        for (const media of medias) {
+          await product.related('media').create({
+            mediaUrl: media.mediaUrl,
+            mediaType: media.mediaType,
+            productId: product.id,
+          })
+        }
       }
 
       // Récupérer le produit avec ses médias et catégorie
@@ -285,17 +350,84 @@ export default class ProductsController {
         product.categorieId = category.id
       }
       await product.save()
-      // Gestion des médias
-      const productMedia = request.files('medias')
-      const { medias, errors } = await manageUploadProductMedias(productMedia)
-      // Enregistrement des médias en base
-      for (const media of medias) {
-        await product.related('media').create({
-          mediaUrl: media.mediaUrl,
-          mediaType: media.mediaType,
-          productId: product.id,
-        })
+
+      // Gestion des images (image principale + images supplémentaires)
+      // Support à la fois de l'ancienne méthode (medias) et de la nouvelle (image, image1, image2, image3, image4)
+      const image = request.file('image')
+      const image1 = request.file('image1')
+      const image2 = request.file('image2')
+      const image3 = request.file('image3')
+      const image4 = request.file('image4')
+      const productMedia = request.files('medias') // Ancienne méthode pour compatibilité
+
+      let errors: any[] = []
+
+      // Si on utilise la nouvelle méthode (image, image1, etc.)
+      if (image || image1 || image2 || image3 || image4) {
+        const {
+          image: uploadedImage,
+          image1: uploadedImage1,
+          image2: uploadedImage2,
+          image3: uploadedImage3,
+          image4: uploadedImage4,
+          errors: uploadErrors,
+        } = await manageUploadProductImages(image || null, image1 || null, image2 || null, image3 || null, image4 || null)
+
+        errors = uploadErrors
+
+        // Enregistrement de l'image principale
+        if (uploadedImage) {
+          await product.related('media').create({
+            mediaUrl: uploadedImage.imageUrl,
+            mediaType: uploadedImage.imageType,
+            productId: product.id,
+          })
+        }
+
+        // Enregistrement des images supplémentaires
+        if (uploadedImage1) {
+          await product.related('media').create({
+            mediaUrl: uploadedImage1.imageUrl,
+            mediaType: uploadedImage1.imageType,
+            productId: product.id,
+          })
+        }
+        if (uploadedImage2) {
+          await product.related('media').create({
+            mediaUrl: uploadedImage2.imageUrl,
+            mediaType: uploadedImage2.imageType,
+            productId: product.id,
+          })
+        }
+        if (uploadedImage3) {
+          await product.related('media').create({
+            mediaUrl: uploadedImage3.imageUrl,
+            mediaType: uploadedImage3.imageType,
+            productId: product.id,
+          })
+        }
+        if (uploadedImage4) {
+          await product.related('media').create({
+            mediaUrl: uploadedImage4.imageUrl,
+            mediaType: uploadedImage4.imageType,
+            productId: product.id,
+          })
+        }
+      } else if (productMedia && productMedia.length > 0) {
+        // Ancienne méthode pour compatibilité
+        const { medias, errors: mediasErrors } = await manageUploadProductMedias(productMedia)
+        errors = mediasErrors
+
+        // Enregistrement des médias en base
+        for (const media of medias) {
+          await product.related('media').create({
+            mediaUrl: media.mediaUrl,
+            mediaType: media.mediaType,
+            productId: product.id,
+          })
+        }
       }
+
       // Récupérer le produit avec ses médias
       await product.load('media')
       if (errors.length > 0) {
