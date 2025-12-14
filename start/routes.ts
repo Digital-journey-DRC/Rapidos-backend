@@ -215,6 +215,15 @@ router
 router.post('/users/forgot-password', [RegistersController, 'forgotPassWord'])
 router.post('/users/reset-password', [RegistersController, 'resetPassword'])
 
+// Mise à jour du numéro de téléphone avec OTP
+router
+  .post('/users/update-phone', [RegistersController, 'updatePhone'])
+  .use(middleware.auth({ guards: ['api'] }))
+
+router
+  .post('/users/verify-phone-otp', [RegistersController, 'verifyPhoneOtp'])
+  .use(middleware.auth({ guards: ['api'] }))
+
 // Endpoint temporaire pour créer la table promotions (sans authentification)
 router.get('/create-promotions-table', [PromotionsController, 'createTable'])
 

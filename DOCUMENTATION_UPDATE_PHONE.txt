@@ -1,0 +1,184 @@
+================================================================================
+DOCUMENTATION - MISE À JOUR DU NUMÉRO DE TÉLÉPHONE AVEC OTP
+================================================================================
+
+DESCRIPTION
+-----------
+Cette fonctionnalité permet aux utilisateurs de modifier leur numéro de 
+téléphone. Le processus se fait en deux étapes :
+1. Demander le changement de numéro (génère et envoie un OTP)
+2. Vérifier l'OTP pour confirmer le changement
+
+================================================================================
+ENDPOINT 1: DEMANDER LE CHANGEMENT DE NUMÉRO
+================================================================================
+
+URL: POST /users/update-phone
+Authentification: REQUISE (Bearer Token)
+
+DESCRIPTION:
+Génère un code OTP à 6 chiffres et l'envoie au nouveau numéro de téléphone 
+via SMS (ou WhatsApp en cas d'échec SMS). Le numéro n'est pas encore modifié, 
+il le sera uniquement après vérification réussie de l'OTP.
+
+REQUÊTE:
+Headers:
+  Content-Type: application/json
+  Authorization: Bearer {token}
+
+Body (JSON):
+{
+  "newPhone": "+243999999999"
+}
+
+VALIDATIONS:
+- L'utilisateur doit être connecté
+- Le nouveau numéro doit être différent de l'ancien
+- Le nouveau numéro ne doit pas être déjà utilisé par un autre utilisateur
+- Le format du numéro doit être valide (format international avec +)
+
+RÉPONSE SUCCÈS (200):
+{
+  "message": "Un code de vérification a été envoyé à votre nouveau numéro de téléphone",
+  "status": 200,
+  "newPhone": "+243999999999",
+  "expiresAt": "2025-01-20T12:00:00.000Z"
+}
+
+RÉPONSES D'ERREUR:
+- 400: Le nouveau numéro de téléphone est requis
+- 400: Le nouveau numéro de téléphone doit être différent de l'ancien
+- 401: Vous devez être connecté pour modifier votre numéro de téléphone
+- 409: Ce numéro de téléphone est déjà utilisé par un autre utilisateur
+- 500: Erreur interne lors de la demande de changement de numéro de téléphone
+
+EXEMPLE CURL:
+curl -X POST http://localhost:3333/users/update-phone \
+  -H 'Content-Type: application/json' \
+  -H 'Authorization: Bearer YOUR_TOKEN_HERE' \
+  -d '{"newPhone":"+243999999999"}'
+
+================================================================================
+ENDPOINT 2: VÉRIFIER L'OTP ET CONFIRMER LE CHANGEMENT
+================================================================================
+
+URL: POST /users/verify-phone-otp
+Authentification: REQUISE (Bearer Token)
+
+DESCRIPTION:
+Vérifie le code OTP reçu et met à jour définitivement le numéro de téléphone 
+de l'utilisateur si l'OTP est valide et non expiré.
+
+REQUÊTE:
+Headers:
+  Content-Type: application/json
+  Authorization: Bearer {token}
+
+Body (JSON):
+{
+  "otp": "123456",
+  "newPhone": "+243999999999"
+}
+
+VALIDATIONS:
+- L'utilisateur doit être connecté
+- L'OTP et le nouveau numéro sont requis
+- L'OTP doit correspondre au code généré
+- L'OTP ne doit pas être expiré (validité: 50 minutes)
+- Le nouveau numéro ne doit pas être déjà utilisé par un autre utilisateur
+
+RÉPONSE SUCCÈS (200):
+{
+  "message": "Numéro de téléphone mis à jour avec succès",
+  "status": 200,
+  "phone": "+243999999999"
+}
+
+RÉPONSES D'ERREUR:
+- 400: L'OTP et le nouveau numéro de téléphone sont requis
+- 400: Code OTP invalide
+- 400: Code OTP expiré. Veuillez demander un nouveau code
+- 401: Vous devez être connecté pour vérifier l'OTP
+- 409: Ce numéro de téléphone est déjà utilisé par un autre utilisateur
+- 404: Utilisateur introuvable
+- 500: Erreur interne lors de la vérification de l'OTP
+
+EXEMPLE CURL:
+curl -X POST http://localhost:3333/users/verify-phone-otp \
+  -H 'Content-Type: application/json' \
+  -H 'Authorization: Bearer YOUR_TOKEN_HERE' \
+  -d '{"otp":"123456","newPhone":"+243999999999"}'
+
+================================================================================
+FLUX COMPLET D'UTILISATION
+================================================================================
+
+ÉTAPE 1: L'utilisateur demande le changement
+  POST /users/update-phone
+  Body: { "newPhone": "+243999999999" }
+  
+  → Un OTP est généré et envoyé au nouveau numéro
+  → L'utilisateur reçoit un SMS/WhatsApp avec le code
+
+ÉTAPE 2: L'utilisateur vérifie l'OTP
+  POST /users/verify-phone-otp
+  Body: { "otp": "123456", "newPhone": "+243999999999" }
+  
+  → Si l'OTP est valide, le numéro est mis à jour
+  → Si l'OTP est invalide ou expiré, le numéro reste inchangé
+
+================================================================================
+NOTES IMPORTANTES
+================================================================================
+
+1. SÉCURITÉ:
+   - Les deux endpoints nécessitent une authentification
+   - L'OTP expire après 50 minutes
+   - Le numéro n'est modifié qu'après vérification réussie de l'OTP
+
+2. ENVOI DE L'OTP:
+   - L'OTP est d'abord envoyé via SMS
+   - En cas d'échec SMS, un envoi WhatsApp est tenté
+   - Le code OTP est un nombre à 6 chiffres (ex: 123456)
+
+3. VALIDATION:
+   - Le nouveau numéro doit être au format international (ex: +243999999999)
+   - Le nouveau numéro ne peut pas être le même que l'ancien
+   - Le nouveau numéro ne peut pas être déjà utilisé par un autre utilisateur
+
+4. GESTION DES ERREURS:
+   - Si l'OTP est incorrect, l'utilisateur peut redemander un nouveau code
+   - Si l'OTP est expiré, l'utilisateur doit redemander un nouveau code
+   - Le numéro de téléphone n'est jamais modifié si l'OTP n'est pas vérifié
+
+================================================================================
+EXEMPLE COMPLET DE TEST
+================================================================================
+
+# 1. Connexion pour obtenir un token
+curl -X POST http://localhost:3333/login \
+  -H 'Content-Type: application/json' \
+  -d '{"uid":"user@example.com","password":"password123"}'
+
+# Réponse: { "token": { "token": "YOUR_TOKEN_HERE", ... } }
+
+# 2. Demander le changement de numéro
+curl -X POST http://localhost:3333/users/update-phone \
+  -H 'Content-Type: application/json' \
+  -H 'Authorization: Bearer YOUR_TOKEN_HERE' \
+  -d '{"newPhone":"+243999999999"}'
+
+# Réponse: { "message": "Un code de vérification a été envoyé...", "newPhone": "+243999999999", "expiresAt": "..." }
+
+# 3. Vérifier l'OTP (remplacer 123456 par le code reçu)
+curl -X POST http://localhost:3333/users/verify-phone-otp \
+  -H 'Content-Type: application/json' \
+  -H 'Authorization: Bearer YOUR_TOKEN_HERE' \
+  -d '{"otp":"123456","newPhone":"+243999999999"}'
+
+# Réponse: { "message": "Numéro de téléphone mis à jour avec succès", "phone": "+243999999999" }
+
+================================================================================
+FIN DE LA DOCUMENTATION
+================================================================================
+
