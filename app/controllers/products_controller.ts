@@ -362,7 +362,6 @@ export default class ProductsController {
       if (!product) {
         return response.status(404).json({ message: 'Produit non trouvé' })
       }
-
       // Récupérer tous les médias du produit
       const allMedias = await Media.query()
         .where('productId', product.id)
