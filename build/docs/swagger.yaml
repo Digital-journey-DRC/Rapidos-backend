@@ -805,6 +805,7 @@ paths:
       tags:
         - Products
       summary: Récupérer tous les produits
+      description: Retourne la liste complète de tous les produits avec leurs images Cloudinary et informations du vendeur
       security:
         - bearerAuth: []
       responses:
@@ -818,11 +819,78 @@ paths:
                   products:
                     type: array
                     items:
-                      $ref: '#/components/schemas/Product'
-                  category:
-                    type: array
-                    items:
-                      $ref: '#/components/schemas/Category'
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                          example: 176
+                        name:
+                          type: string
+                          example: Chasubles de sport
+                        description:
+                          type: string
+                          example: Chasubles d'entraînement colorées
+                        price:
+                          type: number
+                          format: float
+                          example: 5.99
+                        stock:
+                          type: integer
+                          example: 100
+                        category:
+                          type: object
+                          properties:
+                            id:
+                              type: integer
+                            name:
+                              type: string
+                            createdAt:
+                              type: string
+                              format: date-time
+                            updatedAt:
+                              type: string
+                              format: date-time
+                        image:
+                          type: string
+                          format: uri
+                          nullable: true
+                          description: URL Cloudinary de l'image principale
+                          example: https://res.cloudinary.com/dnn2ght5x/image/upload/v1234/main.jpg
+                        images:
+                          type: array
+                          description: URLs Cloudinary des images secondaires
+                          items:
+                            type: string
+                            format: uri
+                          example:
+                            - https://res.cloudinary.com/dnn2ght5x/image/upload/v1234/image1.jpg
+                            - https://res.cloudinary.com/dnn2ght5x/image/upload/v1234/image2.jpg
+                        vendeur:
+                          type: object
+                          description: Informations du vendeur
+                          properties:
+                            id:
+                              type: integer
+                              example: 14
+                            firstName:
+                              type: string
+                              example: Judah
+                            lastName:
+                              type: string
+                              example: Mvi
+                            profil:
+                              type: object
+                              nullable: true
+                              description: Profil du vendeur avec photo
+                              properties:
+                                media:
+                                  type: object
+                                  nullable: true
+                                  properties:
+                                    mediaUrl:
+                                      type: string
+                                      format: uri
+                                      example: https://res.cloudinary.com/dnn2ght5x/image/upload/v1234/profile.jpg
         '403':
           description: Non autorisé
         '404':
@@ -1077,10 +1145,24 @@ paths:
                             vendeur:
                               type: object
                               properties:
+                                id:
+                                  type: integer
                                 firstName:
                                   type: string
                                 lastName:
                                   type: string
+                                profil:
+                                  type: object
+                                  nullable: true
+                                  description: Profil du vendeur avec photo
+                                  properties:
+                                    media:
+                                      type: object
+                                      nullable: true
+                                      properties:
+                                        mediaUrl:
+                                          type: string
+                                          format: uri
                         createdAt:
                           type: string
                           format: date-time
@@ -2158,12 +2240,28 @@ paths:
           type: object
           description: Informations du vendeur
           properties:
+            id:
+              type: integer
+              example: 14
             firstName:
               type: string
               example: Judah
             lastName:
               type: string
               example: Mvi
+            profil:
+              type: object
+              nullable: true
+              description: Profil du vendeur avec photo
+              properties:
+                media:
+                  type: object
+                  nullable: true
+                  properties:
+                    mediaUrl:
+                      type: string
+                      format: uri
+                      example: https://res.cloudinary.com/dnn2ght5x/image/upload/v1234/profile.jpg
 
     ProductResponse:
       type: object
@@ -2209,12 +2307,28 @@ paths:
           type: object
           description: Informations du vendeur
           properties:
+            id:
+              type: integer
+              example: 14
             firstName:
               type: string
               example: Judah
             lastName:
               type: string
               example: Mvi
+            profil:
+              type: object
+              nullable: true
+              description: Profil du vendeur avec photo
+              properties:
+                media:
+                  type: object
+                  nullable: true
+                  properties:
+                    mediaUrl:
+                      type: string
+                      format: uri
+                      example: https://res.cloudinary.com/dnn2ght5x/image/upload/v1234/profile.jpg
         category:
           $ref: '#/components/schemas/Category'
         createdAt:
