@@ -764,4 +764,90 @@ export default class RegistersController {
       })
     }
   }
+
+  /**
+   * Modifier le mot de passe avec vérification de l'ancien mot de passe
+   * POST /users/change-password
+   */
+  async changePassword({ request, response, auth }: HttpContext) {
+    try {
+      const user = auth.user
+      if (!user) {
+        return response.unauthorized({
+          message: 'Vous devez être connecté pour modifier votre mot de passe',
+          status: 401,
+        })
+      }
+
+      const { oldPassword, newPassword } = request.only(['oldPassword', 'newPassword'])
+
+      // Validation des champs
+      if (!oldPassword || !newPassword) {
+        return response.badRequest({
+          message: 'L\'ancien mot de passe et le nouveau mot de passe sont requis',
+          status: 400,
+        })
+      }
+
+      // Vérifier que le nouveau mot de passe est différent de l'ancien
+      if (oldPassword === newPassword) {
+        return response.badRequest({
+          message: 'Le nouveau mot de passe doit être différent de l\'ancien',
+          status: 400,
+        })
+      }
+
+      // Valider la longueur du nouveau mot de passe
+      if (newPassword.length < 8) {
+        return response.badRequest({
+          message: 'Le nouveau mot de passe doit contenir au moins 8 caractères',
+          status: 400,
+        })
+      }
+
+      // Récupérer l'utilisateur avec le mot de passe hashé
+      const userWithPassword = await User.find(user.id)
+      if (!userWithPassword) {
+        return response.notFound({
+          message: 'Utilisateur introuvable',
+          status: 404,
+        })
+      }
+
+      // Vérifier l'ancien mot de passe
+      const hash = await import('@adonisjs/core/services/hash')
+      const isValidPassword = await hash.default.verify(userWithPassword.password, oldPassword)
+
+      if (!isValidPassword) {
+        return response.badRequest({
+          message: 'L\'ancien mot de passe est incorrect',
+          status: 400,
+        })
+      }
+
+      // Hasher et sauvegarder le nouveau mot de passe
+      userWithPassword.password = newPassword
+      await userWithPassword.save()
+
+      logger.info('Mot de passe modifié avec succès', {
+        userId: user.id,
+        email: user.email,
+      })
+
+      return response.ok({
+        message: 'Mot de passe modifié avec succès',
+        status: 200,
+      })
+    } catch (error) {
+      logger.error('Erreur lors de la modification du mot de passe', {
+        message: error.message,
+        stack: error.stack,
+      })
+      return response.internalServerError({
+        message: 'Erreur interne lors de la modification du mot de passe',
+        status: 500,
+        error: error.message,
+      })
+    }
+  }
 }

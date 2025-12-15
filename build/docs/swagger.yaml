@@ -725,6 +725,123 @@ paths:
         '500':
           description: Erreur serveur interne
 
+  /users/change-password:
+    post:
+      tags:
+        - Users
+      summary: Modifier le mot de passe
+      description: Permet à un utilisateur connecté de modifier son mot de passe en fournissant l'ancien mot de passe et le nouveau mot de passe
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - oldPassword
+                - newPassword
+              properties:
+                oldPassword:
+                  type: string
+                  example: 'OldPassword123!'
+                  description: Ancien mot de passe actuel
+                newPassword:
+                  type: string
+                  example: 'NewPassword123!'
+                  description: Nouveau mot de passe (minimum 8 caractères)
+      responses:
+        '200':
+          description: Mot de passe modifié avec succès
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Mot de passe modifié avec succès
+                  status:
+                    type: integer
+                    example: 200
+        '400':
+          description: Erreur de validation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: L'ancien mot de passe est incorrect
+                  status:
+                    type: integer
+                    example: 400
+              examples:
+                incorrect_old_password:
+                  summary: Ancien mot de passe incorrect
+                  value:
+                    message: L'ancien mot de passe est incorrect
+                    status: 400
+                missing_fields:
+                  summary: Champs manquants
+                  value:
+                    message: L'ancien mot de passe et le nouveau mot de passe sont requis
+                    status: 400
+                same_password:
+                  summary: Même mot de passe
+                  value:
+                    message: Le nouveau mot de passe doit être différent de l'ancien
+                    status: 400
+                short_password:
+                  summary: Mot de passe trop court
+                  value:
+                    message: Le nouveau mot de passe doit contenir au moins 8 caractères
+                    status: 400
+        '401':
+          description: Non autorisé
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Vous devez être connecté pour modifier votre mot de passe
+                  status:
+                    type: integer
+                    example: 401
+        '404':
+          description: Utilisateur introuvable
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Utilisateur introuvable
+                  status:
+                    type: integer
+                    example: 404
+        '500':
+          description: Erreur serveur interne
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Erreur interne lors de la modification du mot de passe
+                  status:
+                    type: integer
+                    example: 500
+                  error:
+                    type: string
+                    example: Internal server error
+
   /users/update-profil:
     post:
       tags:

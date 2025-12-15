@@ -227,6 +227,11 @@ router
   .post('/users/verify-phone-otp', [RegistersController, 'verifyPhoneOtp'])
   .use(middleware.auth({ guards: ['api'] }))
 
+// Changement de mot de passe
+router
+  .post('/users/change-password', [RegistersController, 'changePassword'])
+  .use(middleware.auth({ guards: ['api'] }))
+
 // Endpoint temporaire pour créer la table promotions (sans authentification)
 router.get('/create-promotions-table', [PromotionsController, 'createTable'])
 

@@ -154,6 +154,9 @@ router
 router
     .post('/users/verify-phone-otp', [RegistersController, 'verifyPhoneOtp'])
     .use(middleware.auth({ guards: ['api'] }));
+router
+    .post('/users/change-password', [RegistersController, 'changePassword'])
+    .use(middleware.auth({ guards: ['api'] }));
 router.get('/create-promotions-table', [PromotionsController, 'createTable']);
 router.post('/activate-admin', async ({ response }) => {
     try {

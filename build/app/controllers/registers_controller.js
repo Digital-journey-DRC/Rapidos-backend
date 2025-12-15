@@ -672,5 +672,71 @@ export default class RegistersController {
             });
         }
     }
+    async changePassword({ request, response, auth }) {
+        try {
+            const user = auth.user;
+            if (!user) {
+                return response.unauthorized({
+                    message: 'Vous devez être connecté pour modifier votre mot de passe',
+                    status: 401,
+                });
+            }
+            const { oldPassword, newPassword } = request.only(['oldPassword', 'newPassword']);
+            if (!oldPassword || !newPassword) {
+                return response.badRequest({
+                    message: 'L\'ancien mot de passe et le nouveau mot de passe sont requis',
+                    status: 400,
+                });
+            }
+            if (oldPassword === newPassword) {
+                return response.badRequest({
+                    message: 'Le nouveau mot de passe doit être différent de l\'ancien',
+                    status: 400,
+                });
+            }
+            if (newPassword.length < 8) {
+                return response.badRequest({
+                    message: 'Le nouveau mot de passe doit contenir au moins 8 caractères',
+                    status: 400,
+                });
+            }
+            const userWithPassword = await User.find(user.id);
+            if (!userWithPassword) {
+                return response.notFound({
+                    message: 'Utilisateur introuvable',
+                    status: 404,
+                });
+            }
+            const hash = await import('@adonisjs/core/services/hash');
+            const isValidPassword = await hash.default.verify(userWithPassword.password, oldPassword);
+            if (!isValidPassword) {
+                return response.badRequest({
+                    message: 'L\'ancien mot de passe est incorrect',
+                    status: 400,
+                });
+            }
+            userWithPassword.password = newPassword;
+            await userWithPassword.save();
+            logger.info('Mot de passe modifié avec succès', {
+                userId: user.id,
+                email: user.email,
+            });
+            return response.ok({
+                message: 'Mot de passe modifié avec succès',
+                status: 200,
+            });
+        }
+        catch (error) {
+            logger.error('Erreur lors de la modification du mot de passe', {
+                message: error.message,
+                stack: error.stack,
+            });
+            return response.internalServerError({
+                message: 'Erreur interne lors de la modification du mot de passe',
+                status: 500,
+                error: error.message,
+            });
+        }
+    }
 }
 //# sourceMappingURL=registers_controller.js.map
