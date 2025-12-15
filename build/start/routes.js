@@ -147,6 +147,12 @@ router
     .use(middleware.auth({ guards: ['api'] }));
 router.post('/users/forgot-password', [RegistersController, 'forgotPassWord']);
 router.post('/users/reset-password', [RegistersController, 'resetPassword']);
+router
+    .post('/users/update-phone', [RegistersController, 'updatePhone'])
+    .use(middleware.auth({ guards: ['api'] }));
+router
+    .post('/users/verify-phone-otp', [RegistersController, 'verifyPhoneOtp'])
+    .use(middleware.auth({ guards: ['api'] }));
 router.get('/create-promotions-table', [PromotionsController, 'createTable']);
 router.post('/activate-admin', async ({ response }) => {
     try {

@@ -50,6 +50,10 @@ __decorate([
 ], Promotion.prototype, "likes", void 0);
 __decorate([
     column.dateTime(),
+    __metadata("design:type", Object)
+], Promotion.prototype, "dateDebutPromotion", void 0);
+__decorate([
+    column.dateTime(),
     __metadata("design:type", DateTime)
 ], Promotion.prototype, "delaiPromotion", void 0);
 __decorate([

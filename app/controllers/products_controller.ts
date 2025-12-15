@@ -176,7 +176,6 @@ export default class ProductsController {
     const { userId } = params
     try {
       const products = await Product.query()
-        .select(['id', 'name', 'description', 'price', 'stock'])
         .where('vendeur_id', userId)
         .preload('category')
         .preload('vendeur')
@@ -188,9 +187,9 @@ export default class ProductsController {
       // Formater exactement comme getAllProducts (même structure)
       const productsFormatted = await Promise.all(
         products.map(async (product) => {
-          // Récupérer tous les médias du produit (utiliser product_id pour correspondre à la colonne DB)
+          // Récupérer tous les médias du produit
           const allMedias = await Media.query()
-            .where('product_id', product.id)
+            .where('productId', product.id)
             .orderBy('created_at', 'asc')
 
           // Image principale (première image ou null)
@@ -228,7 +227,6 @@ export default class ProductsController {
   async getAllProducts({ response }: HttpContext) {
     try {
       const products = await Product.query()
-        .select(['id', 'name', 'description', 'price', 'stock'])
         .preload('category')
         .preload('vendeur')
 
@@ -239,9 +237,9 @@ export default class ProductsController {
       // Formater exactement comme dans les promotions (même structure)
       const productsFormatted = await Promise.all(
         products.map(async (product) => {
-          // Récupérer tous les médias du produit (utiliser product_id pour correspondre à la colonne DB)
+          // Récupérer tous les médias du produit
           const allMedias = await Media.query()
-            .where('product_id', product.id)
+            .where('productId', product.id)
             .orderBy('created_at', 'asc')
 
           // Image principale (première image ou null)
@@ -315,7 +313,7 @@ export default class ProductsController {
         products.map(async (product) => {
           // Récupérer tous les médias du produit
           const allMedias = await Media.query()
-            .where('product_id', product.id)
+            .where('productId', product.id)
             .orderBy('created_at', 'asc')
 
           // Image principale (première image ou null)

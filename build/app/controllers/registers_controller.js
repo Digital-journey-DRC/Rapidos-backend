@@ -12,6 +12,7 @@ import { UserRole } from '../Enum/user_role.js';
 import { UserStatus } from '../Enum/user_status.js';
 import { uploadProfilePicture } from '#services/upload_profil';
 import Media from '#models/media';
+import { WhatsappService } from '#exceptions/whatssapotpservice';
 export default class RegistersController {
     async register({ request, response }) {
         try {
@@ -520,6 +521,154 @@ export default class RegistersController {
             return response.internalServerError({
                 message: 'Erreur interne lors de la mise à jour du profil utilisateur',
                 status: 500,
+            });
+        }
+    }
+    async updatePhone({ request, response, auth }) {
+        try {
+            const { newPhone } = request.only(['newPhone']);
+            if (!newPhone) {
+                return response.badRequest({
+                    message: 'Le nouveau numéro de téléphone est requis',
+                    status: 400,
+                });
+            }
+            const user = auth.user;
+            if (!user) {
+                return response.unauthorized({
+                    message: 'Vous devez être connecté pour modifier votre numéro de téléphone',
+                    status: 401,
+                });
+            }
+            const currentUser = await User.findOrFail(user.id);
+            if (currentUser.phone === newPhone) {
+                return response.badRequest({
+                    message: 'Le nouveau numéro de téléphone doit être différent de l\'ancien',
+                    status: 400,
+                });
+            }
+            const existingUser = await User.findBy('phone', newPhone);
+            if (existingUser && existingUser.id !== currentUser.id) {
+                return response.conflict({
+                    message: 'Ce numéro de téléphone est déjà utilisé par un autre utilisateur',
+                    status: 409,
+                });
+            }
+            const { otpCode, otpExpiredAt } = generateOtp();
+            await createUser.setUserOtp(currentUser, otpCode, otpExpiredAt);
+            try {
+                await smsservice.envoyerSms(newPhone, otpCode);
+            }
+            catch (smsError) {
+                logger.error('Erreur lors de l\'envoi du SMS', {
+                    error: smsError.message,
+                    phone: newPhone,
+                });
+                try {
+                    await WhatsappService.sendOtp(newPhone, otpCode);
+                }
+                catch (whatsappError) {
+                    logger.error('Erreur lors de l\'envoi du WhatsApp', {
+                        error: whatsappError.message,
+                        phone: newPhone,
+                    });
+                }
+            }
+            return response.ok({
+                message: 'Un code de vérification a été envoyé à votre nouveau numéro de téléphone',
+                status: 200,
+                newPhone: newPhone,
+                expiresAt: otpExpiredAt,
+            });
+        }
+        catch (error) {
+            if (error.code === 'E_ROW_NOT_FOUND') {
+                return response.notFound({
+                    message: 'Utilisateur introuvable',
+                    status: 404,
+                });
+            }
+            logger.error('Erreur lors de la demande de changement de numéro de téléphone', {
+                message: error.message,
+                stack: error.stack,
+            });
+            return response.internalServerError({
+                message: 'Erreur interne lors de la demande de changement de numéro de téléphone',
+                status: 500,
+                error: error.message,
+            });
+        }
+    }
+    async verifyPhoneOtp({ request, response, auth }) {
+        try {
+            const { otp, newPhone } = request.only(['otp', 'newPhone']);
+            if (!otp || !newPhone) {
+                return response.badRequest({
+                    message: 'L\'OTP et le nouveau numéro de téléphone sont requis',
+                    status: 400,
+                });
+            }
+            const user = auth.user;
+            if (!user) {
+                return response.unauthorized({
+                    message: 'Vous devez être connecté pour vérifier l\'OTP',
+                    status: 401,
+                });
+            }
+            const currentUser = await User.findOrFail(user.id);
+            if (!currentUser.secureOtp || currentUser.secureOtp !== Number(otp)) {
+                currentUser.secureOtp = null;
+                currentUser.otpExpiredAt = null;
+                await currentUser.save();
+                return response.badRequest({
+                    message: 'Code OTP invalide',
+                    status: 400,
+                });
+            }
+            if (!currentUser.otpExpiredAt || new Date() > new Date(currentUser.otpExpiredAt)) {
+                currentUser.secureOtp = null;
+                currentUser.otpExpiredAt = null;
+                await currentUser.save();
+                return response.badRequest({
+                    message: 'Code OTP expiré. Veuillez demander un nouveau code',
+                    status: 400,
+                });
+            }
+            const existingUser = await User.findBy('phone', newPhone);
+            if (existingUser && existingUser.id !== currentUser.id) {
+                currentUser.secureOtp = null;
+                currentUser.otpExpiredAt = null;
+                await currentUser.save();
+                return response.conflict({
+                    message: 'Ce numéro de téléphone est déjà utilisé par un autre utilisateur',
+                    status: 409,
+                });
+            }
+            currentUser.phone = newPhone;
+            currentUser.secureOtp = null;
+            currentUser.otpExpiredAt = null;
+            await currentUser.save();
+            return response.ok({
+                message: 'Numéro de téléphone mis à jour avec succès',
+                status: 200,
+                phone: currentUser.phone,
+            });
+        }
+        catch (error) {
+            if (error.code === 'E_ROW_NOT_FOUND') {
+                return response.notFound({
+                    message: 'Utilisateur introuvable',
+                    status: 404,
+                });
+            }
+            logger.error('Erreur lors de la vérification de l\'OTP pour le changement de numéro', {
+                message: error.message,
+                stack: error.stack,
+            });
+            return response.internalServerError({
+                message: 'Erreur interne lors de la vérification de l\'OTP',
+                status: 500,
+                error: error.message,
             });
         }
     }

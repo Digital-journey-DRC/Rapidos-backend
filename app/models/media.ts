@@ -14,7 +14,7 @@ export default class Media extends BaseModel {
   @column()
   declare mediaType: string
 
-  @column()
+  @column({ columnName: 'product_id' })
   declare productId: number
 
   @column.dateTime({ autoCreate: true })

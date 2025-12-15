@@ -19,7 +19,6 @@ import { UserStatus } from '../Enum/user_status.js'
 import { uploadProfilePicture } from '#services/upload_profil'
 import Media from '#models/media'
 import { WhatsappService } from '#exceptions/whatssapotpservice'
-import { WhatsappService } from '#exceptions/whatssapotpservice'
 
 export default class RegistersController {
   async register({ request, response }: HttpContext) {
@@ -676,8 +675,6 @@ export default class RegistersController {
    */
   async verifyPhoneOtp({ request, response, auth }: HttpContext) {
     try {
-      const { otp } = request.only(['otp'])
-
       const { otp, newPhone } = request.only(['otp', 'newPhone'])
 
       if (!otp || !newPhone) {

@@ -26,7 +26,7 @@ __decorate([
     __metadata("design:type", String)
 ], Media.prototype, "mediaType", void 0);
 __decorate([
-    column(),
+    column({ columnName: 'product_id' }),
     __metadata("design:type", Number)
 ], Media.prototype, "productId", void 0);
 __decorate([

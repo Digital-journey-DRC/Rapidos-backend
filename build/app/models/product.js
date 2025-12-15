@@ -37,19 +37,19 @@ __decorate([
     __metadata("design:type", Number)
 ], Product.prototype, "stock", void 0);
 __decorate([
-    column(),
+    column({ serializeAs: null }),
     __metadata("design:type", Number)
 ], Product.prototype, "categorieId", void 0);
 __decorate([
-    column(),
+    column({ serializeAs: null }),
     __metadata("design:type", Number)
 ], Product.prototype, "vendeurId", void 0);
 __decorate([
-    column.dateTime({ autoCreate: true }),
+    column.dateTime({ autoCreate: true, serializeAs: null }),
     __metadata("design:type", DateTime)
 ], Product.prototype, "createdAt", void 0);
 __decorate([
-    column.dateTime({ autoCreate: true, autoUpdate: true }),
+    column.dateTime({ autoCreate: true, autoUpdate: true, serializeAs: null }),
     __metadata("design:type", DateTime)
 ], Product.prototype, "updatedAt", void 0);
 __decorate([
@@ -82,6 +82,7 @@ __decorate([
 __decorate([
     hasMany(() => Promotion, {
         foreignKey: 'productId',
+        serializeAs: null,
     }),
     __metadata("design:type", Object)
 ], Product.prototype, "promotions", void 0);

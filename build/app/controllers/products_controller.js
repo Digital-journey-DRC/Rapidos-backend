@@ -4,6 +4,7 @@ import Product from '#models/product';
 import User from '#models/user';
 import ProductEvent from '#models/product_event';
 import { manageUploadProductMedias } from '#services/managemedias';
+import { manageUploadProductImages } from '#services/manageproductimages';
 import { categoryValidator } from '#validators/category';
 import { EventType } from '../Enum/event_type.js';
 import { createProductValidator, validateProductStock } from '#validators/products';
@@ -43,14 +44,62 @@ export default class ProductsController {
                 categorieId: category.id,
                 vendeurId,
             });
+            const image = request.file('image') || request.input('image');
+            const image1 = request.file('image1') || request.input('image1');
+            const image2 = request.file('image2') || request.input('image2');
+            const image3 = request.file('image3') || request.input('image3');
+            const image4 = request.file('image4') || request.input('image4');
             const productMedia = request.files('medias');
-            const { medias, errors } = await manageUploadProductMedias(productMedia);
-            for (const media of medias) {
-                await product.related('media').create({
-                    mediaUrl: media.mediaUrl,
-                    mediaType: media.mediaType,
-                    productId: product.id,
-                });
+            let errors = [];
+            if (image || image1 || image2 || image3 || image4) {
+                const { image: uploadedImage, image1: uploadedImage1, image2: uploadedImage2, image3: uploadedImage3, image4: uploadedImage4, errors: uploadErrors, } = await manageUploadProductImages(image || null, image1 || null, image2 || null, image3 || null, image4 || null);
+                errors = uploadErrors;
+                if (uploadedImage) {
+                    await product.related('media').create({
+                        mediaUrl: uploadedImage.imageUrl,
+                        mediaType: uploadedImage.imageType,
+                        productId: product.id,
+                    });
+                }
+                if (uploadedImage1) {
+                    await product.related('media').create({
+                        mediaUrl: uploadedImage1.imageUrl,
+                        mediaType: uploadedImage1.imageType,
+                        productId: product.id,
+                    });
+                }
+                if (uploadedImage2) {
+                    await product.related('media').create({
+                        mediaUrl: uploadedImage2.imageUrl,
+                        mediaType: uploadedImage2.imageType,
+                        productId: product.id,
+                    });
+                }
+                if (uploadedImage3) {
+                    await product.related('media').create({
+                        mediaUrl: uploadedImage3.imageUrl,
+                        mediaType: uploadedImage3.imageType,
+                        productId: product.id,
+                    });
+                }
+                if (uploadedImage4) {
+                    await product.related('media').create({
+                        mediaUrl: uploadedImage4.imageUrl,
+                        mediaType: uploadedImage4.imageType,
+                        productId: product.id,
+                    });
+                }
+            }
+            else if (productMedia && productMedia.length > 0) {
+                const { medias, errors: mediasErrors } = await manageUploadProductMedias(productMedia);
+                errors = mediasErrors;
+                for (const media of medias) {
+                    await product.related('media').create({
+                        mediaUrl: media.mediaUrl,
+                        mediaType: media.mediaType,
+                        productId: product.id,
+                    });
+                }
             }
             await product.load('media');
             await product.load('category');
@@ -86,15 +135,33 @@ export default class ProductsController {
     async getAllProductByUser({ params, response }) {
         const { userId } = params;
         try {
-            const product = await Product.query()
+            const products = await Product.query()
                 .where('vendeur_id', userId)
-                .preload('media')
                 .preload('category')
-                .preload('commandes');
-            if (product.length === 0) {
+                .preload('vendeur');
+            if (products.length === 0) {
                 return response.status(404).json({ message: 'Produit non trouvé' });
             }
-            return response.status(200).json({ product });
+            const productsFormatted = await Promise.all(products.map(async (product) => {
+                const allMedias = await Media.query()
+                    .where('productId', product.id)
+                    .orderBy('created_at', 'asc');
+                const mainImage = allMedias.length > 0 ? allMedias[0].mediaUrl : null;
+                const images = allMedias.length > 1 ? allMedias.slice(1).map((media) => media.mediaUrl) : [];
+                const serialized = product.serialize();
+                return {
+                    id: serialized.id,
+                    name: serialized.name,
+                    description: serialized.description,
+                    price: serialized.price,
+                    stock: serialized.stock,
+                    category: serialized.category,
+                    image: mainImage,
+                    images: images,
+                    vendeur: serialized.vendeur,
+                };
+            }));
+            return response.status(200).json({ products: productsFormatted });
         }
         catch (error) {
             if (error.code === 'E_ROW_NOT_FOUND') {
@@ -106,17 +173,31 @@ export default class ProductsController {
     async getAllProducts({ response }) {
         try {
             const products = await Product.query()
-                .preload('media')
                 .preload('category')
-                .preload('vendeur', (query) => {
-                query.preload('profil', (profilQuery) => {
-                    profilQuery.preload('media');
-                });
-            });
+                .preload('vendeur');
             if (products.length === 0) {
                 return response.status(404).json({ message: 'Produit non trouvé' });
             }
-            return response.status(200).json({ products });
+            const productsFormatted = await Promise.all(products.map(async (product) => {
+                const allMedias = await Media.query()
+                    .where('productId', product.id)
+                    .orderBy('created_at', 'asc');
+                const mainImage = allMedias.length > 0 ? allMedias[0].mediaUrl : null;
+                const images = allMedias.length > 1 ? allMedias.slice(1).map((media) => media.mediaUrl) : [];
+                const serialized = product.serialize();
+                return {
+                    id: serialized.id,
+                    name: serialized.name,
+                    description: serialized.description,
+                    price: serialized.price,
+                    stock: serialized.stock,
+                    category: serialized.category,
+                    image: mainImage,
+                    images: images,
+                    vendeur: serialized.vendeur,
+                };
+            }));
+            return response.status(200).json({ products: productsFormatted });
         }
         catch (error) {
             if (error.code === 'E_ROW_NOT_FOUND') {
@@ -149,13 +230,33 @@ export default class ProductsController {
             }
             const products = await Product.query()
                 .where('categorieId', categoryId)
-                .preload('media')
                 .preload('category')
+                .preload('vendeur')
                 .preload('commandes');
             if (products.length === 0) {
                 return response.status(404).json({ message: 'Produit non trouvé' });
             }
-            return response.status(200).json({ products });
+            const productsFormatted = await Promise.all(products.map(async (product) => {
+                const allMedias = await Media.query()
+                    .where('productId', product.id)
+                    .orderBy('created_at', 'asc');
+                const mainImage = allMedias.length > 0 ? allMedias[0].mediaUrl : null;
+                const images = allMedias.length > 1 ? allMedias.slice(1).map((media) => media.mediaUrl) : [];
+                const serialized = product.serialize();
+                return {
+                    id: serialized.id,
+                    name: serialized.name,
+                    description: serialized.description,
+                    price: serialized.price,
+                    stock: serialized.stock,
+                    category: serialized.category,
+                    image: mainImage,
+                    images: images,
+                    vendeur: serialized.vendeur,
+                    commandes: serialized.commandes,
+                };
+            }));
+            return response.status(200).json({ products: productsFormatted });
         }
         catch (error) {
             if (error.code === 'E_ROW_NOT_FOUND') {
@@ -170,14 +271,32 @@ export default class ProductsController {
         try {
             const product = await Product.query()
                 .where('id', productIdValue)
-                .preload('media')
                 .preload('category')
+                .preload('vendeur')
                 .preload('commandes')
                 .first();
             if (!product) {
                 return response.status(404).json({ message: 'Produit non trouvé' });
             }
-            return response.status(200).json({ product });
+            const allMedias = await Media.query()
+                .where('product_id', product.id)
+                .orderBy('created_at', 'asc');
+            const mainImage = allMedias.length > 0 ? allMedias[0].mediaUrl : null;
+            const images = allMedias.length > 1 ? allMedias.slice(1).map((media) => media.mediaUrl) : [];
+            const serialized = product.serialize();
+            const productFormatted = {
+                id: serialized.id,
+                name: serialized.name,
+                description: serialized.description,
+                price: serialized.price,
+                stock: serialized.stock,
+                category: serialized.category,
+                image: mainImage,
+                images: images,
+                vendeur: serialized.vendeur,
+                commandes: serialized.commandes,
+            };
+            return response.status(200).json({ product: productFormatted });
         }
         catch (error) {
             if (error.code === 'E_ROW_NOT_FOUND') {
@@ -217,14 +336,62 @@ export default class ProductsController {
                 product.categorieId = category.id;
             }
             await product.save();
+            const image = request.file('image');
+            const image1 = request.file('image1');
+            const image2 = request.file('image2');
+            const image3 = request.file('image3');
+            const image4 = request.file('image4');
             const productMedia = request.files('medias');
-            const { medias, errors } = await manageUploadProductMedias(productMedia);
-            for (const media of medias) {
-                await product.related('media').create({
-                    mediaUrl: media.mediaUrl,
-                    mediaType: media.mediaType,
-                    productId: product.id,
-                });
+            let errors = [];
+            if (image || image1 || image2 || image3 || image4) {
+                const { image: uploadedImage, image1: uploadedImage1, image2: uploadedImage2, image3: uploadedImage3, image4: uploadedImage4, errors: uploadErrors, } = await manageUploadProductImages(image || null, image1 || null, image2 || null, image3 || null, image4 || null);
+                errors = uploadErrors;
+                if (uploadedImage) {
+                    await product.related('media').create({
+                        mediaUrl: uploadedImage.imageUrl,
+                        mediaType: uploadedImage.imageType,
+                        productId: product.id,
+                    });
+                }
+                if (uploadedImage1) {
+                    await product.related('media').create({
+                        mediaUrl: uploadedImage1.imageUrl,
+                        mediaType: uploadedImage1.imageType,
+                        productId: product.id,
+                    });
+                }
+                if (uploadedImage2) {
+                    await product.related('media').create({
+                        mediaUrl: uploadedImage2.imageUrl,
+                        mediaType: uploadedImage2.imageType,
+                        productId: product.id,
+                    });
+                }
+                if (uploadedImage3) {
+                    await product.related('media').create({
+                        mediaUrl: uploadedImage3.imageUrl,
+                        mediaType: uploadedImage3.imageType,
+                        productId: product.id,
+                    });
+                }
+                if (uploadedImage4) {
+                    await product.related('media').create({
+                        mediaUrl: uploadedImage4.imageUrl,
+                        mediaType: uploadedImage4.imageType,
+                        productId: product.id,
+                    });
+                }
+            }
+            else if (productMedia && productMedia.length > 0) {
+                const { medias, errors: mediasErrors } = await manageUploadProductMedias(productMedia);
+                errors = mediasErrors;
+                for (const media of medias) {
+                    await product.related('media').create({
+                        mediaUrl: media.mediaUrl,
+                        mediaType: media.mediaType,
+                        productId: product.id,
+                    });
+                }
             }
             await product.load('media');
             if (errors.length > 0) {
@@ -410,22 +577,21 @@ export default class ProductsController {
             const userId = auth.user?.id;
             if (!userId) {
                 const randomProducts = await Product.query()
+                    .select(['id', 'name', 'description', 'price', 'stock'])
                     .where('stock', '>', 0)
                     .preload('media')
                     .preload('category')
-                    .preload('vendeur', (query) => {
-                    query.preload('profil', (profilQuery) => {
-                        profilQuery.preload('media');
-                    });
-                })
-                    .preload('promotions', (promotionQuery) => {
-                    promotionQuery.where('delaiPromotion', '>', new Date().toISOString());
-                })
+                    .preload('vendeur')
                     .limit(5);
+                const productsFormatted = randomProducts.map((product) => {
+                    const serialized = product.serialize();
+                    const { categorieId, vendeurId, createdAt, updatedAt, promotions, ...rest } = serialized;
+                    return rest;
+                });
                 return response.status(200).json({
                     message: 'Produits recommandés récupérés avec succès',
-                    products: randomProducts,
-                    count: randomProducts.length,
+                    products: productsFormatted,
+                    count: productsFormatted.length,
                 });
             }
             let userEvents = [];
@@ -447,22 +613,21 @@ export default class ProductsController {
             }
             if (userEvents.length === 0) {
                 const randomProducts = await Product.query()
+                    .select(['id', 'name', 'description', 'price', 'stock'])
                     .where('stock', '>', 0)
                     .preload('media')
                     .preload('category')
-                    .preload('vendeur', (query) => {
-                    query.preload('profil', (profilQuery) => {
-                        profilQuery.preload('media');
-                    });
-                })
-                    .preload('promotions', (promotionQuery) => {
-                    promotionQuery.where('delaiPromotion', '>', new Date().toISOString());
-                })
+                    .preload('vendeur')
                     .limit(5);
+                const productsFormatted = randomProducts.map((product) => {
+                    const serialized = product.serialize();
+                    const { categorieId, vendeurId, createdAt, updatedAt, promotions, ...rest } = serialized;
+                    return rest;
+                });
                 return response.status(200).json({
                     message: 'Produits recommandés récupérés avec succès',
-                    products: randomProducts,
-                    count: randomProducts.length,
+                    products: productsFormatted,
+                    count: productsFormatted.length,
                 });
             }
             const categoryScores = {};
@@ -507,19 +672,13 @@ export default class ProductsController {
                     if (recommendedProducts.length >= 5)
                         break;
                     const productsInCategory = await Product.query()
+                        .select(['id', 'name', 'description', 'price', 'stock'])
                         .where('categorieId', categoryId)
                         .whereNotIn('id', excludedProductIds)
                         .where('stock', '>', 0)
                         .preload('media')
                         .preload('category')
-                        .preload('vendeur', (query) => {
-                        query.preload('profil', (profilQuery) => {
-                            profilQuery.preload('media');
-                        });
-                    })
-                        .preload('promotions', (promotionQuery) => {
-                        promotionQuery.where('delaiPromotion', '>', new Date().toISOString());
-                    })
+                        .preload('vendeur')
                         .limit(5 - recommendedProducts.length);
                     for (const product of productsInCategory) {
                         if (recommendedProducts.length >= 5)
@@ -532,25 +691,24 @@ export default class ProductsController {
             if (recommendedProducts.length < 5) {
                 const remainingCount = 5 - recommendedProducts.length;
                 const additionalProducts = await Product.query()
+                    .select(['id', 'name', 'description', 'price', 'stock'])
                     .whereNotIn('id', excludedProductIds)
                     .where('stock', '>', 0)
                     .preload('media')
                     .preload('category')
-                    .preload('vendeur', (query) => {
-                    query.preload('profil', (profilQuery) => {
-                        profilQuery.preload('media');
-                    });
-                })
-                    .preload('promotions', (promotionQuery) => {
-                    promotionQuery.where('delaiPromotion', '>', new Date().toISOString());
-                })
+                    .preload('vendeur')
                     .limit(remainingCount);
                 recommendedProducts.push(...additionalProducts);
             }
+            const productsFormatted = recommendedProducts.slice(0, 5).map((product) => {
+                const serialized = product.serialize();
+                const { categorieId, vendeurId, createdAt, updatedAt, promotions, ...rest } = serialized;
+                return rest;
+            });
             return response.status(200).json({
                 message: 'Produits recommandés récupérés avec succès',
-                products: recommendedProducts.slice(0, 5),
-                count: Math.min(recommendedProducts.length, 5),
+                products: productsFormatted,
+                count: productsFormatted.length,
             });
         }
         catch (error) {
