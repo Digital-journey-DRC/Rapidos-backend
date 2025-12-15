@@ -109,7 +109,7 @@ export default class ProductsController {
                     errors,
                 });
             }
-            const mediasForProduct = await Media.query().where('product_id', product.id);
+            const mediasForProduct = await Media.query().where('productId', product.id);
             return response.created({
                 message: 'Produit créé avec succès',
                 product,
@@ -279,7 +279,7 @@ export default class ProductsController {
                 return response.status(404).json({ message: 'Produit non trouvé' });
             }
             const allMedias = await Media.query()
-                .where('product_id', product.id)
+                .where('productId', product.id)
                 .orderBy('created_at', 'asc');
             const mainImage = allMedias.length > 0 ? allMedias[0].mediaUrl : null;
             const images = allMedias.length > 1 ? allMedias.slice(1).map((media) => media.mediaUrl) : [];
@@ -400,7 +400,7 @@ export default class ProductsController {
                     errors,
                 });
             }
-            const mediasForProduct = await Media.query().where('product_id', product.id);
+            const mediasForProduct = await Media.query().where('productId', product.id);
             return response.status(200).json({
                 message: 'Produit mis à jour avec succès',
                 product,

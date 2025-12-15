@@ -145,7 +145,7 @@ export default class ProductsController {
         })
       }
 
-      const mediasForProduct = await Media.query().where('product_id', product.id)
+      const mediasForProduct = await Media.query().where('productId', product.id)
 
       return response.created({
         message: 'Produit créé avec succès',
@@ -365,7 +365,7 @@ export default class ProductsController {
 
       // Récupérer tous les médias du produit
       const allMedias = await Media.query()
-        .where('product_id', product.id)
+        .where('productId', product.id)
         .orderBy('created_at', 'asc')
 
       // Image principale (première image ou null)
@@ -517,7 +517,7 @@ export default class ProductsController {
           errors,
         })
       }
-      const mediasForProduct = await Media.query().where('product_id', product.id)
+      const mediasForProduct = await Media.query().where('productId', product.id)
       return response.status(200).json({
         message: 'Produit mis à jour avec succès',
         product,
