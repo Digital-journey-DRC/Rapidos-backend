@@ -70,7 +70,14 @@ export default class PromotionsController {
             const now = DateTime.now().toISO();
             const promotions = await Promotion.query()
                 .preload('product', (productQuery) => {
-                productQuery.preload('media').preload('category').preload('vendeur');
+                productQuery
+                    .preload('media')
+                    .preload('category')
+                    .preload('vendeur', (vendeurQuery) => {
+                    vendeurQuery.preload('profil', (profilQuery) => {
+                        profilQuery.preload('media');
+                    });
+                });
             })
                 .where('delaiPromotion', '>', now)
                 .where((query) => {
@@ -100,7 +107,7 @@ export default class PromotionsController {
                     images: images,
                     libelle: promotion.libelle,
                     likes: promotion.likes || 0,
-                    dateDebutPromotion: promotion.dateDebutPromotion,
+                    dateDebutPromotion: promotion.dateDebutPromotion || DateTime.now(),
                     delaiPromotion: promotion.delaiPromotion,
                     nouveauPrix: promotion.nouveauPrix,
                     ancienPrix: promotion.ancienPrix,
@@ -153,7 +160,14 @@ export default class PromotionsController {
                     .orWhere('dateDebutPromotion', '<=', now);
             })
                 .preload('product', (productQuery) => {
-                productQuery.preload('media').preload('category').preload('vendeur');
+                productQuery
+                    .preload('media')
+                    .preload('category')
+                    .preload('vendeur', (vendeurQuery) => {
+                    vendeurQuery.preload('profil', (profilQuery) => {
+                        profilQuery.preload('media');
+                    });
+                });
             })
                 .firstOrFail();
             const product = promotion.product;
@@ -173,7 +187,7 @@ export default class PromotionsController {
                 images: images,
                 libelle: promotion.libelle,
                 likes: promotion.likes || 0,
-                dateDebutPromotion: promotion.dateDebutPromotion,
+                dateDebutPromotion: promotion.dateDebutPromotion || DateTime.now(),
                 delaiPromotion: promotion.delaiPromotion,
                 nouveauPrix: promotion.nouveauPrix,
                 ancienPrix: promotion.ancienPrix,
@@ -593,6 +607,64 @@ export default class PromotionsController {
             });
             return response.status(500).json({
                 message: 'Erreur serveur interne',
+                error: error.message,
+            });
+        }
+    }
+    async testIndex({ response }) {
+        try {
+            const promotions = await Promotion.query()
+                .preload('product', (productQuery) => {
+                productQuery
+                    .preload('media')
+                    .preload('category')
+                    .preload('vendeur', (vendeurQuery) => {
+                    vendeurQuery.preload('profil', (profilQuery) => {
+                        profilQuery.preload('media');
+                    });
+                });
+            });
+            const promotionsFormatted = promotions.map((promotion) => {
+                const product = promotion.product;
+                const images = [
+                    promotion.image1,
+                    promotion.image2,
+                    promotion.image3,
+                    promotion.image4
+                ].filter((img) => img !== null);
+                return {
+                    id: promotion.id,
+                    image: promotion.image,
+                    images: images,
+                    libelle: promotion.libelle,
+                    likes: promotion.likes || 0,
+                    dateDebutPromotion: promotion.dateDebutPromotion || DateTime.now(),
+                    delaiPromotion: promotion.delaiPromotion,
+                    nouveauPrix: promotion.nouveauPrix,
+                    ancienPrix: promotion.ancienPrix,
+                    product: {
+                        id: product.id,
+                        name: product.name,
+                        description: product.description,
+                        price: product.price,
+                        stock: product.stock,
+                        category: product.category,
+                        media: product.media,
+                        vendeur: product.vendeur,
+                    },
+                    createdAt: promotion.createdAt,
+                    updatedAt: promotion.updatedAt,
+                };
+            });
+            return response.status(200).json({
+                message: 'Promotions récupérées avec succès (TEST)',
+                promotions: promotionsFormatted,
+            });
+        }
+        catch (error) {
+            console.error('Erreur lors de la récupération des promotions:', error);
+            return response.status(500).json({
+                message: 'Erreur lors de la récupération des promotions',
                 error: error.message,
             });
         }

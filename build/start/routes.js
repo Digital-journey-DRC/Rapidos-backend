@@ -130,6 +130,7 @@ router
     .post('/stock/:productId/update', [ProductsController, 'updateStockForProduct'])
     .use(middleware.auth({ guards: ['api'] }));
 router.get('/promotions/create-table', [PromotionsController, 'createTable']);
+router.get('/promotions/test', [PromotionsController, 'testIndex']);
 router
     .get('/promotions', [PromotionsController, 'index'])
     .use(middleware.auth({ guards: ['api'] }));

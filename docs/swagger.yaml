@@ -556,6 +556,175 @@ paths:
                     type: integer
                     example: 500
 
+  /users/update-phone:
+    post:
+      tags:
+        - Users
+      summary: Demande de changement de numéro de téléphone
+      description: Envoie un code OTP au nouveau numéro de téléphone pour vérification. Le numéro ne sera changé qu'après vérification du code OTP.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - newPhone
+              properties:
+                newPhone:
+                  type: string
+                  example: '+243819493099'
+                  description: Nouveau numéro de téléphone au format international
+      responses:
+        '200':
+          description: Code OTP envoyé avec succès au nouveau numéro
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Un code de vérification a été envoyé à votre nouveau numéro de téléphone
+                  status:
+                    type: integer
+                    example: 200
+                  newPhone:
+                    type: string
+                    example: '+243819493099'
+                  expiresAt:
+                    type: string
+                    format: date-time
+                    example: 2025-12-15T15:30:00.000Z
+        '400':
+          description: Nouveau numéro requis ou identique à l'ancien
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Le nouveau numéro de téléphone doit être différent de l'ancien
+                  status:
+                    type: integer
+                    example: 400
+        '401':
+          description: Non autorisé
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Vous devez être connecté pour modifier votre numéro de téléphone
+                  status:
+                    type: integer
+                    example: 401
+        '409':
+          description: Numéro déjà utilisé par un autre utilisateur
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Ce numéro de téléphone est déjà utilisé par un autre utilisateur
+                  status:
+                    type: integer
+                    example: 409
+        '500':
+          description: Erreur serveur interne
+
+  /users/verify-phone-otp:
+    post:
+      tags:
+        - Users
+      summary: Vérifie l'OTP et confirme le changement de numéro
+      description: Après avoir reçu l'OTP sur le nouveau numéro, cet endpoint permet de vérifier le code et de confirmer définitivement le changement de numéro de téléphone
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - otp
+                - newPhone
+              properties:
+                otp:
+                  type: string
+                  example: '123456'
+                  description: Code OTP reçu par SMS ou WhatsApp
+                newPhone:
+                  type: string
+                  example: '+243819493099'
+                  description: Nouveau numéro de téléphone (doit correspondre au numéro utilisé lors de la demande)
+      responses:
+        '200':
+          description: Numéro de téléphone mis à jour avec succès
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Numéro de téléphone mis à jour avec succès
+                  status:
+                    type: integer
+                    example: 200
+                  phone:
+                    type: string
+                    example: '+243819493099'
+        '400':
+          description: OTP invalide ou expiré
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Code OTP invalide
+                  status:
+                    type: integer
+                    example: 400
+        '401':
+          description: Non autorisé
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Vous devez être connecté pour vérifier l'OTP
+                  status:
+                    type: integer
+                    example: 401
+        '409':
+          description: Numéro déjà utilisé par un autre utilisateur
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Ce numéro de téléphone est déjà utilisé par un autre utilisateur
+                  status:
+                    type: integer
+                    example: 409
+        '500':
+          description: Erreur serveur interne
+
   /users/update-profil:
     post:
       tags:

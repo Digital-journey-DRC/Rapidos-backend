@@ -7,7 +7,7 @@ export default class Promotion extends BaseModel {
   @column({ isPrimary: true })
   declare id: number
 
-  @column()
+  @column({ columnName: 'product_id' })
   declare productId: number
 
   @column()
@@ -31,27 +31,25 @@ export default class Promotion extends BaseModel {
   @column()
   declare likes: number
 
-  @column.dateTime()
+  @column.dateTime({ columnName: 'date_debut_promotion' })
   declare dateDebutPromotion: DateTime | null
 
-  @column.dateTime()
+  @column.dateTime({ columnName: 'delai_promotion' })
   declare delaiPromotion: DateTime
 
-  @column()
+  @column({ columnName: 'nouveau_prix' })
   declare nouveauPrix: number
 
-  @column()
+  @column({ columnName: 'ancien_prix' })
   declare ancienPrix: number
 
-  @column.dateTime({ autoCreate: true })
+  @column.dateTime({ autoCreate: true, columnName: 'created_at' })
   declare createdAt: DateTime
 
-  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  @column.dateTime({ autoCreate: true, autoUpdate: true, columnName: 'updated_at' })
   declare updatedAt: DateTime
 
-  @belongsTo(() => Product, {
-    foreignKey: 'productId',
-  })
+  @belongsTo(() => Product)
   declare product: BelongsTo<typeof Product>
 }
 

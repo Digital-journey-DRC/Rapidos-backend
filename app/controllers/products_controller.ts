@@ -276,12 +276,48 @@ export default class ProductsController {
 
   async showAllProducts({ response, auth }: HttpContext) {
     try {
-      const products = await Product.query().where('vendeur_id', auth.user!.id).preload('media').preload('category')
+      const products = await Product.query()
+        .where('vendeur_id', auth.user!.id)
+        .preload('category')
+        .preload('vendeur', (vendeurQuery) => {
+          vendeurQuery.preload('profil', (profilQuery) => {
+            profilQuery.preload('media')
+          })
+        })
 
       if (products.length === 0) {
         return response.status(404).json({ message: 'Produit non trouvé' })
       }
-      return response.status(200).json({ products })
+
+      // Formater les produits avec image principale et images secondaires
+      const productsFormatted = await Promise.all(
+        products.map(async (product) => {
+          // Récupérer tous les médias du produit
+          const allMedias = await Media.query()
+            .where('productId', product.id)
+            .orderBy('created_at', 'asc')
+          
+          // Image principale (première image ou null)
+          const mainImage = allMedias.length > 0 ? allMedias[0].mediaUrl : null
+          
+          // Tableau des images supplémentaires (toutes sauf la première)
+          const images = allMedias.length > 1 ? allMedias.slice(1).map((media) => media.mediaUrl) : []
+
+          return {
+            id: product.id,
+            name: product.name,
+            description: product.description,
+            price: product.price,
+            stock: product.stock,
+            category: product.category,
+            image: mainImage,
+            images: images,
+            vendeur: product.vendeur,
+          }
+        })
+      )
+
+      return response.status(200).json({ products: productsFormatted })
     } catch (error) {
       if (error.code === 'E_ROW_NOT_FOUND') {
         return response.status(404).json({ message: 'Produit non trouvé', error: error.message })

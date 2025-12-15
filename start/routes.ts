@@ -187,6 +187,9 @@ router
 // GET /promotions/create-table - Crée la table promotions (DOIT être avant /promotions/:id)
 router.get('/promotions/create-table', [PromotionsController, 'createTable'])
 
+// GET /promotions/test - Récupère tous les produits en promotion (sans auth pour test)
+router.get('/promotions/test', [PromotionsController, 'testIndex'])
+
 // GET /promotions - Récupère tous les produits en promotion
 router
   .get('/promotions', [PromotionsController, 'index'])

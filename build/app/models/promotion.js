@@ -17,7 +17,7 @@ __decorate([
     __metadata("design:type", Number)
 ], Promotion.prototype, "id", void 0);
 __decorate([
-    column(),
+    column({ columnName: 'product_id' }),
     __metadata("design:type", Number)
 ], Promotion.prototype, "productId", void 0);
 __decorate([
@@ -49,33 +49,31 @@ __decorate([
     __metadata("design:type", Number)
 ], Promotion.prototype, "likes", void 0);
 __decorate([
-    column.dateTime(),
+    column.dateTime({ columnName: 'date_debut_promotion' }),
     __metadata("design:type", Object)
 ], Promotion.prototype, "dateDebutPromotion", void 0);
 __decorate([
-    column.dateTime(),
+    column.dateTime({ columnName: 'delai_promotion' }),
     __metadata("design:type", DateTime)
 ], Promotion.prototype, "delaiPromotion", void 0);
 __decorate([
-    column(),
+    column({ columnName: 'nouveau_prix' }),
     __metadata("design:type", Number)
 ], Promotion.prototype, "nouveauPrix", void 0);
 __decorate([
-    column(),
+    column({ columnName: 'ancien_prix' }),
     __metadata("design:type", Number)
 ], Promotion.prototype, "ancienPrix", void 0);
 __decorate([
-    column.dateTime({ autoCreate: true }),
+    column.dateTime({ autoCreate: true, columnName: 'created_at' }),
     __metadata("design:type", DateTime)
 ], Promotion.prototype, "createdAt", void 0);
 __decorate([
-    column.dateTime({ autoCreate: true, autoUpdate: true }),
+    column.dateTime({ autoCreate: true, autoUpdate: true, columnName: 'updated_at' }),
     __metadata("design:type", DateTime)
 ], Promotion.prototype, "updatedAt", void 0);
 __decorate([
-    belongsTo(() => Product, {
-        foreignKey: 'productId',
-    }),
+    belongsTo(() => Product),
     __metadata("design:type", Object)
 ], Promotion.prototype, "product", void 0);
 //# sourceMappingURL=promotion.js.map
