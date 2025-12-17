@@ -1,5 +1,6 @@
 import Promotion from '#models/promotion';
 import Product from '#models/product';
+import Media from '#models/media';
 import { createPromotionValidator, updatePromotionValidator } from '#validators/promotion';
 import { manageUploadPromotionImages } from '#services/managepromotionimages';
 import logger from '@adonisjs/core/services/logger';
@@ -89,22 +90,29 @@ export default class PromotionsController {
             if (promotions.length === 0) {
                 return response.status(404).json({ message: 'Aucune promotion trouvée' });
             }
-            const promotionsFormatted = promotions.map((promotion) => {
+            const promotionsFormatted = await Promise.all(promotions.map(async (promotion) => {
                 const product = promotion.product;
-                const images = [];
+                const promotionImages = [];
                 if (promotion.image1)
-                    images.push(promotion.image1);
+                    promotionImages.push(promotion.image1);
                 if (promotion.image2)
-                    images.push(promotion.image2);
+                    promotionImages.push(promotion.image2);
                 if (promotion.image3)
-                    images.push(promotion.image3);
+                    promotionImages.push(promotion.image3);
                 if (promotion.image4)
-                    images.push(promotion.image4);
+                    promotionImages.push(promotion.image4);
+                const allProductMedias = await Media.query()
+                    .where('productId', product.id)
+                    .orderBy('created_at', 'asc');
+                const productMainImage = allProductMedias.length > 0 ? allProductMedias[0].mediaUrl : null;
+                const productSecondaryImages = allProductMedias.length > 1
+                    ? allProductMedias.slice(1).map((media) => media.mediaUrl)
+                    : [];
                 return {
                     id: promotion.id,
                     productId: promotion.productId,
                     image: promotion.image,
-                    images: images,
+                    images: promotionImages,
                     libelle: promotion.libelle,
                     likes: promotion.likes || 0,
                     dateDebutPromotion: promotion.dateDebutPromotion || DateTime.now(),
@@ -118,13 +126,14 @@ export default class PromotionsController {
                         price: product.price,
                         stock: product.stock,
                         category: product.category,
-                        media: product.media,
+                        image: productMainImage,
+                        images: productSecondaryImages,
                         vendeur: product.vendeur,
                     },
                     createdAt: promotion.createdAt,
                     updatedAt: promotion.updatedAt,
                 };
-            });
+            }));
             return response.status(200).json({
                 message: 'Produits en promotion récupérés avec succès',
                 promotions: promotionsFormatted,
@@ -171,20 +180,27 @@ export default class PromotionsController {
             })
                 .firstOrFail();
             const product = promotion.product;
-            const images = [];
+            const promotionImages = [];
             if (promotion.image1)
-                images.push(promotion.image1);
+                promotionImages.push(promotion.image1);
             if (promotion.image2)
-                images.push(promotion.image2);
+                promotionImages.push(promotion.image2);
             if (promotion.image3)
-                images.push(promotion.image3);
+                promotionImages.push(promotion.image3);
             if (promotion.image4)
-                images.push(promotion.image4);
+                promotionImages.push(promotion.image4);
+            const allProductMedias = await Media.query()
+                .where('productId', product.id)
+                .orderBy('created_at', 'asc');
+            const productMainImage = allProductMedias.length > 0 ? allProductMedias[0].mediaUrl : null;
+            const productSecondaryImages = allProductMedias.length > 1
+                ? allProductMedias.slice(1).map((media) => media.mediaUrl)
+                : [];
             const promotionFormatted = {
                 id: promotion.id,
                 productId: promotion.productId,
                 image: promotion.image,
-                images: images,
+                images: promotionImages,
                 libelle: promotion.libelle,
                 likes: promotion.likes || 0,
                 dateDebutPromotion: promotion.dateDebutPromotion || DateTime.now(),
@@ -198,7 +214,8 @@ export default class PromotionsController {
                     price: product.price,
                     stock: product.stock,
                     category: product.category,
-                    media: product.media,
+                    image: productMainImage,
+                    images: productSecondaryImages,
                     vendeur: product.vendeur,
                 },
                 createdAt: promotion.createdAt,

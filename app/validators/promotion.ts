@@ -26,7 +26,7 @@ export const createPromotionValidator = vine.compile(
 
 export const updatePromotionValidator = vine.compile(
   vine.object({
-    productId: vine.number().positive().optional(),
+    // productId ne devrait JAMAIS être modifié pour une promotion existante
     libelle: vine.string().trim().escape().minLength(2).maxLength(200).optional(),
     likes: vine.number().min(0).optional(),
     dateDebutPromotion: vine.string().transform((value) => {

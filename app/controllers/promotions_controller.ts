@@ -1,5 +1,6 @@
 import Promotion from '#models/promotion'
 import Product from '#models/product'
+import Media from '#models/media'
 import { createPromotionValidator, updatePromotionValidator } from '#validators/promotion'
 import { manageUploadPromotionImages } from '#services/managepromotionimages'
 import type { HttpContext } from '@adonisjs/core/http'
@@ -115,43 +116,60 @@ export default class PromotionsController {
       }
 
       // Formater les données pour inclure toutes les informations requises
-      const promotionsFormatted = promotions.map((promotion) => {
-        const product = promotion.product
-        // Créer un tableau avec les images secondaires (seulement celles qui existent)
-        const images = []
-        if (promotion.image1) images.push(promotion.image1)
-        if (promotion.image2) images.push(promotion.image2)
-        if (promotion.image3) images.push(promotion.image3)
-        if (promotion.image4) images.push(promotion.image4)
+      const promotionsFormatted = await Promise.all(
+        promotions.map(async (promotion) => {
+          const product = promotion.product
+          
+          // Images de la promotion
+          const promotionImages = []
+          if (promotion.image1) promotionImages.push(promotion.image1)
+          if (promotion.image2) promotionImages.push(promotion.image2)
+          if (promotion.image3) promotionImages.push(promotion.image3)
+          if (promotion.image4) promotionImages.push(promotion.image4)
 
-        return {
-          id: promotion.id,
-          productId: promotion.productId,
-          // Images
-          image: promotion.image,
-          images: images,
-          // Autres informations
-          libelle: promotion.libelle,
-          likes: promotion.likes || 0,
-          dateDebutPromotion: promotion.dateDebutPromotion || DateTime.now(),
-          delaiPromotion: promotion.delaiPromotion,
-          nouveauPrix: promotion.nouveauPrix,
-          ancienPrix: promotion.ancienPrix,
-          // Informations du produit
-          product: {
-            id: product.id,
-            name: product.name,
-            description: product.description,
-            price: product.price,
-            stock: product.stock,
-            category: product.category,
-            media: product.media,
-            vendeur: product.vendeur,
-          },
-          createdAt: promotion.createdAt,
-          updatedAt: promotion.updatedAt,
-        }
-      })
+          // Récupérer toutes les images du produit
+          const allProductMedias = await Media.query()
+            .where('productId', product.id)
+            .orderBy('created_at', 'asc')
+
+          // Image principale du produit (première image)
+          const productMainImage = allProductMedias.length > 0 ? allProductMedias[0].mediaUrl : null
+          
+          // Images secondaires du produit (toutes sauf la première)
+          const productSecondaryImages = allProductMedias.length > 1 
+            ? allProductMedias.slice(1).map((media) => media.mediaUrl) 
+            : []
+
+          return {
+            id: promotion.id,
+            productId: promotion.productId,
+            // Images de la promotion
+            image: promotion.image,
+            images: promotionImages,
+            // Autres informations
+            libelle: promotion.libelle,
+            likes: promotion.likes || 0,
+            dateDebutPromotion: promotion.dateDebutPromotion || DateTime.now(),
+            delaiPromotion: promotion.delaiPromotion,
+            nouveauPrix: promotion.nouveauPrix,
+            ancienPrix: promotion.ancienPrix,
+            // Informations du produit avec ses images
+            product: {
+              id: product.id,
+              name: product.name,
+              description: product.description,
+              price: product.price,
+              stock: product.stock,
+              category: product.category,
+              image: productMainImage,
+              images: productSecondaryImages,
+              vendeur: product.vendeur,
+            },
+            createdAt: promotion.createdAt,
+            updatedAt: promotion.updatedAt,
+          }
+        })
+      )
 
       return response.status(200).json({
         message: 'Produits en promotion récupérés avec succès',
@@ -210,18 +228,32 @@ export default class PromotionsController {
         .firstOrFail()
 
       const product = promotion.product
-      // Créer un tableau avec les images secondaires (seulement celles qui existent)
-      const images = []
-      if (promotion.image1) images.push(promotion.image1)
-      if (promotion.image2) images.push(promotion.image2)
-      if (promotion.image3) images.push(promotion.image3)
-      if (promotion.image4) images.push(promotion.image4)
+      
+      // Images de la promotion
+      const promotionImages = []
+      if (promotion.image1) promotionImages.push(promotion.image1)
+      if (promotion.image2) promotionImages.push(promotion.image2)
+      if (promotion.image3) promotionImages.push(promotion.image3)
+      if (promotion.image4) promotionImages.push(promotion.image4)
+
+      // Récupérer toutes les images du produit
+      const allProductMedias = await Media.query()
+        .where('productId', product.id)
+        .orderBy('created_at', 'asc')
+
+      // Image principale du produit (première image)
+      const productMainImage = allProductMedias.length > 0 ? allProductMedias[0].mediaUrl : null
+      
+      // Images secondaires du produit (toutes sauf la première)
+      const productSecondaryImages = allProductMedias.length > 1 
+        ? allProductMedias.slice(1).map((media) => media.mediaUrl) 
+        : []
 
       const promotionFormatted = {
         id: promotion.id,
         productId: promotion.productId,
         image: promotion.image,
-        images: images,
+        images: promotionImages,
         libelle: promotion.libelle,
         likes: promotion.likes || 0,
         dateDebutPromotion: promotion.dateDebutPromotion || DateTime.now(),
@@ -235,7 +267,8 @@ export default class PromotionsController {
           price: product.price,
           stock: product.stock,
           category: product.category,
-          media: product.media,
+          image: productMainImage,
+          images: productSecondaryImages,
           vendeur: product.vendeur,
         },
         createdAt: promotion.createdAt,
@@ -539,6 +572,7 @@ export default class PromotionsController {
       const deleteImage3 = request.input('deleteImage3') === 'true'
       const deleteImage4 = request.input('deleteImage4') === 'true'
 
+      // Copier les données du payload (productId n'est plus dans le validator)
       const updateData: any = { ...payload }
 
       // Upload des nouvelles images si fournies

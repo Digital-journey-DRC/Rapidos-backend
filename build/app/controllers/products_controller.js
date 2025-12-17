@@ -333,14 +333,14 @@ export default class ProductsController {
     async updateProduct({ params, response, bouncer, request }) {
         const { productId } = params;
         try {
-            if (await bouncer.denies('canUpdateOrDeleteProduct', productId)) {
-                return response
-                    .status(403)
-                    .json({ message: "Vous n'êtes pas autorisé à faire cette action" });
-            }
             const product = await Product.findOrFail(productId);
             if (!product) {
                 return response.status(404).json({ message: 'Produit non trouvé' });
+            }
+            if (await bouncer.denies('canUpdateOrDeleteProduct', product.vendeurId)) {
+                return response
+                    .status(403)
+                    .json({ message: "Vous n'êtes pas autorisé à faire cette action" });
             }
             const payload = await request.validateUsing(createProductValidator);
             let category;
@@ -418,18 +418,38 @@ export default class ProductsController {
                     });
                 }
             }
-            await product.load('media');
+            await product.load('category');
+            await product.load('vendeur', (vendeurQuery) => {
+                vendeurQuery.preload('profil', (profilQuery) => {
+                    profilQuery.preload('media');
+                });
+            });
+            const allMedias = await Media.query()
+                .where('productId', product.id)
+                .orderBy('created_at', 'asc');
+            const mainImage = allMedias.length > 0 ? allMedias[0].mediaUrl : null;
+            const images = allMedias.length > 1 ? allMedias.slice(1).map((media) => media.mediaUrl) : [];
+            const productFormatted = {
+                id: product.id,
+                name: product.name,
+                description: product.description,
+                price: product.price,
+                stock: product.stock,
+                category: product.category,
+                image: mainImage,
+                images: images,
+                vendeur: product.vendeur,
+            };
             if (errors.length > 0) {
                 return response.status(207).json({
                     message: "Produit mis à jour, mais certaines images n'ont pas pu être uploadées.",
+                    product: productFormatted,
                     errors,
                 });
             }
-            const mediasForProduct = await Media.query().where('productId', product.id);
             return response.status(200).json({
                 message: 'Produit mis à jour avec succès',
-                product,
-                medias: mediasForProduct,
+                product: productFormatted,
             });
         }
         catch (error) {
@@ -602,17 +622,33 @@ export default class ProductsController {
             const userId = auth.user?.id;
             if (!userId) {
                 const randomProducts = await Product.query()
-                    .select(['id', 'name', 'description', 'price', 'stock'])
+                    .select(['id', 'name', 'description', 'price', 'stock', 'categorie_id', 'vendeur_id'])
                     .where('stock', '>', 0)
-                    .preload('media')
                     .preload('category')
-                    .preload('vendeur')
+                    .preload('vendeur', (vendeurQuery) => {
+                    vendeurQuery.preload('profil', (profilQuery) => {
+                        profilQuery.preload('media');
+                    });
+                })
                     .limit(5);
-                const productsFormatted = randomProducts.map((product) => {
-                    const serialized = product.serialize();
-                    const { categorieId, vendeurId, createdAt, updatedAt, promotions, ...rest } = serialized;
-                    return rest;
-                });
+                const productsFormatted = await Promise.all(randomProducts.map(async (product) => {
+                    const allMedias = await Media.query()
+                        .where('productId', product.id)
+                        .orderBy('created_at', 'asc');
+                    const mainImage = allMedias.length > 0 ? allMedias[0].mediaUrl : null;
+                    const images = allMedias.length > 1 ? allMedias.slice(1).map((media) => media.mediaUrl) : [];
+                    return {
+                        id: product.id,
+                        name: product.name,
+                        description: product.description,
+                        price: product.price,
+                        stock: product.stock,
+                        category: product.category,
+                        image: mainImage,
+                        images: images,
+                        vendeur: product.vendeur,
+                    };
+                }));
                 return response.status(200).json({
                     message: 'Produits recommandés récupérés avec succès',
                     products: productsFormatted,
@@ -638,17 +674,33 @@ export default class ProductsController {
             }
             if (userEvents.length === 0) {
                 const randomProducts = await Product.query()
-                    .select(['id', 'name', 'description', 'price', 'stock'])
+                    .select(['id', 'name', 'description', 'price', 'stock', 'categorie_id', 'vendeur_id'])
                     .where('stock', '>', 0)
-                    .preload('media')
                     .preload('category')
-                    .preload('vendeur')
+                    .preload('vendeur', (vendeurQuery) => {
+                    vendeurQuery.preload('profil', (profilQuery) => {
+                        profilQuery.preload('media');
+                    });
+                })
                     .limit(5);
-                const productsFormatted = randomProducts.map((product) => {
-                    const serialized = product.serialize();
-                    const { categorieId, vendeurId, createdAt, updatedAt, promotions, ...rest } = serialized;
-                    return rest;
-                });
+                const productsFormatted = await Promise.all(randomProducts.map(async (product) => {
+                    const allMedias = await Media.query()
+                        .where('productId', product.id)
+                        .orderBy('created_at', 'asc');
+                    const mainImage = allMedias.length > 0 ? allMedias[0].mediaUrl : null;
+                    const images = allMedias.length > 1 ? allMedias.slice(1).map((media) => media.mediaUrl) : [];
+                    return {
+                        id: product.id,
+                        name: product.name,
+                        description: product.description,
+                        price: product.price,
+                        stock: product.stock,
+                        category: product.category,
+                        image: mainImage,
+                        images: images,
+                        vendeur: product.vendeur,
+                    };
+                }));
                 return response.status(200).json({
                     message: 'Produits recommandés récupérés avec succès',
                     products: productsFormatted,
@@ -697,13 +749,16 @@ export default class ProductsController {
                     if (recommendedProducts.length >= 5)
                         break;
                     const productsInCategory = await Product.query()
-                        .select(['id', 'name', 'description', 'price', 'stock'])
+                        .select(['id', 'name', 'description', 'price', 'stock', 'categorie_id', 'vendeur_id'])
                         .where('categorieId', categoryId)
                         .whereNotIn('id', excludedProductIds)
                         .where('stock', '>', 0)
-                        .preload('media')
                         .preload('category')
-                        .preload('vendeur')
+                        .preload('vendeur', (vendeurQuery) => {
+                        vendeurQuery.preload('profil', (profilQuery) => {
+                            profilQuery.preload('media');
+                        });
+                    })
                         .limit(5 - recommendedProducts.length);
                     for (const product of productsInCategory) {
                         if (recommendedProducts.length >= 5)
@@ -716,20 +771,36 @@ export default class ProductsController {
             if (recommendedProducts.length < 5) {
                 const remainingCount = 5 - recommendedProducts.length;
                 const additionalProducts = await Product.query()
-                    .select(['id', 'name', 'description', 'price', 'stock'])
+                    .select(['id', 'name', 'description', 'price', 'stock', 'categorie_id', 'vendeur_id'])
                     .whereNotIn('id', excludedProductIds)
                     .where('stock', '>', 0)
-                    .preload('media')
                     .preload('category')
-                    .preload('vendeur')
+                    .preload('vendeur', (vendeurQuery) => {
+                    vendeurQuery.preload('profil', (profilQuery) => {
+                        profilQuery.preload('media');
+                    });
+                })
                     .limit(remainingCount);
                 recommendedProducts.push(...additionalProducts);
             }
-            const productsFormatted = recommendedProducts.slice(0, 5).map((product) => {
-                const serialized = product.serialize();
-                const { categorieId, vendeurId, createdAt, updatedAt, promotions, ...rest } = serialized;
-                return rest;
-            });
+            const productsFormatted = await Promise.all(recommendedProducts.slice(0, 5).map(async (product) => {
+                const allMedias = await Media.query()
+                    .where('productId', product.id)
+                    .orderBy('created_at', 'asc');
+                const mainImage = allMedias.length > 0 ? allMedias[0].mediaUrl : null;
+                const images = allMedias.length > 1 ? allMedias.slice(1).map((media) => media.mediaUrl) : [];
+                return {
+                    id: product.id,
+                    name: product.name,
+                    description: product.description,
+                    price: product.price,
+                    stock: product.stock,
+                    category: product.category,
+                    image: mainImage,
+                    images: images,
+                    vendeur: product.vendeur,
+                };
+            }));
             return response.status(200).json({
                 message: 'Produits recommandés récupérés avec succès',
                 products: productsFormatted,
