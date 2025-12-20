@@ -622,7 +622,6 @@ export default class ProductsController {
             const userId = auth.user?.id;
             if (!userId) {
                 const randomProducts = await Product.query()
-                    .select(['id', 'name', 'description', 'price', 'stock', 'categorie_id', 'vendeur_id'])
                     .where('stock', '>', 0)
                     .preload('category')
                     .preload('vendeur', (vendeurQuery) => {
@@ -637,22 +636,24 @@ export default class ProductsController {
                         .orderBy('created_at', 'asc');
                     const mainImage = allMedias.length > 0 ? allMedias[0].mediaUrl : null;
                     const images = allMedias.length > 1 ? allMedias.slice(1).map((media) => media.mediaUrl) : [];
+                    const serialized = product.serialize();
                     return {
-                        id: product.id,
-                        name: product.name,
-                        description: product.description,
-                        price: product.price,
-                        stock: product.stock,
-                        category: product.category,
+                        id: serialized.id,
+                        name: serialized.name,
+                        description: serialized.description,
+                        price: serialized.price,
+                        stock: serialized.stock,
+                        category: serialized.category,
                         image: mainImage,
                         images: images,
-                        vendeur: product.vendeur,
+                        vendeur: serialized.vendeur,
                     };
                 }));
+                const productsWithImages = productsFormatted.filter(product => product.image !== null);
                 return response.status(200).json({
                     message: 'Produits recommandés récupérés avec succès',
-                    products: productsFormatted,
-                    count: productsFormatted.length,
+                    products: productsWithImages,
+                    count: productsWithImages.length,
                 });
             }
             let userEvents = [];
@@ -674,7 +675,6 @@ export default class ProductsController {
             }
             if (userEvents.length === 0) {
                 const randomProducts = await Product.query()
-                    .select(['id', 'name', 'description', 'price', 'stock', 'categorie_id', 'vendeur_id'])
                     .where('stock', '>', 0)
                     .preload('category')
                     .preload('vendeur', (vendeurQuery) => {
@@ -689,22 +689,24 @@ export default class ProductsController {
                         .orderBy('created_at', 'asc');
                     const mainImage = allMedias.length > 0 ? allMedias[0].mediaUrl : null;
                     const images = allMedias.length > 1 ? allMedias.slice(1).map((media) => media.mediaUrl) : [];
+                    const serialized = product.serialize();
                     return {
-                        id: product.id,
-                        name: product.name,
-                        description: product.description,
-                        price: product.price,
-                        stock: product.stock,
-                        category: product.category,
+                        id: serialized.id,
+                        name: serialized.name,
+                        description: serialized.description,
+                        price: serialized.price,
+                        stock: serialized.stock,
+                        category: serialized.category,
                         image: mainImage,
                         images: images,
-                        vendeur: product.vendeur,
+                        vendeur: serialized.vendeur,
                     };
                 }));
+                const productsWithImages = productsFormatted.filter(product => product.image !== null);
                 return response.status(200).json({
                     message: 'Produits recommandés récupérés avec succès',
-                    products: productsFormatted,
-                    count: productsFormatted.length,
+                    products: productsWithImages,
+                    count: productsWithImages.length,
                 });
             }
             const categoryScores = {};
@@ -749,7 +751,6 @@ export default class ProductsController {
                     if (recommendedProducts.length >= 5)
                         break;
                     const productsInCategory = await Product.query()
-                        .select(['id', 'name', 'description', 'price', 'stock', 'categorie_id', 'vendeur_id'])
                         .where('categorieId', categoryId)
                         .whereNotIn('id', excludedProductIds)
                         .where('stock', '>', 0)
@@ -771,7 +772,6 @@ export default class ProductsController {
             if (recommendedProducts.length < 5) {
                 const remainingCount = 5 - recommendedProducts.length;
                 const additionalProducts = await Product.query()
-                    .select(['id', 'name', 'description', 'price', 'stock', 'categorie_id', 'vendeur_id'])
                     .whereNotIn('id', excludedProductIds)
                     .where('stock', '>', 0)
                     .preload('category')
@@ -789,22 +789,24 @@ export default class ProductsController {
                     .orderBy('created_at', 'asc');
                 const mainImage = allMedias.length > 0 ? allMedias[0].mediaUrl : null;
                 const images = allMedias.length > 1 ? allMedias.slice(1).map((media) => media.mediaUrl) : [];
+                const serialized = product.serialize();
                 return {
-                    id: product.id,
-                    name: product.name,
-                    description: product.description,
-                    price: product.price,
-                    stock: product.stock,
-                    category: product.category,
+                    id: serialized.id,
+                    name: serialized.name,
+                    description: serialized.description,
+                    price: serialized.price,
+                    stock: serialized.stock,
+                    category: serialized.category,
                     image: mainImage,
                     images: images,
-                    vendeur: product.vendeur,
+                    vendeur: serialized.vendeur,
                 };
             }));
+            const productsWithImages = productsFormatted.filter(product => product.image !== null);
             return response.status(200).json({
                 message: 'Produits recommandés récupérés avec succès',
-                products: productsFormatted,
-                count: productsFormatted.length,
+                products: productsWithImages,
+                count: productsWithImages.length,
             });
         }
         catch (error) {

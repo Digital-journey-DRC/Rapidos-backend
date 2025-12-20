@@ -793,7 +793,6 @@ export default class ProductsController {
       if (!userId) {
         // Si pas d'utilisateur connecté, retourner 5 produits aléatoires en stock
         const randomProducts = await Product.query()
-          .select(['id', 'name', 'description', 'price', 'stock', 'categorie_id', 'vendeur_id'])
           .where('stock', '>', 0)
           .preload('category')
           .preload('vendeur', (vendeurQuery) => {
@@ -803,34 +802,43 @@ export default class ProductsController {
           })
           .limit(5)
 
-        // Formater avec images comme dans showAllProducts
+        // Formater exactement comme dans getAllProducts (même structure)
         const productsFormatted = await Promise.all(
           randomProducts.map(async (product) => {
+            // Récupérer tous les médias du produit
             const allMedias = await Media.query()
               .where('productId', product.id)
               .orderBy('created_at', 'asc')
 
+            // Image principale (première image ou null)
             const mainImage = allMedias.length > 0 ? allMedias[0].mediaUrl : null
+
+            // Tableau des images supplémentaires (toutes sauf la première)
             const images = allMedias.length > 1 ? allMedias.slice(1).map((media) => media.mediaUrl) : []
 
+            // Utiliser serialize() puis extraire uniquement les champs souhaités
+            const serialized = product.serialize()
             return {
-              id: product.id,
-              name: product.name,
-              description: product.description,
-              price: product.price,
-              stock: product.stock,
-              category: product.category,
-              image: mainImage,
-              images: images,
-              vendeur: product.vendeur,
+              id: serialized.id,
+              name: serialized.name,
+              description: serialized.description,
+              price: serialized.price,
+              stock: serialized.stock,
+              category: serialized.category,
+              image: mainImage, // Image principale
+              images: images, // Tableau des images supplémentaires
+              vendeur: serialized.vendeur,
             }
           })
         )
 
+        // Filtrer pour garder uniquement les produits avec au moins une image
+        const productsWithImages = productsFormatted.filter(product => product.image !== null)
+
         return response.status(200).json({
           message: 'Produits recommandés récupérés avec succès',
-          products: productsFormatted,
-          count: productsFormatted.length,
+          products: productsWithImages,
+          count: productsWithImages.length,
         })
       }
 
@@ -857,7 +865,6 @@ export default class ProductsController {
       // Si pas d'événements, retourner 5 produits aléatoires en stock
       if (userEvents.length === 0) {
         const randomProducts = await Product.query()
-          .select(['id', 'name', 'description', 'price', 'stock', 'categorie_id', 'vendeur_id'])
           .where('stock', '>', 0)
           .preload('category')
           .preload('vendeur', (vendeurQuery) => {
@@ -867,34 +874,43 @@ export default class ProductsController {
           })
           .limit(5)
 
-        // Formater avec images comme dans showAllProducts
+        // Formater exactement comme dans getAllProducts (même structure)
         const productsFormatted = await Promise.all(
           randomProducts.map(async (product) => {
+            // Récupérer tous les médias du produit
             const allMedias = await Media.query()
               .where('productId', product.id)
               .orderBy('created_at', 'asc')
 
+            // Image principale (première image ou null)
             const mainImage = allMedias.length > 0 ? allMedias[0].mediaUrl : null
+
+            // Tableau des images supplémentaires (toutes sauf la première)
             const images = allMedias.length > 1 ? allMedias.slice(1).map((media) => media.mediaUrl) : []
 
+            // Utiliser serialize() puis extraire uniquement les champs souhaités
+            const serialized = product.serialize()
             return {
-              id: product.id,
-              name: product.name,
-              description: product.description,
-              price: product.price,
-              stock: product.stock,
-              category: product.category,
-              image: mainImage,
-              images: images,
-              vendeur: product.vendeur,
+              id: serialized.id,
+              name: serialized.name,
+              description: serialized.description,
+              price: serialized.price,
+              stock: serialized.stock,
+              category: serialized.category,
+              image: mainImage, // Image principale
+              images: images, // Tableau des images supplémentaires
+              vendeur: serialized.vendeur,
             }
           })
         )
 
+        // Filtrer pour garder uniquement les produits avec au moins une image
+        const productsWithImages = productsFormatted.filter(product => product.image !== null)
+
         return response.status(200).json({
           message: 'Produits recommandés récupérés avec succès',
-          products: productsFormatted,
-          count: productsFormatted.length,
+          products: productsWithImages,
+          count: productsWithImages.length,
         })
       }
 
@@ -945,7 +961,6 @@ export default class ProductsController {
         if (recommendedProducts.length >= 5) break
 
         const productsInCategory = await Product.query()
-          .select(['id', 'name', 'description', 'price', 'stock', 'categorie_id', 'vendeur_id'])
           .where('categorieId', categoryId)
           .whereNotIn('id', excludedProductIds)
           .where('stock', '>', 0)
@@ -970,7 +985,6 @@ export default class ProductsController {
       if (recommendedProducts.length < 5) {
         const remainingCount = 5 - recommendedProducts.length
         const additionalProducts = await Product.query()
-          .select(['id', 'name', 'description', 'price', 'stock', 'categorie_id', 'vendeur_id'])
           .whereNotIn('id', excludedProductIds)
           .where('stock', '>', 0)
           .preload('category')
@@ -984,35 +998,44 @@ export default class ProductsController {
         recommendedProducts.push(...additionalProducts)
       }
 
-      // Formater avec images comme dans showAllProducts
+      // Formater exactement comme dans getAllProducts (même structure)
       const productsFormatted = await Promise.all(
         recommendedProducts.slice(0, 5).map(async (product) => {
+          // Récupérer tous les médias du produit
           const allMedias = await Media.query()
             .where('productId', product.id)
             .orderBy('created_at', 'asc')
 
+          // Image principale (première image ou null)
           const mainImage = allMedias.length > 0 ? allMedias[0].mediaUrl : null
+
+          // Tableau des images supplémentaires (toutes sauf la première)
           const images = allMedias.length > 1 ? allMedias.slice(1).map((media) => media.mediaUrl) : []
 
+          // Utiliser serialize() puis extraire uniquement les champs souhaités
+          const serialized = product.serialize()
           return {
-            id: product.id,
-            name: product.name,
-            description: product.description,
-            price: product.price,
-            stock: product.stock,
-            category: product.category,
-            image: mainImage,
-            images: images,
-            vendeur: product.vendeur,
+            id: serialized.id,
+            name: serialized.name,
+            description: serialized.description,
+            price: serialized.price,
+            stock: serialized.stock,
+            category: serialized.category,
+            image: mainImage, // Image principale
+            images: images, // Tableau des images supplémentaires
+            vendeur: serialized.vendeur,
           }
         })
       )
 
+      // Filtrer pour garder uniquement les produits avec au moins une image
+      const productsWithImages = productsFormatted.filter(product => product.image !== null)
+
       // Sérialiser manuellement pour éviter la sérialisation automatique de Lucid
       return response.status(200).json({
         message: 'Produits recommandés récupérés avec succès',
-        products: productsFormatted,
-        count: productsFormatted.length,
+        products: productsWithImages,
+        count: productsWithImages.length,
       })
     } catch (error) {
       logger.error('Erreur lors de la récupération des produits recommandés', {

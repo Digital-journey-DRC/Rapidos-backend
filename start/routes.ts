@@ -86,10 +86,8 @@ router
   .get('/products/all', [ProductsController, 'getAllProducts'])
   .use(middleware.auth({ guards: ['api'] }))
 
-// Produits recommandés basés sur les événements de l'acheteur
-router
-  .get('/products/recommended', [ProductsController, 'getRecommendedProducts'])
-  .use(middleware.auth({ guards: ['api'] }))
+// Produits recommandés basés sur les événements de l'acheteur (auth optionnelle)
+router.get('/products/recommended', [ProductsController, 'getRecommendedProducts'])
 
 // 3. Voir tous les produits (admin uniquement)
 router

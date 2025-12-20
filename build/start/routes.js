@@ -59,9 +59,7 @@ router
 router
     .get('/products/all', [ProductsController, 'getAllProducts'])
     .use(middleware.auth({ guards: ['api'] }));
-router
-    .get('/products/recommended', [ProductsController, 'getRecommendedProducts'])
-    .use(middleware.auth({ guards: ['api'] }));
+router.get('/products/recommended', [ProductsController, 'getRecommendedProducts']);
 router
     .get('/products/adm/all', [ProductsController, 'showAllProducts'])
     .use(middleware.auth({ guards: ['api'] }));
