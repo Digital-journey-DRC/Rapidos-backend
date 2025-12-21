@@ -2,6 +2,7 @@ import Category from '#models/category'
 import Media from '#models/media'
 import Product from '#models/product'
 import User from '#models/user'
+import ProductEvent from '#models/product_event'
 import { manageUploadProductMedias } from '#services/managemedias'
 import { manageUploadProductImages } from '#services/manageproductimages'
 import { categoryValidator } from '#validators/category'
@@ -780,29 +781,224 @@ export default class ProductsController {
   }
 
   /**
-   * Endpoint pour récupérer 5 produits les plus récents
+   * Endpoint pour récupérer 5 produits recommandés basés sur l'historique de l'utilisateur
    * GET /products/recommended
    */
-  async getRecommendedProducts({ response }: HttpContext) {
+  async getRecommendedProducts({ response, auth }: HttpContext) {
     try {
-      // Retourner les 5 produits les plus récents en stock
-      const recentProducts = await Product.query()
-        .where('stock', '>', 0)
-        .preload('category')
-        .preload('vendeur')
-        .orderBy('created_at', 'desc')
-        .limit(5)
+      const userId = auth.user?.id
 
-      // Récupérer tous les IDs de produits
-      const productIds = recentProducts.map((p) => p.id)
+      // Si pas d'utilisateur connecté, retourner les 5 produits les plus récents
+      if (!userId) {
+        const recentProducts = await Product.query()
+          .where('stock', '>', 0)
+          .preload('category')
+          .preload('vendeur')
+          .orderBy('created_at', 'desc')
+          .limit(5)
 
-      // Récupérer tous les médias en une seule requête pour optimiser
+        const productIds = recentProducts.map((p) => p.id)
+        const allMedias = await Media.query()
+          .whereIn('productId', productIds)
+          .orderBy('product_id', 'asc')
+          .orderBy('created_at', 'asc')
+
+        const mediasByProduct: Record<number, typeof allMedias> = {}
+        for (const media of allMedias) {
+          if (!mediasByProduct[media.productId]) {
+            mediasByProduct[media.productId] = []
+          }
+          mediasByProduct[media.productId].push(media)
+        }
+
+        const productsFormatted = recentProducts.map((product) => {
+          const productMedias = mediasByProduct[product.id] || []
+          const mainImage = productMedias.length > 0 ? productMedias[0].mediaUrl : null
+          const images = productMedias.length > 1 ? productMedias.slice(1).map((media) => media.mediaUrl) : []
+
+          const serialized = product.serialize()
+          return {
+            id: serialized.id,
+            name: serialized.name,
+            description: serialized.description,
+            price: serialized.price,
+            stock: serialized.stock,
+            category: serialized.category,
+            image: mainImage,
+            images: images,
+            vendeur: serialized.vendeur,
+          }
+        })
+
+        return response.status(200).json({ products: productsFormatted })
+      }
+
+      // Récupérer les événements de l'utilisateur (30 derniers jours)
+      const thirtyDaysAgo = new Date()
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
+
+      let userEvents: ProductEvent[] = []
+      try {
+        userEvents = await ProductEvent.query()
+          .where('userId', userId)
+          .where('createdAt', '>=', thirtyDaysAgo.toISOString())
+          .whereNotNull('productCategoryId')
+          .orderBy('createdAt', 'desc')
+          .limit(100)
+      } catch (error) {
+        // Si la table n'existe pas, retourner les produits récents
+        logger.warn('Table product_events non disponible, retour des produits récents')
+        
+        const recentProducts = await Product.query()
+          .where('stock', '>', 0)
+          .preload('category')
+          .preload('vendeur')
+          .orderBy('created_at', 'desc')
+          .limit(5)
+
+        const productIds = recentProducts.map((p) => p.id)
+        const allMedias = await Media.query()
+          .whereIn('productId', productIds)
+          .orderBy('product_id', 'asc')
+          .orderBy('created_at', 'asc')
+
+        const mediasByProduct: Record<number, typeof allMedias> = {}
+        for (const media of allMedias) {
+          if (!mediasByProduct[media.productId]) {
+            mediasByProduct[media.productId] = []
+          }
+          mediasByProduct[media.productId].push(media)
+        }
+
+        const productsFormatted = recentProducts.map((product) => {
+          const productMedias = mediasByProduct[product.id] || []
+          const mainImage = productMedias.length > 0 ? productMedias[0].mediaUrl : null
+          const images = productMedias.length > 1 ? productMedias.slice(1).map((media) => media.mediaUrl) : []
+
+          const serialized = product.serialize()
+          return {
+            id: serialized.id,
+            name: serialized.name,
+            description: serialized.description,
+            price: serialized.price,
+            stock: serialized.stock,
+            category: serialized.category,
+            image: mainImage,
+            images: images,
+            vendeur: serialized.vendeur,
+          }
+        })
+
+        return response.status(200).json({ products: productsFormatted })
+      }
+
+      // Si pas d'événements, retourner les produits récents
+      if (userEvents.length === 0) {
+        const recentProducts = await Product.query()
+          .where('stock', '>', 0)
+          .preload('category')
+          .preload('vendeur')
+          .orderBy('created_at', 'desc')
+          .limit(5)
+
+        const productIds = recentProducts.map((p) => p.id)
+        const allMedias = await Media.query()
+          .whereIn('productId', productIds)
+          .orderBy('product_id', 'asc')
+          .orderBy('created_at', 'asc')
+
+        const mediasByProduct: Record<number, typeof allMedias> = {}
+        for (const media of allMedias) {
+          if (!mediasByProduct[media.productId]) {
+            mediasByProduct[media.productId] = []
+          }
+          mediasByProduct[media.productId].push(media)
+        }
+
+        const productsFormatted = recentProducts.map((product) => {
+          const productMedias = mediasByProduct[product.id] || []
+          const mainImage = productMedias.length > 0 ? productMedias[0].mediaUrl : null
+          const images = productMedias.length > 1 ? productMedias.slice(1).map((media) => media.mediaUrl) : []
+
+          const serialized = product.serialize()
+          return {
+            id: serialized.id,
+            name: serialized.name,
+            description: serialized.description,
+            price: serialized.price,
+            stock: serialized.stock,
+            category: serialized.category,
+            image: mainImage,
+            images: images,
+            vendeur: serialized.vendeur,
+          }
+        })
+
+        return response.status(200).json({ products: productsFormatted })
+      }
+
+      // Analyser les catégories consultées par l'utilisateur
+      const categoryCounts: Record<number, number> = {}
+      const viewedProductIds: Set<number> = new Set()
+
+      for (const event of userEvents) {
+        if (event.productCategoryId) {
+          categoryCounts[event.productCategoryId] = (categoryCounts[event.productCategoryId] || 0) + 1
+        }
+        if (event.productId) {
+          viewedProductIds.add(event.productId)
+        }
+      }
+
+      // Trier les catégories par nombre de vues
+      const topCategories = Object.entries(categoryCounts)
+        .sort(([, a], [, b]) => b - a)
+        .slice(0, 3)
+        .map(([categoryId]) => parseInt(categoryId))
+
+      // Récupérer des produits récents dans ces catégories
+      const recommendedProducts: Product[] = []
+      const excludedIds = Array.from(viewedProductIds)
+
+      for (const categoryId of topCategories) {
+        if (recommendedProducts.length >= 5) break
+
+        const productsInCategory = await Product.query()
+          .where('categorieId', categoryId)
+          .whereNotIn('id', excludedIds)
+          .where('stock', '>', 0)
+          .preload('category')
+          .preload('vendeur')
+          .orderBy('created_at', 'desc')
+          .limit(5 - recommendedProducts.length)
+
+        for (const product of productsInCategory) {
+          if (recommendedProducts.length >= 5) break
+          recommendedProducts.push(product)
+          excludedIds.push(product.id)
+        }
+      }
+
+      // Compléter avec des produits récents si nécessaire
+      if (recommendedProducts.length < 5) {
+        const additionalProducts = await Product.query()
+          .whereNotIn('id', excludedIds)
+          .where('stock', '>', 0)
+          .preload('category')
+          .preload('vendeur')
+          .orderBy('created_at', 'desc')
+          .limit(5 - recommendedProducts.length)
+
+        recommendedProducts.push(...additionalProducts)
+      }
+
+      // Formater les produits
+      const productIds = recommendedProducts.map((p) => p.id)
       const allMedias = await Media.query()
         .whereIn('productId', productIds)
         .orderBy('product_id', 'asc')
         .orderBy('created_at', 'asc')
 
-      // Grouper les médias par productId
       const mediasByProduct: Record<number, typeof allMedias> = {}
       for (const media of allMedias) {
         if (!mediasByProduct[media.productId]) {
@@ -811,8 +1007,7 @@ export default class ProductsController {
         mediasByProduct[media.productId].push(media)
       }
 
-      // Formater les produits
-      const productsFormatted = recentProducts.map((product) => {
+      const productsFormatted = recommendedProducts.map((product) => {
         const productMedias = mediasByProduct[product.id] || []
         const mainImage = productMedias.length > 0 ? productMedias[0].mediaUrl : null
         const images = productMedias.length > 1 ? productMedias.slice(1).map((media) => media.mediaUrl) : []
@@ -833,7 +1028,7 @@ export default class ProductsController {
 
       return response.status(200).json({ products: productsFormatted })
     } catch (error) {
-      logger.error('Erreur lors de la récupération des produits récents', {
+      logger.error('Erreur lors de la récupération des produits recommandés', {
         error: error.message,
         stack: error.stack,
       })
