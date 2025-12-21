@@ -1039,4 +1039,70 @@ export default class ProductsController {
       })
     }
   }
+
+  /**
+   * Endpoint pour récupérer 10 produits aléatoires
+   * GET /products/random
+   */
+  async getRandomProducts({ response }: HttpContext) {
+    try {
+      // Récupérer 10 produits aléatoires en stock
+      const randomProducts = await Product.query()
+        .where('stock', '>', 0)
+        .preload('category')
+        .preload('vendeur')
+        .orderByRaw('RANDOM()')
+        .limit(10)
+
+      // Récupérer tous les IDs de produits
+      const productIds = randomProducts.map((p) => p.id)
+
+      // Récupérer tous les médias en une seule requête pour optimiser
+      const allMedias = await Media.query()
+        .whereIn('productId', productIds)
+        .orderBy('product_id', 'asc')
+        .orderBy('created_at', 'asc')
+
+      // Grouper les médias par productId
+      const mediasByProduct: Record<number, typeof allMedias> = {}
+      for (const media of allMedias) {
+        if (!mediasByProduct[media.productId]) {
+          mediasByProduct[media.productId] = []
+        }
+        mediasByProduct[media.productId].push(media)
+      }
+
+      // Formater les produits
+      const productsFormatted = randomProducts.map((product) => {
+        const productMedias = mediasByProduct[product.id] || []
+        const mainImage = productMedias.length > 0 ? productMedias[0].mediaUrl : null
+        const images = productMedias.length > 1 ? productMedias.slice(1).map((media) => media.mediaUrl) : []
+
+        const serialized = product.serialize()
+        return {
+          id: serialized.id,
+          name: serialized.name,
+          description: serialized.description,
+          price: serialized.price,
+          stock: serialized.stock,
+          category: serialized.category,
+          image: mainImage,
+          images: images,
+          vendeur: serialized.vendeur,
+        }
+      })
+
+      return response.status(200).json({ products: productsFormatted })
+    } catch (error) {
+      logger.error('Erreur lors de la récupération des produits aléatoires', {
+        error: error.message,
+        stack: error.stack,
+      })
+
+      return response.status(500).json({
+        message: 'Erreur serveur interne',
+        error: error.message,
+      })
+    }
+  }
 }

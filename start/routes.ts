@@ -89,6 +89,9 @@ router
 // Produits recommandés basés sur les événements de l'acheteur (auth optionnelle)
 router.get('/products/recommended', [ProductsController, 'getRecommendedProducts'])
 
+// Produits aléatoires (10 produits)
+router.get('/products/random', [ProductsController, 'getRandomProducts'])
+
 // 3. Voir tous les produits (admin uniquement)
 router
   .get('/products/adm/all', [ProductsController, 'showAllProducts'])
