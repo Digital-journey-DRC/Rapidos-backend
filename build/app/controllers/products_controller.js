@@ -2,11 +2,9 @@ import Category from '#models/category';
 import Media from '#models/media';
 import Product from '#models/product';
 import User from '#models/user';
-import ProductEvent from '#models/product_event';
 import { manageUploadProductMedias } from '#services/managemedias';
 import { manageUploadProductImages } from '#services/manageproductimages';
 import { categoryValidator } from '#validators/category';
-import { EventType } from '../Enum/event_type.js';
 import { createProductValidator, validateProductStock } from '#validators/products';
 import logger from '@adonisjs/core/services/logger';
 export default class ProductsController {
@@ -544,24 +542,16 @@ export default class ProductsController {
                 return response.status(404).json({ message: 'Vendeur non trouvé' });
             }
             const products = await Product.query()
+                .select(['id', 'name', 'description', 'price', 'stock'])
                 .where('vendeur_id', vendeur.id)
-                .preload('category');
-            const productIds = products.map((p) => p.id);
-            const allMedias = await Media.query()
-                .whereIn('productId', productIds)
-                .orderBy('product_id', 'asc')
-                .orderBy('created_at', 'asc');
-            const mediasByProduct = {};
-            for (const media of allMedias) {
-                if (!mediasByProduct[media.productId]) {
-                    mediasByProduct[media.productId] = [];
-                }
-                mediasByProduct[media.productId].push(media);
-            }
-            const productsFormatted = products.map((product) => {
-                const productMedias = mediasByProduct[product.id] || [];
-                const mainImage = productMedias.length > 0 ? productMedias[0].mediaUrl : null;
-                const images = productMedias.length > 1 ? productMedias.slice(1).map((media) => media.mediaUrl) : [];
+                .preload('category')
+                .preload('vendeur');
+            const productsFormatted = await Promise.all(products.map(async (product) => {
+                const allMedias = await Media.query()
+                    .where('productId', product.id)
+                    .orderBy('created_at', 'asc');
+                const mainImage = allMedias.length > 0 ? allMedias[0].mediaUrl : null;
+                const images = allMedias.length > 1 ? allMedias.slice(1).map((media) => media.mediaUrl) : [];
                 const serialized = product.serialize();
                 return {
                     id: serialized.id,
@@ -572,8 +562,9 @@ export default class ProductsController {
                     category: serialized.category,
                     image: mainImage,
                     images: images,
+                    vendeur: serialized.vendeur,
                 };
-            });
+            }));
             let vendeurMedia = null;
             if (vendeur.profil?.media) {
                 vendeurMedia = vendeur.profil.media;
@@ -644,178 +635,30 @@ export default class ProductsController {
             return response.status(500).json({ message: 'Erreur serveur interne', error: error.message });
         }
     }
-    async getRecommendedProducts({ response, auth }) {
+    async getRecommendedProducts({ response }) {
         try {
-            const userId = auth.user?.id;
-            if (!userId) {
-                const randomProducts = await Product.query()
-                    .where('stock', '>', 0)
-                    .preload('category')
-                    .preload('vendeur', (vendeurQuery) => {
-                    vendeurQuery.preload('profil', (profilQuery) => {
-                        profilQuery.preload('media');
-                    });
-                })
-                    .limit(5);
-                const productsFormatted = await Promise.all(randomProducts.map(async (product) => {
-                    const allMedias = await Media.query()
-                        .where('productId', product.id)
-                        .orderBy('created_at', 'asc');
-                    const mainImage = allMedias.length > 0 ? allMedias[0].mediaUrl : null;
-                    const images = allMedias.length > 1 ? allMedias.slice(1).map((media) => media.mediaUrl) : [];
-                    const serialized = product.serialize();
-                    return {
-                        id: serialized.id,
-                        name: serialized.name,
-                        description: serialized.description,
-                        price: serialized.price,
-                        stock: serialized.stock,
-                        category: serialized.category,
-                        image: mainImage,
-                        images: images,
-                        vendeur: serialized.vendeur,
-                    };
-                }));
-                const productsWithImages = productsFormatted.filter(product => product.image !== null);
-                return response.status(200).json({
-                    message: 'Produits recommandés récupérés avec succès',
-                    products: productsWithImages,
-                    count: productsWithImages.length,
-                });
-            }
-            let userEvents = [];
-            try {
-                const thirtyDaysAgo = new Date();
-                thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-                userEvents = await ProductEvent.query()
-                    .where('userId', userId)
-                    .where('createdAt', '>=', thirtyDaysAgo.toISOString())
-                    .whereNotNull('productCategoryId')
-                    .orderBy('createdAt', 'desc')
-                    .limit(100);
-            }
-            catch (error) {
-                logger.warn('Impossible de récupérer les événements, utilisation de produits aléatoires', {
-                    error: error.message,
-                });
-                userEvents = [];
-            }
-            if (userEvents.length === 0) {
-                const randomProducts = await Product.query()
-                    .where('stock', '>', 0)
-                    .preload('category')
-                    .preload('vendeur', (vendeurQuery) => {
-                    vendeurQuery.preload('profil', (profilQuery) => {
-                        profilQuery.preload('media');
-                    });
-                })
-                    .limit(5);
-                const productsFormatted = await Promise.all(randomProducts.map(async (product) => {
-                    const allMedias = await Media.query()
-                        .where('productId', product.id)
-                        .orderBy('created_at', 'asc');
-                    const mainImage = allMedias.length > 0 ? allMedias[0].mediaUrl : null;
-                    const images = allMedias.length > 1 ? allMedias.slice(1).map((media) => media.mediaUrl) : [];
-                    const serialized = product.serialize();
-                    return {
-                        id: serialized.id,
-                        name: serialized.name,
-                        description: serialized.description,
-                        price: serialized.price,
-                        stock: serialized.stock,
-                        category: serialized.category,
-                        image: mainImage,
-                        images: images,
-                        vendeur: serialized.vendeur,
-                    };
-                }));
-                const productsWithImages = productsFormatted.filter(product => product.image !== null);
-                return response.status(200).json({
-                    message: 'Produits recommandés récupérés avec succès',
-                    products: productsWithImages,
-                    count: productsWithImages.length,
-                });
-            }
-            const categoryScores = {};
-            const viewedProductIds = new Set();
-            const purchasedProductIds = new Set();
-            for (const event of userEvents) {
-                if (event.productCategoryId) {
-                    let weight = 1;
-                    if (event.eventType === EventType.VIEW_PRODUCT) {
-                        weight = 1;
-                        if (event.productId)
-                            viewedProductIds.add(event.productId);
-                    }
-                    else if (event.eventType === EventType.ADD_TO_CART) {
-                        weight = 2;
-                        if (event.productId)
-                            viewedProductIds.add(event.productId);
-                    }
-                    else if (event.eventType === EventType.ADD_TO_WISHLIST) {
-                        weight = 2;
-                        if (event.productId)
-                            viewedProductIds.add(event.productId);
-                    }
-                    else if (event.eventType === EventType.PURCHASE) {
-                        weight = 5;
-                        if (event.productId) {
-                            viewedProductIds.add(event.productId);
-                            purchasedProductIds.add(event.productId);
-                        }
-                    }
-                    categoryScores[event.productCategoryId] =
-                        (categoryScores[event.productCategoryId] || 0) + weight;
+            const recentProducts = await Product.query()
+                .where('stock', '>', 0)
+                .preload('category')
+                .preload('vendeur')
+                .orderBy('created_at', 'desc')
+                .limit(5);
+            const productIds = recentProducts.map((p) => p.id);
+            const allMedias = await Media.query()
+                .whereIn('productId', productIds)
+                .orderBy('product_id', 'asc')
+                .orderBy('created_at', 'asc');
+            const mediasByProduct = {};
+            for (const media of allMedias) {
+                if (!mediasByProduct[media.productId]) {
+                    mediasByProduct[media.productId] = [];
                 }
+                mediasByProduct[media.productId].push(media);
             }
-            const sortedCategories = Object.entries(categoryScores)
-                .sort(([, a], [, b]) => b - a)
-                .map(([categoryId]) => parseInt(categoryId));
-            const recommendedProducts = [];
-            const excludedProductIds = Array.from(viewedProductIds);
-            if (sortedCategories.length > 0) {
-                for (const categoryId of sortedCategories) {
-                    if (recommendedProducts.length >= 5)
-                        break;
-                    const productsInCategory = await Product.query()
-                        .where('categorieId', categoryId)
-                        .whereNotIn('id', excludedProductIds)
-                        .where('stock', '>', 0)
-                        .preload('category')
-                        .preload('vendeur', (vendeurQuery) => {
-                        vendeurQuery.preload('profil', (profilQuery) => {
-                            profilQuery.preload('media');
-                        });
-                    })
-                        .limit(5 - recommendedProducts.length);
-                    for (const product of productsInCategory) {
-                        if (recommendedProducts.length >= 5)
-                            break;
-                        recommendedProducts.push(product);
-                        excludedProductIds.push(product.id);
-                    }
-                }
-            }
-            if (recommendedProducts.length < 5) {
-                const remainingCount = 5 - recommendedProducts.length;
-                const additionalProducts = await Product.query()
-                    .whereNotIn('id', excludedProductIds)
-                    .where('stock', '>', 0)
-                    .preload('category')
-                    .preload('vendeur', (vendeurQuery) => {
-                    vendeurQuery.preload('profil', (profilQuery) => {
-                        profilQuery.preload('media');
-                    });
-                })
-                    .limit(remainingCount);
-                recommendedProducts.push(...additionalProducts);
-            }
-            const productsFormatted = await Promise.all(recommendedProducts.slice(0, 5).map(async (product) => {
-                const allMedias = await Media.query()
-                    .where('productId', product.id)
-                    .orderBy('created_at', 'asc');
-                const mainImage = allMedias.length > 0 ? allMedias[0].mediaUrl : null;
-                const images = allMedias.length > 1 ? allMedias.slice(1).map((media) => media.mediaUrl) : [];
+            const productsFormatted = recentProducts.map((product) => {
+                const productMedias = mediasByProduct[product.id] || [];
+                const mainImage = productMedias.length > 0 ? productMedias[0].mediaUrl : null;
+                const images = productMedias.length > 1 ? productMedias.slice(1).map((media) => media.mediaUrl) : [];
                 const serialized = product.serialize();
                 return {
                     id: serialized.id,
@@ -828,16 +671,11 @@ export default class ProductsController {
                     images: images,
                     vendeur: serialized.vendeur,
                 };
-            }));
-            const productsWithImages = productsFormatted.filter(product => product.image !== null);
-            return response.status(200).json({
-                message: 'Produits recommandés récupérés avec succès',
-                products: productsWithImages,
-                count: productsWithImages.length,
             });
+            return response.status(200).json({ products: productsFormatted });
         }
         catch (error) {
-            logger.error('Erreur lors de la récupération des produits recommandés', {
+            logger.error('Erreur lors de la récupération des produits récents', {
                 error: error.message,
                 stack: error.stack,
             });

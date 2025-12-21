@@ -2,11 +2,9 @@ import Category from '#models/category'
 import Media from '#models/media'
 import Product from '#models/product'
 import User from '#models/user'
-import ProductEvent from '#models/product_event'
 import { manageUploadProductMedias } from '#services/managemedias'
 import { manageUploadProductImages } from '#services/manageproductimages'
 import { categoryValidator } from '#validators/category'
-import { EventType } from '../Enum/event_type.js'
 
 import { createProductValidator, validateProductStock } from '#validators/products'
 
@@ -814,290 +812,60 @@ export default class ProductsController {
   }
 
   /**
-   * Endpoint pour récupérer 5 produits recommandés basés sur les événements de l'acheteur
+   * Endpoint pour récupérer 5 produits les plus récents
    * GET /products/recommended
    */
-  async getRecommendedProducts({ response, auth }: HttpContext) {
+  async getRecommendedProducts({ response }: HttpContext) {
     try {
-      const userId = auth.user?.id
+      // Retourner les 5 produits les plus récents en stock
+      const recentProducts = await Product.query()
+        .where('stock', '>', 0)
+        .preload('category')
+        .preload('vendeur')
+        .orderBy('created_at', 'desc')
+        .limit(5)
 
-      if (!userId) {
-        // Si pas d'utilisateur connecté, retourner 5 produits les plus récents en stock
-        const randomProducts = await Product.query()
-          .where('stock', '>', 0)
-          .preload('category')
-          .preload('vendeur')
-          .orderBy('createdAt', 'desc')
-          .limit(5)
+      // Récupérer tous les IDs de produits
+      const productIds = recentProducts.map((p) => p.id)
 
-        // Formater exactement comme dans getAllProducts (même structure)
-        const productsFormatted = await Promise.all(
-          randomProducts.map(async (product) => {
-            // Récupérer tous les médias du produit
-            const allMedias = await Media.query()
-              .where('productId', product.id)
-              .orderBy('created_at', 'asc')
+      // Récupérer tous les médias en une seule requête pour optimiser
+      const allMedias = await Media.query()
+        .whereIn('productId', productIds)
+        .orderBy('product_id', 'asc')
+        .orderBy('created_at', 'asc')
 
-            // Image principale (première image ou null)
-            const mainImage = allMedias.length > 0 ? allMedias[0].mediaUrl : null
-
-            // Tableau des images supplémentaires (toutes sauf la première)
-            const images = allMedias.length > 1 ? allMedias.slice(1).map((media) => media.mediaUrl) : []
-
-            // Utiliser serialize() puis extraire uniquement les champs souhaités
-            const serialized = product.serialize()
-            // Exclure profil de vendeur pour avoir la même structure que getAllProducts
-            let vendeurWithoutProfil = null
-            if (serialized.vendeur) {
-              const v = serialized.vendeur as any
-              // Créer un nouvel objet avec seulement les propriétés souhaitées (sans profil)
-              vendeurWithoutProfil = {
-                id: v.id,
-                firstName: v.firstName,
-                lastName: v.lastName,
-                email: v.email,
-                phone: v.phone,
-                secureOtp: v.secureOtp,
-                otpExpiredAt: v.otpExpiredAt,
-                termsAccepted: v.termsAccepted,
-                role: v.role,
-                createdAt: v.createdAt,
-                updatedAt: v.updatedAt,
-                userStatus: v.userStatus,
-              }
-            }
-            return {
-              id: serialized.id,
-              name: serialized.name,
-              description: serialized.description,
-              price: serialized.price,
-              stock: serialized.stock,
-              category: serialized.category,
-              image: mainImage, // Image principale
-              images: images, // Tableau des images supplémentaires
-              vendeur: vendeurWithoutProfil,
-            }
-          })
-        )
-
-        // Filtrer pour garder uniquement les produits avec au moins une image
-        const productsWithImages = productsFormatted.filter(product => product.image !== null)
-
-        return response.status(200).json({
-          message: 'Produits recommandés récupérés avec succès',
-          products: productsWithImages,
-          count: productsWithImages.length,
-        })
-      }
-
-      // Récupérer les événements de l'utilisateur (30 derniers jours)
-      let userEvents: ProductEvent[] = []
-      try {
-      const thirtyDaysAgo = new Date()
-      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
-
-        userEvents = await ProductEvent.query()
-          .where('userId', userId)
-          .where('createdAt', '>=', thirtyDaysAgo.toISOString())
-          .whereNotNull('productCategoryId')
-          .orderBy('createdAt', 'desc')
-        .limit(100)
-      } catch (error) {
-        // Si la table n'existe pas ou erreur de connexion, continuer avec userEvents = []
-        logger.warn('Impossible de récupérer les événements, utilisation de produits aléatoires', {
-          error: error.message,
-        })
-        userEvents = []
-      }
-
-      // Si pas d'événements, retourner 5 produits les plus récents en stock
-      if (userEvents.length === 0) {
-        const randomProducts = await Product.query()
-          .where('stock', '>', 0)
-          .preload('category')
-          .preload('vendeur')
-          .orderBy('createdAt', 'desc')
-          .limit(5)
-
-        // Formater exactement comme dans getAllProducts (même structure)
-        const productsFormatted = await Promise.all(
-          randomProducts.map(async (product) => {
-            // Récupérer tous les médias du produit
-            const allMedias = await Media.query()
-              .where('productId', product.id)
-              .orderBy('created_at', 'asc')
-
-            // Image principale (première image ou null)
-            const mainImage = allMedias.length > 0 ? allMedias[0].mediaUrl : null
-
-            // Tableau des images supplémentaires (toutes sauf la première)
-            const images = allMedias.length > 1 ? allMedias.slice(1).map((media) => media.mediaUrl) : []
-
-            // Utiliser serialize() puis extraire uniquement les champs souhaités
-            const serialized = product.serialize()
-            // Exclure profil de vendeur pour avoir la même structure que getAllProducts
-            let vendeurWithoutProfil = null
-            if (serialized.vendeur) {
-              const v = serialized.vendeur as any
-              // Créer un nouvel objet avec seulement les propriétés souhaitées (sans profil)
-              vendeurWithoutProfil = {
-                id: v.id,
-                firstName: v.firstName,
-                lastName: v.lastName,
-                email: v.email,
-                phone: v.phone,
-                secureOtp: v.secureOtp,
-                otpExpiredAt: v.otpExpiredAt,
-                termsAccepted: v.termsAccepted,
-                role: v.role,
-                createdAt: v.createdAt,
-                updatedAt: v.updatedAt,
-                userStatus: v.userStatus,
-              }
-            }
-            return {
-              id: serialized.id,
-              name: serialized.name,
-              description: serialized.description,
-              price: serialized.price,
-              stock: serialized.stock,
-              category: serialized.category,
-              image: mainImage, // Image principale
-              images: images, // Tableau des images supplémentaires
-              vendeur: vendeurWithoutProfil,
-            }
-          })
-        )
-
-        // Filtrer pour garder uniquement les produits avec au moins une image
-        const productsWithImages = productsFormatted.filter(product => product.image !== null)
-
-        return response.status(200).json({
-          message: 'Produits recommandés récupérés avec succès',
-          products: productsWithImages,
-          count: productsWithImages.length,
-        })
-      }
-
-      // Analyser les catégories les plus consultées/achetées
-      const categoryScores: Record<number, number> = {}
-      const viewedProductIds: Set<number> = new Set()
-      const purchasedProductIds: Set<number> = new Set()
-
-      for (const event of userEvents) {
-        if (event.productCategoryId) {
-          // Poids selon le type d'événement
-          let weight = 1
-          if (event.eventType === EventType.VIEW_PRODUCT) {
-            weight = 1
-            if (event.productId) viewedProductIds.add(event.productId)
-          } else if (event.eventType === EventType.ADD_TO_CART) {
-            weight = 2
-            if (event.productId) viewedProductIds.add(event.productId)
-          } else if (event.eventType === EventType.ADD_TO_WISHLIST) {
-            weight = 2
-            if (event.productId) viewedProductIds.add(event.productId)
-          } else if (event.eventType === EventType.PURCHASE) {
-            weight = 5
-            if (event.productId) {
-              viewedProductIds.add(event.productId)
-              purchasedProductIds.add(event.productId)
-            }
-          }
-
-          categoryScores[event.productCategoryId] =
-            (categoryScores[event.productCategoryId] || 0) + weight
+      // Grouper les médias par productId
+      const mediasByProduct: Record<number, typeof allMedias> = {}
+      for (const media of allMedias) {
+        if (!mediasByProduct[media.productId]) {
+          mediasByProduct[media.productId] = []
         }
+        mediasByProduct[media.productId].push(media)
       }
 
-      // Trier les catégories par score décroissant
-      const sortedCategories = Object.entries(categoryScores)
-        .sort(([, a], [, b]) => b - a)
-        .map(([categoryId]) => parseInt(categoryId))
+      // Formater les produits
+      const productsFormatted = recentProducts.map((product) => {
+        const productMedias = mediasByProduct[product.id] || []
+        const mainImage = productMedias.length > 0 ? productMedias[0].mediaUrl : null
+        const images = productMedias.length > 1 ? productMedias.slice(1).map((media) => media.mediaUrl) : []
 
-      // Récupérer les produits recommandés
-      const recommendedProducts: Product[] = []
-      const excludedProductIds = Array.from(viewedProductIds)
-
-      // Si on a des catégories préférées, chercher des produits dans ces catégories
-      if (sortedCategories.length > 0) {
-      // Pour chaque catégorie (par ordre de préférence)
-      for (const categoryId of sortedCategories) {
-        if (recommendedProducts.length >= 5) break
-
-        const productsInCategory = await Product.query()
-          .where('categorieId', categoryId)
-          .whereNotIn('id', excludedProductIds)
-          .where('stock', '>', 0)
-          .preload('category')
-          .preload('vendeur')
-          .orderBy('createdAt', 'desc')
-          .limit(5 - recommendedProducts.length)
-
-        for (const product of productsInCategory) {
-          if (recommendedProducts.length >= 5) break
-          recommendedProducts.push(product)
-          excludedProductIds.push(product.id)
-          }
+        const serialized = product.serialize()
+        return {
+          id: serialized.id,
+          name: serialized.name,
+          description: serialized.description,
+          price: serialized.price,
+          stock: serialized.stock,
+          category: serialized.category,
+          image: mainImage,
+          images: images,
+          vendeur: serialized.vendeur,
         }
-      }
-
-      // Si on n'a pas assez de produits (pas de catégories ou pas assez de produits dans les catégories),
-      // compléter avec des produits les plus récents en stock
-      if (recommendedProducts.length < 5) {
-        const remainingCount = 5 - recommendedProducts.length
-        const additionalProducts = await Product.query()
-          .whereNotIn('id', excludedProductIds)
-          .where('stock', '>', 0)
-          .preload('category')
-          .preload('vendeur')
-          .orderBy('createdAt', 'desc')
-          .limit(remainingCount)
-
-        recommendedProducts.push(...additionalProducts)
-      }
-
-      // Formater exactement comme dans getAllProducts (même structure)
-      const productsFormatted = await Promise.all(
-        recommendedProducts.slice(0, 5).map(async (product) => {
-          // Récupérer tous les médias du produit
-          const allMedias = await Media.query()
-            .where('productId', product.id)
-            .orderBy('created_at', 'asc')
-
-          // Image principale (première image ou null)
-          const mainImage = allMedias.length > 0 ? allMedias[0].mediaUrl : null
-
-          // Tableau des images supplémentaires (toutes sauf la première)
-          const images = allMedias.length > 1 ? allMedias.slice(1).map((media) => media.mediaUrl) : []
-
-          // Utiliser serialize() puis extraire uniquement les champs souhaités
-          const serialized = product.serialize()
-          return {
-            id: serialized.id,
-            name: serialized.name,
-            description: serialized.description,
-            price: serialized.price,
-            stock: serialized.stock,
-            category: serialized.category,
-            image: mainImage, // Image principale
-            images: images, // Tableau des images supplémentaires
-            vendeur: serialized.vendeur,
-          }
-        })
-      )
-
-      // Filtrer pour garder uniquement les produits avec au moins une image
-      const productsWithImages = productsFormatted.filter(product => product.image !== null)
-
-      // Sérialiser manuellement pour éviter la sérialisation automatique de Lucid
-      return response.status(200).json({
-        message: 'Produits recommandés récupérés avec succès',
-        products: productsWithImages,
-        count: productsWithImages.length,
       })
+
+      return response.status(200).json({ products: productsFormatted })
     } catch (error) {
-      logger.error('Erreur lors de la récupération des produits recommandés', {
+      logger.error('Erreur lors de la récupération des produits récents', {
         error: error.message,
         stack: error.stack,
       })
