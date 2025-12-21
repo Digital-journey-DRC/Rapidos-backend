@@ -708,7 +708,6 @@ export default class ProductsController {
       if (vendeur.profil?.media) {
         vendeurMedia = vendeur.profil.media
       }
-
       return response.ok({
         message: 'Vendeur récupéré avec succès',
         vendeur: {
