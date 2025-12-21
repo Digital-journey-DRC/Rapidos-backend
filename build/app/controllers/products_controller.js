@@ -545,8 +545,35 @@ export default class ProductsController {
             }
             const products = await Product.query()
                 .where('vendeur_id', vendeur.id)
-                .preload('media')
                 .preload('category');
+            const productIds = products.map((p) => p.id);
+            const allMedias = await Media.query()
+                .whereIn('productId', productIds)
+                .orderBy('product_id', 'asc')
+                .orderBy('created_at', 'asc');
+            const mediasByProduct = {};
+            for (const media of allMedias) {
+                if (!mediasByProduct[media.productId]) {
+                    mediasByProduct[media.productId] = [];
+                }
+                mediasByProduct[media.productId].push(media);
+            }
+            const productsFormatted = products.map((product) => {
+                const productMedias = mediasByProduct[product.id] || [];
+                const mainImage = productMedias.length > 0 ? productMedias[0].mediaUrl : null;
+                const images = productMedias.length > 1 ? productMedias.slice(1).map((media) => media.mediaUrl) : [];
+                const serialized = product.serialize();
+                return {
+                    id: serialized.id,
+                    name: serialized.name,
+                    description: serialized.description,
+                    price: serialized.price,
+                    stock: serialized.stock,
+                    category: serialized.category,
+                    image: mainImage,
+                    images: images,
+                };
+            });
             let vendeurMedia = null;
             if (vendeur.profil?.media) {
                 vendeurMedia = vendeur.profil.media;
@@ -567,8 +594,8 @@ export default class ProductsController {
                 profil: vendeur.profil,
                 media: vendeurMedia,
                 horairesOuverture: vendeur.horairesOuverture || [],
-                products: products,
-                totalProducts: products.length,
+                products: productsFormatted,
+                totalProducts: productsFormatted.length,
             });
         }
         catch (error) {

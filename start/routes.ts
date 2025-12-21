@@ -166,9 +166,7 @@ router
 // Route temporaire pour créer la table (sans auth)
 router.get('/vendeurs/horaires/create-table', [HorairesOuvertureController, 'createTable'])
 
-router
-  .get('/vendeurs/:id', [ProductsController, 'getVendeurById'])
-  .use(middleware.auth({ guards: ['api'] }))
+router.get('/vendeurs/:id', [ProductsController, 'getVendeurById'])
 
 router
   .get('/commandes/acheteur', [CommandesController, 'getCommandeByAcheteur'])

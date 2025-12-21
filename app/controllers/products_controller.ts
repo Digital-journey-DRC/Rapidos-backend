@@ -699,11 +699,47 @@ export default class ProductsController {
         return response.status(404).json({ message: 'Vendeur non trouvé' })
       }
 
-      // Récupérer les produits du vendeur
+      // Récupérer les produits du vendeur avec le même format que getAllProducts
       const products = await Product.query()
         .where('vendeur_id', vendeur.id)
-        .preload('media')
         .preload('category')
+
+      // Récupérer tous les IDs de produits
+      const productIds = products.map((p) => p.id)
+
+      // Récupérer tous les médias en une seule requête pour optimiser
+      const allMedias = await Media.query()
+        .whereIn('productId', productIds)
+        .orderBy('product_id', 'asc')
+        .orderBy('created_at', 'asc')
+
+      // Grouper les médias par productId
+      const mediasByProduct: Record<number, typeof allMedias> = {}
+      for (const media of allMedias) {
+        if (!mediasByProduct[media.productId]) {
+          mediasByProduct[media.productId] = []
+        }
+        mediasByProduct[media.productId].push(media)
+      }
+
+      // Formater les produits
+      const productsFormatted = products.map((product) => {
+        const productMedias = mediasByProduct[product.id] || []
+        const mainImage = productMedias.length > 0 ? productMedias[0].mediaUrl : null
+        const images = productMedias.length > 1 ? productMedias.slice(1).map((media) => media.mediaUrl) : []
+
+        const serialized = product.serialize()
+        return {
+          id: serialized.id,
+          name: serialized.name,
+          description: serialized.description,
+          price: serialized.price,
+          stock: serialized.stock,
+          category: serialized.category,
+          image: mainImage,
+          images: images,
+        }
+      })
 
       // Récupérer le media du profil si disponible
       let vendeurMedia = null
@@ -727,8 +763,8 @@ export default class ProductsController {
         profil: vendeur.profil,
         media: vendeurMedia,
         horairesOuverture: vendeur.horairesOuverture || [],
-        products: products,
-        totalProducts: products.length,
+        products: productsFormatted,
+        totalProducts: productsFormatted.length,
       })
     } catch (error) {
       if (error.code === 'E_ROW_NOT_FOUND') {
