@@ -8,6 +8,7 @@ const LivraisonsController = () => import('#controllers/livraisons_controller');
 const PromotionsController = () => import('#controllers/promotions_controller');
 const HorairesOuvertureController = () => import('#controllers/horaires_ouverture_controller');
 const EventsController = () => import('#controllers/events_controller');
+const EcommerceOrdersController = () => import('#controllers/ecommerce_orders_controller');
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import YAML from 'yamljs';
@@ -60,6 +61,7 @@ router
     .get('/products/all', [ProductsController, 'getAllProducts'])
     .use(middleware.auth({ guards: ['api'] }));
 router.get('/products/recommended', [ProductsController, 'getRecommendedProducts']);
+router.get('/products/random', [ProductsController, 'getRandomProducts']);
 router
     .get('/products/adm/all', [ProductsController, 'showAllProducts'])
     .use(middleware.auth({ guards: ['api'] }));
@@ -190,6 +192,28 @@ router
     .get('/users/get-all/status-pending', [RegistersController, 'showAllUserWithStatusPendning'])
     .use(middleware.auth({ guards: ['api'] }));
 router.post('/users/update-profil', [RegistersController, 'updateUserProfile']).use(middleware.auth({ guards: ['api'] }));
+router.get('/ecommerce/create-tables', [EcommerceOrdersController, 'createTables']);
+router
+    .post('/ecommerce/commandes/store', [EcommerceOrdersController, 'store'])
+    .use(middleware.auth({ guards: ['api'] }));
+router
+    .get('/ecommerce/commandes/acheteur', [EcommerceOrdersController, 'getOrdersByBuyer'])
+    .use(middleware.auth({ guards: ['api'] }));
+router
+    .get('/ecommerce/commandes/vendeur', [EcommerceOrdersController, 'getOrdersByVendor'])
+    .use(middleware.auth({ guards: ['api'] }));
+router
+    .get('/ecommerce/livraison/ma-liste', [EcommerceOrdersController, 'getDeliveriesList'])
+    .use(middleware.auth({ guards: ['api'] }));
+router
+    .patch('/ecommerce/commandes/:id/status', [EcommerceOrdersController, 'updateStatus'])
+    .use(middleware.auth({ guards: ['api'] }));
+router
+    .post('/ecommerce/livraison/:orderId/take', [EcommerceOrdersController, 'takeDelivery'])
+    .use(middleware.auth({ guards: ['api'] }));
+router
+    .post('/ecommerce/upload/package-photo', [EcommerceOrdersController, 'uploadPackagePhoto'])
+    .use(middleware.auth({ guards: ['api'] }));
 const MigrationController = () => import('#controllers/migration_controller');
 router.get('/migration/create-promotions-table', [MigrationController, 'createPromotionsTable']);
 //# sourceMappingURL=routes.js.map

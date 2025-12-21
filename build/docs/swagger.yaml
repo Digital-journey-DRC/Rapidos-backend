@@ -2444,12 +2444,278 @@ paths:
                     example: Accès interdit
         '500':
           description: Erreur serveur interne
-  components:
-    securitySchemes:
-      bearerAuth:
-        type: http
-        scheme: bearer
-        bearerFormat: JWT
+  /ecommerce/create-tables:
+    get:
+      summary: Créer les tables e-commerce (endpoint temporaire)
+      tags:
+        - E-commerce
+      description: |
+        Endpoint temporaire pour créer les tables `ecommerce_orders` et `ecommerce_order_logs` dans la base de données.
+        Cet endpoint ne nécessite pas d'authentification et ne doit être utilisé qu'une seule fois lors de la configuration initiale.
+      responses:
+        '200':
+          description: Tables créées avec succès
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Tables ecommerce_orders et ecommerce_order_logs créées avec succès
+        '500':
+          description: Erreur serveur
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  message:
+                    type: string
+                    example: Erreur lors de la création des tables
+                  error:
+                    type: string
+  /ecommerce/commandes/store:
+    post:
+      summary: Créer une commande e-commerce
+      tags:
+        - E-commerce
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EcommerceOrderCreateRequest'
+      responses:
+        '201':
+          description: Commande créée avec succès
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  orderId:
+                    type: string
+                  status:
+                    type: string
+                  message:
+                    type: string
+        '422':
+          description: Erreur de validation
+        '500':
+          description: Erreur serveur
+
+  /ecommerce/commandes/acheteur:
+    get:
+      summary: Voir ses commandes (acheteur)
+      tags:
+        - E-commerce
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Commandes récupérées
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  commandes:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/EcommerceOrder'
+        '500':
+          description: Erreur serveur
+
+  /ecommerce/commandes/vendeur:
+    get:
+      summary: Voir ses commandes (vendeur)
+      tags:
+        - E-commerce
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Commandes récupérées
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  commandes:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/EcommerceOrder'
+        '500':
+          description: Erreur serveur
+
+  /ecommerce/livraison/ma-liste:
+    get:
+      summary: Liste des livraisons disponibles (livreur)
+      tags:
+        - E-commerce
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Livraisons récupérées
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  livraison:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/EcommerceOrder'
+        '500':
+          description: Erreur serveur
+
+  /ecommerce/commandes/{id}/status:
+    patch:
+      summary: Mettre à jour le statut d'une commande
+      tags:
+        - E-commerce
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EcommerceOrderUpdateStatusRequest'
+      responses:
+        '200':
+          description: Statut mis à jour
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  order:
+                    $ref: '#/components/schemas/EcommerceOrder'
+                  message:
+                    type: string
+        '400':
+          description: Erreur de validation
+        '403':
+          description: Non autorisé
+        '404':
+          description: Commande non trouvée
+        '500':
+          description: Erreur serveur
+
+  /ecommerce/livraison/{orderId}/take:
+    post:
+      summary: Prendre en charge une livraison (livreur)
+      tags:
+        - E-commerce
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: orderId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Livraison prise en charge
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  order:
+                    $ref: '#/components/schemas/EcommerceOrder'
+                  message:
+                    type: string
+        '400':
+          description: Erreur de validation
+        '403':
+          description: Non autorisé
+        '404':
+          description: Commande non trouvée
+        '500':
+          description: Erreur serveur
+
+  /ecommerce/upload/package-photo:
+    post:
+      summary: Upload photo du colis (vendeur)
+      tags:
+        - E-commerce
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - orderId
+                - photo
+              properties:
+                orderId:
+                  type: string
+                photo:
+                  type: string
+                  format: binary
+      responses:
+        '200':
+          description: Photo uploadée avec succès
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  photoUrl:
+                    type: string
+                  message:
+                    type: string
+        '400':
+          description: Erreur de validation
+        '403':
+          description: Non autorisé
+        '404':
+          description: Commande non trouvée
+        '500':
+          description: Erreur serveur
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
 
   schemas:
 
@@ -3017,3 +3283,116 @@ paths:
           example: '2025-05-25T16:15:09.637+00:00'
         commande:
           $ref: '#/components/schemas/Commande'
+
+    EcommerceOrder:
+      type: object
+      properties:
+        orderId:
+          type: string
+        status:
+          type: string
+        clientId:
+          type: integer
+        client:
+          type: string
+        phone:
+          type: string
+        vendorId:
+          type: integer
+        deliveryPersonId:
+          type: integer
+          nullable: true
+        items:
+          type: array
+          items:
+            type: object
+            properties:
+              productId:
+                type: integer
+              name:
+                type: string
+              price:
+                type: number
+              quantity:
+                type: integer
+              idVendeur:
+                type: integer
+        address:
+          type: object
+          properties:
+            ville:
+              type: string
+            commune:
+              type: string
+            quartier:
+              type: string
+            avenue:
+              type: string
+            numero:
+              type: string
+            pays:
+              type: string
+            codePostale:
+              type: string
+        total:
+          type: number
+        packagePhoto:
+          type: string
+          nullable: true
+        packagePhotoPublicId:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    EcommerceOrderCreateRequest:
+      type: object
+      properties:
+        produits:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: integer
+              nom:
+                type: string
+              prix:
+                type: number
+              quantite:
+                type: integer
+              idVendeur:
+                type: integer
+        ville:
+          type: string
+        commune:
+          type: string
+        quartier:
+          type: string
+        avenue:
+          type: string
+        numero:
+          type: string
+        pays:
+          type: string
+        codePostale:
+          type: string
+    EcommerceOrderUpdateStatusRequest:
+      type: object
+      properties:
+        status:
+          type: string
+          enum:
+            - pending
+            - colis en cours de préparation
+            - prêt à expédier
+            - en route pour livraison
+            - delivered
+            - cancelled
+            - rejected
+        reason:
+          type: string
+          nullable: true

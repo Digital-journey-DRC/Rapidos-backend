@@ -8,6 +8,7 @@ const LivraisonsController = () => import('#controllers/livraisons_controller')
 const PromotionsController = () => import('#controllers/promotions_controller')
 const HorairesOuvertureController = () => import('#controllers/horaires_ouverture_controller')
 const EventsController = () => import('#controllers/events_controller')
+const EcommerceOrdersController = () => import('#controllers/ecommerce_orders_controller')
 
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
@@ -15,6 +16,12 @@ import YAML from 'yamljs'
 
 // Route pour servir la page Swagger UI
 router.get('/docs', async ({ response }) => {
+  const swaggerHtml = readFileSync(join(import.meta.dirname, '../resources/swagger.html'), 'utf-8')
+  return response.type('text/html').send(swaggerHtml)
+})
+
+// Route avec slash final pour /docs/
+router.get('/docs/', async ({ response }) => {
   const swaggerHtml = readFileSync(join(import.meta.dirname, '../resources/swagger.html'), 'utf-8')
   return response.type('text/html').send(swaggerHtml)
 })
@@ -275,6 +282,52 @@ router
   .use(middleware.auth({ guards: ['api'] }))
 
   router.post('/users/update-profil', [RegistersController, 'updateUserProfile']).use(middleware.auth({ guards: ['api'] }))
+
+// ============================================================
+// NOUVEAU MODULE E-COMMERCE ORDERS (NE PAS TOUCHER)
+// ============================================================
+
+// Endpoint temporaire pour créer les tables
+router.get('/ecommerce/create-tables', [EcommerceOrdersController, 'createTables'])
+
+// Créer une commande e-commerce
+router
+  .post('/ecommerce/commandes/store', [EcommerceOrdersController, 'store'])
+  .use(middleware.auth({ guards: ['api'] }))
+
+// Voir ses commandes (acheteur)
+router
+  .get('/ecommerce/commandes/acheteur', [EcommerceOrdersController, 'getOrdersByBuyer'])
+  .use(middleware.auth({ guards: ['api'] }))
+
+// Voir ses commandes (vendeur)
+router
+  .get('/ecommerce/commandes/vendeur', [EcommerceOrdersController, 'getOrdersByVendor'])
+  .use(middleware.auth({ guards: ['api'] }))
+
+// Liste des livraisons disponibles (livreur)
+router
+  .get('/ecommerce/livraison/ma-liste', [EcommerceOrdersController, 'getDeliveriesList'])
+  .use(middleware.auth({ guards: ['api'] }))
+
+// Mettre à jour le statut d'une commande
+router
+  .patch('/ecommerce/commandes/:id/status', [EcommerceOrdersController, 'updateStatus'])
+  .use(middleware.auth({ guards: ['api'] }))
+
+// Prendre en charge une livraison (livreur)
+router
+  .post('/ecommerce/livraison/:orderId/take', [EcommerceOrdersController, 'takeDelivery'])
+  .use(middleware.auth({ guards: ['api'] }))
+
+// Upload photo du colis (vendeur)
+router
+  .post('/ecommerce/upload/package-photo', [EcommerceOrdersController, 'uploadPackagePhoto'])
+  .use(middleware.auth({ guards: ['api'] }))
+
+// ============================================================
+// FIN MODULE E-COMMERCE ORDERS
+// ============================================================
 
 // Route temporaire pour créer la table promotions (GET pour faciliter avec curl)
 const MigrationController = () => import('#controllers/migration_controller')

@@ -1048,49 +1048,66 @@ export default class ProductsController {
     try {
       // Récupérer 10 produits aléatoires en stock
       const randomProducts = await Product.query()
+        .select(['id', 'name', 'description', 'price', 'stock'])
         .where('stock', '>', 0)
         .preload('category')
         .preload('vendeur')
         .orderByRaw('RANDOM()')
         .limit(10)
 
-      // Récupérer tous les IDs de produits
-      const productIds = randomProducts.map((p) => p.id)
-
-      // Récupérer tous les médias en une seule requête pour optimiser
-      const allMedias = await Media.query()
-        .whereIn('productId', productIds)
-        .orderBy('product_id', 'asc')
-        .orderBy('created_at', 'asc')
-
-      // Grouper les médias par productId
-      const mediasByProduct: Record<number, typeof allMedias> = {}
-      for (const media of allMedias) {
-        if (!mediasByProduct[media.productId]) {
-          mediasByProduct[media.productId] = []
-        }
-        mediasByProduct[media.productId].push(media)
+      if (randomProducts.length === 0) {
+        return response.status(404).json({ message: 'Aucun produit trouvé', products: [] })
       }
 
-      // Formater les produits
-      const productsFormatted = randomProducts.map((product) => {
-        const productMedias = mediasByProduct[product.id] || []
-        const mainImage = productMedias.length > 0 ? productMedias[0].mediaUrl : null
-        const images = productMedias.length > 1 ? productMedias.slice(1).map((media) => media.mediaUrl) : []
+      // Formater exactement comme getAllProducts (même structure)
+      const productsFormatted = await Promise.all(
+        randomProducts.map(async (product) => {
+          // Récupérer tous les médias du produit
+          const allMedias = await Media.query()
+            .where('productId', product.id)
+            .orderBy('created_at', 'asc')
 
-        const serialized = product.serialize()
-        return {
-          id: serialized.id,
-          name: serialized.name,
-          description: serialized.description,
-          price: serialized.price,
-          stock: serialized.stock,
-          category: serialized.category,
-          image: mainImage,
-          images: images,
-          vendeur: serialized.vendeur,
-        }
-      })
+          // Image principale (première image ou null)
+          const mainImage = allMedias.length > 0 ? allMedias[0].mediaUrl : null
+
+          // Tableau des images supplémentaires (toutes sauf la première)
+          const images = allMedias.length > 1 ? allMedias.slice(1).map((media) => media.mediaUrl) : []
+
+          // Utiliser serialize() puis extraire uniquement les champs souhaités
+          const serialized = product.serialize()
+          // Exclure profil de vendeur pour avoir la même structure que getAllProducts
+          let vendeurWithoutProfil = null
+          if (serialized.vendeur) {
+            const v = serialized.vendeur as any
+            // Créer un nouvel objet avec seulement les propriétés souhaitées (sans profil)
+            vendeurWithoutProfil = {
+              id: v.id,
+              firstName: v.firstName,
+              lastName: v.lastName,
+              email: v.email,
+              phone: v.phone,
+              secureOtp: v.secureOtp,
+              otpExpiredAt: v.otpExpiredAt,
+              termsAccepted: v.termsAccepted,
+              role: v.role,
+              createdAt: v.createdAt,
+              updatedAt: v.updatedAt,
+              userStatus: v.userStatus,
+            }
+          }
+          return {
+            id: serialized.id,
+            name: serialized.name,
+            description: serialized.description,
+            price: serialized.price,
+            stock: serialized.stock,
+            category: serialized.category,
+            image: mainImage, // Image principale Cloudinary
+            images: images, // Tableau des images supplémentaires Cloudinary
+            vendeur: vendeurWithoutProfil,
+          }
+        })
+      )
 
       return response.status(200).json({ products: productsFormatted })
     } catch (error) {
