@@ -822,15 +822,12 @@ export default class ProductsController {
       const userId = auth.user?.id
 
       if (!userId) {
-        // Si pas d'utilisateur connecté, retourner 5 produits aléatoires en stock
+        // Si pas d'utilisateur connecté, retourner 5 produits les plus récents en stock
         const randomProducts = await Product.query()
           .where('stock', '>', 0)
           .preload('category')
-          .preload('vendeur', (vendeurQuery) => {
-            vendeurQuery.preload('profil', (profilQuery) => {
-              profilQuery.preload('media')
-            })
-          })
+          .preload('vendeur')
+          .orderBy('createdAt', 'desc')
           .limit(5)
 
         // Formater exactement comme dans getAllProducts (même structure)
@@ -849,6 +846,26 @@ export default class ProductsController {
 
             // Utiliser serialize() puis extraire uniquement les champs souhaités
             const serialized = product.serialize()
+            // Exclure profil de vendeur pour avoir la même structure que getAllProducts
+            let vendeurWithoutProfil = null
+            if (serialized.vendeur) {
+              const v = serialized.vendeur as any
+              // Créer un nouvel objet avec seulement les propriétés souhaitées (sans profil)
+              vendeurWithoutProfil = {
+                id: v.id,
+                firstName: v.firstName,
+                lastName: v.lastName,
+                email: v.email,
+                phone: v.phone,
+                secureOtp: v.secureOtp,
+                otpExpiredAt: v.otpExpiredAt,
+                termsAccepted: v.termsAccepted,
+                role: v.role,
+                createdAt: v.createdAt,
+                updatedAt: v.updatedAt,
+                userStatus: v.userStatus,
+              }
+            }
             return {
               id: serialized.id,
               name: serialized.name,
@@ -858,7 +875,7 @@ export default class ProductsController {
               category: serialized.category,
               image: mainImage, // Image principale
               images: images, // Tableau des images supplémentaires
-              vendeur: serialized.vendeur,
+              vendeur: vendeurWithoutProfil,
             }
           })
         )
@@ -893,16 +910,13 @@ export default class ProductsController {
         userEvents = []
       }
 
-      // Si pas d'événements, retourner 5 produits aléatoires en stock
+      // Si pas d'événements, retourner 5 produits les plus récents en stock
       if (userEvents.length === 0) {
         const randomProducts = await Product.query()
           .where('stock', '>', 0)
           .preload('category')
-          .preload('vendeur', (vendeurQuery) => {
-            vendeurQuery.preload('profil', (profilQuery) => {
-              profilQuery.preload('media')
-            })
-          })
+          .preload('vendeur')
+          .orderBy('createdAt', 'desc')
           .limit(5)
 
         // Formater exactement comme dans getAllProducts (même structure)
@@ -921,6 +935,26 @@ export default class ProductsController {
 
             // Utiliser serialize() puis extraire uniquement les champs souhaités
             const serialized = product.serialize()
+            // Exclure profil de vendeur pour avoir la même structure que getAllProducts
+            let vendeurWithoutProfil = null
+            if (serialized.vendeur) {
+              const v = serialized.vendeur as any
+              // Créer un nouvel objet avec seulement les propriétés souhaitées (sans profil)
+              vendeurWithoutProfil = {
+                id: v.id,
+                firstName: v.firstName,
+                lastName: v.lastName,
+                email: v.email,
+                phone: v.phone,
+                secureOtp: v.secureOtp,
+                otpExpiredAt: v.otpExpiredAt,
+                termsAccepted: v.termsAccepted,
+                role: v.role,
+                createdAt: v.createdAt,
+                updatedAt: v.updatedAt,
+                userStatus: v.userStatus,
+              }
+            }
             return {
               id: serialized.id,
               name: serialized.name,
@@ -930,7 +964,7 @@ export default class ProductsController {
               category: serialized.category,
               image: mainImage, // Image principale
               images: images, // Tableau des images supplémentaires
-              vendeur: serialized.vendeur,
+              vendeur: vendeurWithoutProfil,
             }
           })
         )
@@ -996,11 +1030,8 @@ export default class ProductsController {
           .whereNotIn('id', excludedProductIds)
           .where('stock', '>', 0)
           .preload('category')
-          .preload('vendeur', (vendeurQuery) => {
-            vendeurQuery.preload('profil', (profilQuery) => {
-              profilQuery.preload('media')
-            })
-          })
+          .preload('vendeur')
+          .orderBy('createdAt', 'desc')
           .limit(5 - recommendedProducts.length)
 
         for (const product of productsInCategory) {
@@ -1012,18 +1043,15 @@ export default class ProductsController {
       }
 
       // Si on n'a pas assez de produits (pas de catégories ou pas assez de produits dans les catégories),
-      // compléter avec des produits aléatoires en stock
+      // compléter avec des produits les plus récents en stock
       if (recommendedProducts.length < 5) {
         const remainingCount = 5 - recommendedProducts.length
         const additionalProducts = await Product.query()
           .whereNotIn('id', excludedProductIds)
           .where('stock', '>', 0)
           .preload('category')
-          .preload('vendeur', (vendeurQuery) => {
-            vendeurQuery.preload('profil', (profilQuery) => {
-              profilQuery.preload('media')
-            })
-          })
+          .preload('vendeur')
+          .orderBy('createdAt', 'desc')
           .limit(remainingCount)
 
         recommendedProducts.push(...additionalProducts)
