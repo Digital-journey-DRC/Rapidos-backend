@@ -542,29 +542,9 @@ export default class ProductsController {
                 return response.status(404).json({ message: 'Vendeur non trouvé' });
             }
             const products = await Product.query()
-                .select(['id', 'name', 'description', 'price', 'stock'])
                 .where('vendeur_id', vendeur.id)
-                .preload('category')
-                .preload('vendeur');
-            const productsFormatted = await Promise.all(products.map(async (product) => {
-                const allMedias = await Media.query()
-                    .where('productId', product.id)
-                    .orderBy('created_at', 'asc');
-                const mainImage = allMedias.length > 0 ? allMedias[0].mediaUrl : null;
-                const images = allMedias.length > 1 ? allMedias.slice(1).map((media) => media.mediaUrl) : [];
-                const serialized = product.serialize();
-                return {
-                    id: serialized.id,
-                    name: serialized.name,
-                    description: serialized.description,
-                    price: serialized.price,
-                    stock: serialized.stock,
-                    category: serialized.category,
-                    image: mainImage,
-                    images: images,
-                    vendeur: serialized.vendeur,
-                };
-            }));
+                .preload('media')
+                .preload('category');
             let vendeurMedia = null;
             if (vendeur.profil?.media) {
                 vendeurMedia = vendeur.profil.media;
@@ -585,8 +565,8 @@ export default class ProductsController {
                 profil: vendeur.profil,
                 media: vendeurMedia,
                 horairesOuverture: vendeur.horairesOuverture || [],
-                products: productsFormatted,
-                totalProducts: productsFormatted.length,
+                products: products,
+                totalProducts: products.length,
             });
         }
         catch (error) {
