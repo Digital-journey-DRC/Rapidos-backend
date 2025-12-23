@@ -123,13 +123,13 @@ export default class ProductsController {
         const { medias, errors: mediasErrors } = await manageUploadProductMedias(productMedia)
         errors = mediasErrors
 
-        // Enregistrement des médias en base
-        for (const media of medias) {
-          await product.related('media').create({
-            mediaUrl: media.mediaUrl,
-            mediaType: media.mediaType,
-            productId: product.id,
-          })
+      // Enregistrement des médias en base
+      for (const media of medias) {
+        await product.related('media').create({
+          mediaUrl: media.mediaUrl,
+          mediaType: media.mediaType,
+          productId: product.id,
+        })
         }
       }
 
@@ -534,14 +534,14 @@ export default class ProductsController {
         const { medias, errors: mediasErrors } = await manageUploadProductMedias(productMedia)
         errors = mediasErrors
 
-        // Enregistrement des médias en base
-        for (const media of medias) {
-          await product.related('media').create({
-            mediaUrl: media.mediaUrl,
-            mediaType: media.mediaType,
-            productId: product.id,
-          })
-        }
+      // Enregistrement des médias en base
+      for (const media of medias) {
+        await product.related('media').create({
+          mediaUrl: media.mediaUrl,
+          mediaType: media.mediaType,
+          productId: product.id,
+        })
+      }
       }
 
       // Récupérer le produit avec ses relations
@@ -844,7 +844,7 @@ export default class ProductsController {
           .where('createdAt', '>=', thirtyDaysAgo.toISOString())
           .whereNotNull('productCategoryId')
           .orderBy('createdAt', 'desc')
-          .limit(100)
+        .limit(100)
       } catch (error) {
         // Si la table n'existe pas, retourner les produits récents
         logger.warn('Table product_events non disponible, retour des produits récents')
@@ -945,8 +945,8 @@ export default class ProductsController {
         if (event.productCategoryId) {
           categoryCounts[event.productCategoryId] = (categoryCounts[event.productCategoryId] || 0) + 1
         }
-        if (event.productId) {
-          viewedProductIds.add(event.productId)
+            if (event.productId) {
+              viewedProductIds.add(event.productId)
         }
       }
 

@@ -1,5 +1,7 @@
 import { DateTime } from 'luxon'
-import { BaseModel, column } from '@adonisjs/lucid/orm'
+import { BaseModel, belongsTo, column } from '@adonisjs/lucid/orm'
+import PaymentMethod from './payment_method.js'
+import type { BelongsTo } from '@adonisjs/lucid/types/relations'
 
 export enum EcommerceOrderStatus {
   PENDING = 'pending',
@@ -73,9 +75,17 @@ export default class EcommerceOrder extends BaseModel {
   @column()
   declare packagePhotoPublicId: string | null
 
+  @column()
+  declare paymentMethodId: number | null
+
   @column.dateTime({ autoCreate: true })
   declare createdAt: DateTime
 
   @column.dateTime({ autoCreate: true, autoUpdate: true })
   declare updatedAt: DateTime
+
+  @belongsTo(() => PaymentMethod, {
+    foreignKey: 'paymentMethodId',
+  })
+  declare paymentMethod: BelongsTo<typeof PaymentMethod>
 }

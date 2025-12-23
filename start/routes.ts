@@ -366,6 +366,14 @@ router
   .patch('/payment-methods/:id/deactivate', [PaymentMethodsController, 'deactivate'])
   .use(middleware.auth({ guards: ['api'] }))
 
+// GET /payment-methods/templates - Récupérer tous les moyens de paiement disponibles (templates)
+router.get('/payment-methods/templates', [PaymentMethodsController, 'getTemplates'])
+
+// POST /payment-methods/activate-template - Activer un template avec un numéro de compte (vendeur)
+router
+  .post('/payment-methods/activate-template', [PaymentMethodsController, 'activateTemplate'])
+  .use(middleware.auth({ guards: ['api'] }))
+
 // ============================================================
 // FIN MODULE MOYENS DE PAIEMENT VENDEUR
 // ============================================================

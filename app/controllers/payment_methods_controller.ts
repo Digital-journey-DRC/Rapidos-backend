@@ -1,7 +1,13 @@
 import type { HttpContext } from '@adonisjs/core/http'
 import PaymentMethod from '#models/payment_method'
-import { createPaymentMethodValidator, updatePaymentMethodValidator } from '#validators/payment_method'
+import PaymentMethodTemplate from '#models/payment_method_template'
+import {
+  createPaymentMethodValidator,
+  updatePaymentMethodValidator,
+  activateTemplateValidator,
+} from '#validators/payment_method'
 import { UserRole } from '../Enum/user_role.js'
+import User from '#models/user'
 
 export default class PaymentMethodsController {
   /**
@@ -15,7 +21,7 @@ export default class PaymentMethodsController {
         CREATE TABLE payment_methods (
           id SERIAL PRIMARY KEY,
           vendeur_id INTEGER NOT NULL,
-          type VARCHAR(50) NOT NULL DEFAULT 'orange_money' CHECK (type IN ('orange_money', 'master_card')),
+          type VARCHAR(50) NOT NULL DEFAULT 'orange_money' CHECK (type IN ('cash', 'mpesa', 'orange_money', 'airtel_money', 'afrimoney', 'visa', 'master_card')),
           numero_compte VARCHAR(50) NOT NULL,
           nom_titulaire VARCHAR(100),
           is_default BOOLEAN NOT NULL DEFAULT false,
@@ -385,6 +391,134 @@ export default class PaymentMethodsController {
       console.error(error)
       return response.internalServerError({
         message: 'Erreur lors de la désactivation du moyen de paiement',
+        error: error.message,
+      })
+    }
+  }
+
+  /**
+   * GET /payment-methods/templates
+   * Récupérer tous les moyens de paiement disponibles (templates)
+   */
+  async getTemplates({ response }: HttpContext) {
+    try {
+      const templates = await PaymentMethodTemplate.query()
+        .where('is_active', true)
+        .orderBy('display_order', 'asc')
+
+      return response.ok({
+        message: 'Moyens de paiement disponibles récupérés avec succès',
+        paymentMethods: templates,
+      })
+    } catch (error) {
+      console.error(error)
+      return response.internalServerError({
+        message: 'Erreur lors de la récupération des moyens de paiement disponibles',
+        error: error.message,
+      })
+    }
+  }
+
+  /**
+   * POST /payment-methods/activate-template
+   * Activer un moyen de paiement template avec un numéro de compte
+   */
+  async activateTemplate({ request, response, auth }: HttpContext) {
+    try {
+      const user = auth.user!
+
+      // Vérifier que l'utilisateur est un vendeur
+      if (user.role !== UserRole.Vendeur) {
+        return response.forbidden({
+          message: 'Seuls les vendeurs peuvent activer des moyens de paiement',
+        })
+      }
+
+      const payload = await request.validateUsing(activateTemplateValidator)
+
+      // Récupérer le template
+      const template = await PaymentMethodTemplate.find(payload.templateId)
+
+      if (!template) {
+        return response.notFound({
+          message: 'Template de moyen de paiement non trouvé',
+        })
+      }
+
+      if (!template.isActive) {
+        return response.badRequest({
+          message: 'Ce moyen de paiement n\'est pas disponible',
+        })
+      }
+
+      // Vérifier si le vendeur a déjà ce type de moyen de paiement
+      const existingPaymentMethod = await PaymentMethod.query()
+        .where('vendeur_id', user.id)
+        .where('type', template.type)
+        .first()
+
+      if (existingPaymentMethod) {
+        // Mettre à jour le moyen de paiement existant
+        existingPaymentMethod.numeroCompte = payload.numeroCompte.trim()
+        existingPaymentMethod.nomTitulaire = payload.nomTitulaire?.trim() || null
+        existingPaymentMethod.isActive = true
+
+        // Si isDefault est true, désactiver les autres moyens de paiement par défaut
+        if (payload.isDefault) {
+          await PaymentMethod.query()
+            .where('vendeur_id', user.id)
+            .where('is_default', true)
+            .where('id', '!=', existingPaymentMethod.id)
+            .update({ isDefault: false })
+          existingPaymentMethod.isDefault = true
+        }
+
+        await existingPaymentMethod.save()
+
+        return response.ok({
+          message: 'Moyen de paiement mis à jour avec succès',
+          paymentMethod: existingPaymentMethod,
+          template: {
+            id: template.id,
+            type: template.type,
+            name: template.name,
+            imageUrl: template.imageUrl,
+          },
+        })
+      }
+
+      // Si isDefault est true, désactiver les autres moyens de paiement par défaut
+      if (payload.isDefault) {
+        await PaymentMethod.query()
+          .where('vendeur_id', user.id)
+          .where('is_default', true)
+          .update({ isDefault: false })
+      }
+
+      // Créer un nouveau moyen de paiement
+      const paymentMethod = await PaymentMethod.create({
+        vendeurId: user.id,
+        type: template.type,
+        numeroCompte: payload.numeroCompte.trim(),
+        nomTitulaire: payload.nomTitulaire?.trim() || null,
+        isDefault: payload.isDefault || false,
+        isActive: true,
+      })
+
+      return response.created({
+        message: 'Moyen de paiement activé avec succès',
+        paymentMethod: paymentMethod,
+        template: {
+          id: template.id,
+          type: template.type,
+          name: template.name,
+          imageUrl: template.imageUrl,
+        },
+      })
+    } catch (error) {
+      console.error(error)
+      return response.internalServerError({
+        message: 'Erreur lors de l\'activation du moyen de paiement',
         error: error.message,
       })
     }

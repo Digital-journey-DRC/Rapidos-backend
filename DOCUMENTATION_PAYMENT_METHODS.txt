@@ -9,52 +9,132 @@ de paiement des vendeurs dans l'application Rapidos.
 AUTHENTIFICATION
 ================================================================================
 
-Tous les endpoints (sauf create-table) nécessitent une authentification via
-un token Bearer dans le header Authorization.
+Tous les endpoints (sauf GET /payment-methods/templates) nécessitent une
+authentification via un token Bearer dans le header Authorization.
 
-Header requis:
-  Authorization: Bearer <token>
+Format: Authorization: Bearer <token>
 
-Pour obtenir un token, utilisez l'endpoint de login:
-  POST /login
-  Body: {
-    "uid": "email_ou_telephone",
-    "password": "mot_de_passe"
-  }
+Pour obtenir un token, utilisez l'endpoint POST /login.
+
+================================================================================
+TYPES DE MOYENS DE PAIEMENT DISPONIBLES
+================================================================================
+
+Le système supporte les moyens de paiement suivants :
+
+1. cash              - Paiement en espèces
+2. mpesa             - Paiement mobile Mpesa
+3. orange_money       - Paiement mobile Orange Money
+4. airtel_money       - Paiement mobile Airtel Money
+5. afrimoney          - Paiement mobile Afrimoney
+6. visa               - Carte bancaire Visa
+7. master_card         - Carte bancaire Master Card
+
+Chaque moyen de paiement a une image associée stockée dans le système.
 
 ================================================================================
 ENDPOINTS DISPONIBLES
 ================================================================================
 
-1. CRÉER LA TABLE (Endpoint temporaire)
-   =====================================
+1. RÉCUPÉRER TOUS LES MOYENS DE PAIEMENT DISPONIBLES (Templates)
+   ==============================================================
    
-   GET /payment-methods/create-table
-   
-   Description:
-     Crée la table payment_methods dans la base de données.
-     À utiliser une seule fois lors de la mise en place.
-   
-   Authentification: NON REQUISE
-   
-   Réponse succès (201):
-     {
-       "message": "Table payment_methods créée avec succès"
-     }
-   
-   Réponse si table existe déjà (200):
-     {
-       "message": "La table payment_methods existe déjà"
-     }
-
-
-2. AJOUTER UN MOYEN DE PAIEMENT (Vendeur uniquement)
-   ===================================================
-   
-   POST /payment-methods
+   GET /payment-methods/templates
    
    Description:
-     Permet à un vendeur d'ajouter un nouveau moyen de paiement.
+     Récupère la liste de tous les moyens de paiement prédéfinis disponibles
+     dans le système avec leurs images. Cet endpoint est PUBLIC et ne nécessite
+     pas d'authentification.
+   
+   Authentification: NON REQUISE (Public)
+   
+   Réponse succès (200):
+     {
+       "message": "Moyens de paiement disponibles récupérés avec succès",
+       "paymentMethods": [
+         {
+           "id": 1,
+           "type": "cash",
+           "name": "Cash",
+           "description": "Paiement en espèces",
+           "imageUrl": "https://res.cloudinary.com/.../cash.png",
+           "isActive": true,
+           "displayOrder": 1,
+           "createdAt": "2025-01-22T20:00:00.000Z",
+           "updatedAt": null
+         },
+         {
+           "id": 2,
+           "type": "mpesa",
+           "name": "Mpesa",
+           "description": "Paiement mobile Mpesa",
+           "imageUrl": "https://res.cloudinary.com/.../mpesa.png",
+           "isActive": true,
+           "displayOrder": 2,
+           "createdAt": "2025-01-22T20:00:00.000Z",
+           "updatedAt": null
+         },
+         {
+           "id": 3,
+           "type": "orange_money",
+           "name": "Orange Money",
+           "description": "Paiement mobile Orange Money",
+           "imageUrl": "https://res.cloudinary.com/.../orange_money.png",
+           "isActive": true,
+           "displayOrder": 3,
+           "createdAt": "2025-01-22T20:00:00.000Z",
+           "updatedAt": null
+         },
+         {
+           "id": 4,
+           "type": "airtel_money",
+           "name": "Airtel Money",
+           "description": "Paiement mobile Airtel Money",
+           "imageUrl": "https://res.cloudinary.com/.../airtel_money.png",
+           "isActive": true,
+           "displayOrder": 4,
+           "createdAt": "2025-01-22T20:00:00.000Z",
+           "updatedAt": null
+         },
+         {
+           "id": 5,
+           "type": "afrimoney",
+           "name": "Afrimoney",
+           "description": "Paiement mobile Afrimoney",
+           "imageUrl": "https://res.cloudinary.com/.../afrimoney.png",
+           "isActive": true,
+           "displayOrder": 5,
+           "createdAt": "2025-01-22T20:00:00.000Z",
+           "updatedAt": null
+         },
+         {
+           "id": 6,
+           "type": "visa",
+           "name": "Visa",
+           "description": "Carte bancaire Visa",
+           "imageUrl": "https://res.cloudinary.com/.../visa.png",
+           "isActive": true,
+           "displayOrder": 6,
+           "createdAt": "2025-01-22T20:00:00.000Z",
+           "updatedAt": null
+         }
+       ]
+     }
+   
+   Note:
+     - Seuls les moyens de paiement actifs (isActive = true) sont retournés
+     - Triés par displayOrder (ordre d'affichage)
+
+
+2. ACTIVER UN MOYEN DE PAIEMENT TEMPLATE (Vendeur uniquement)
+   ===========================================================
+   
+   POST /payment-methods/activate-template
+   
+   Description:
+     Permet à un vendeur d'activer un moyen de paiement prédéfini en ajoutant
+     son numéro de compte/téléphone. Si le vendeur a déjà activé ce type de
+     moyen de paiement, il sera mis à jour avec les nouvelles informations.
    
    Authentification: REQUISE (Vendeur uniquement)
    
@@ -64,7 +144,107 @@ ENDPOINTS DISPONIBLES
    
    Body (JSON):
      {
-       "type": "orange_money" | "master_card",
+       "templateId": 3,                    // Requis, ID du template (voir GET /payment-methods/templates)
+       "numeroCompte": "0651234567",       // Requis, 8-50 caractères
+       "nomTitulaire": "Jean Dupont",      // Optionnel, max 100 caractères
+       "isDefault": true                   // Optionnel, false par défaut
+     }
+   
+   Règles:
+     - Si le vendeur a déjà activé ce type de moyen de paiement, il sera mis à jour
+     - Si isDefault = true, tous les autres moyens de paiement du vendeur
+       perdent leur statut de défaut
+     - Le moyen de paiement est créé/mis à jour avec isActive = true
+   
+   Réponse succès (201) - Nouveau moyen de paiement:
+     {
+       "message": "Moyen de paiement activé avec succès",
+       "paymentMethod": {
+         "id": 1,
+         "vendeurId": 115,
+         "type": "orange_money",
+         "numeroCompte": "0651234567",
+         "nomTitulaire": "Jean Dupont",
+         "isDefault": true,
+         "isActive": true,
+         "createdAt": "2025-01-22T20:00:00.000Z",
+         "updatedAt": null
+       },
+       "template": {
+         "id": 3,
+         "type": "orange_money",
+         "name": "Orange Money",
+         "imageUrl": "https://res.cloudinary.com/.../orange_money.png"
+       }
+     }
+   
+   Réponse succès (200) - Moyen de paiement mis à jour:
+     {
+       "message": "Moyen de paiement mis à jour avec succès",
+       "paymentMethod": {
+         "id": 1,
+         "vendeurId": 115,
+         "type": "orange_money",
+         "numeroCompte": "0651234568",
+         "nomTitulaire": "Jean Dupont",
+         "isDefault": true,
+         "isActive": true,
+         "createdAt": "2025-01-22T20:00:00.000Z",
+         "updatedAt": "2025-01-22T21:00:00.000Z"
+       },
+       "template": {
+         "id": 3,
+         "type": "orange_money",
+         "name": "Orange Money",
+         "imageUrl": "https://res.cloudinary.com/.../orange_money.png"
+       }
+     }
+   
+   Réponse erreur (400):
+     {
+       "message": "Numéro de compte/téléphone requis (minimum 8 caractères)"
+     }
+   
+   Réponse erreur (400):
+     {
+       "message": "Ce moyen de paiement n'est pas disponible"
+     }
+   
+   Réponse erreur (403):
+     {
+       "message": "Seuls les vendeurs peuvent activer des moyens de paiement"
+     }
+   
+   Réponse erreur (404):
+     {
+       "message": "Template de moyen de paiement non trouvé"
+     }
+   
+   Réponse erreur (422):
+     {
+       "message": "Validation failed",
+       "errors": [...]
+     }
+
+
+3. AJOUTER UN MOYEN DE PAIEMENT (Vendeur uniquement)
+   ===================================================
+   
+   POST /payment-methods
+   
+   Description:
+     Permet à un vendeur d'ajouter un nouveau moyen de paiement directement
+     sans passer par les templates. Méthode alternative à activate-template.
+   
+   Authentification: REQUISE (Vendeur uniquement)
+   
+   Headers:
+     Content-Type: application/json
+     Authorization: Bearer <token>
+   
+   Body (JSON):
+     {
+       "type": "cash" | "mpesa" | "orange_money" | "airtel_money" | "afrimoney" | "visa" | "master_card",
        "numeroCompte": "0651234567",          // Requis, 8-50 caractères
        "nomTitulaire": "Jean Dupont",         // Optionnel, max 100 caractères
        "isDefault": true                      // Optionnel, false par défaut
@@ -103,7 +283,7 @@ ENDPOINTS DISPONIBLES
      }
 
 
-3. LISTER TOUS LES MOYENS DE PAIEMENT DU VENDEUR CONNECTÉ
+4. LISTER TOUS LES MOYENS DE PAIEMENT DU VENDEUR CONNECTÉ
    =======================================================
    
    GET /payment-methods
@@ -134,7 +314,7 @@ ENDPOINTS DISPONIBLES
          {
            "id": 2,
            "vendeurId": 115,
-           "type": "master_card",
+           "type": "visa",
            "numeroCompte": "1234567890123456",
            "nomTitulaire": "Jean Dupont",
            "isDefault": false,
@@ -156,7 +336,7 @@ ENDPOINTS DISPONIBLES
      }
 
 
-4. RÉCUPÉRER LES MOYENS DE PAIEMENT ACTIFS D'UN VENDEUR (Pour acheteurs)
+5. RÉCUPÉRER LES MOYENS DE PAIEMENT ACTIFS D'UN VENDEUR (Pour acheteurs)
    =======================================================================
    
    GET /payment-methods/vendeur/:vendeurId
@@ -212,7 +392,7 @@ ENDPOINTS DISPONIBLES
      }
 
 
-5. MODIFIER UN MOYEN DE PAIEMENT
+6. MODIFIER UN MOYEN DE PAIEMENT
    ===============================
    
    PUT /payment-methods/:id
@@ -231,7 +411,7 @@ ENDPOINTS DISPONIBLES
    
    Body (JSON) - Tous les champs sont optionnels:
      {
-       "type": "orange_money" | "master_card",
+       "type": "cash" | "mpesa" | "orange_money" | "airtel_money" | "afrimoney" | "visa" | "master_card",
        "numeroCompte": "0651234568",
        "nomTitulaire": "Jean Dupont",
        "isDefault": true,
@@ -275,7 +455,7 @@ ENDPOINTS DISPONIBLES
      }
 
 
-6. ACTIVER UN MOYEN DE PAIEMENT
+7. ACTIVER UN MOYEN DE PAIEMENT
    ==============================
    
    PATCH /payment-methods/:id/activate
@@ -323,7 +503,7 @@ ENDPOINTS DISPONIBLES
      }
 
 
-7. DÉSACTIVER UN MOYEN DE PAIEMENT
+8. DÉSACTIVER UN MOYEN DE PAIEMENT
    =================================
    
    PATCH /payment-methods/:id/deactivate
@@ -381,7 +561,7 @@ ENDPOINTS DISPONIBLES
      }
 
 
-8. SUPPRIMER UN MOYEN DE PAIEMENT
+9. SUPPRIMER UN MOYEN DE PAIEMENT
    ================================
    
    DELETE /payment-methods/:id
@@ -423,13 +603,57 @@ ENDPOINTS DISPONIBLES
 
 
 ================================================================================
-MODÈLE DE DONNÉES
+WORKFLOW RECOMMANDÉ POUR LES VENDEURS
 ================================================================================
+
+1. Récupérer la liste des moyens de paiement disponibles :
+   GET /payment-methods/templates
+   → Affiche tous les moyens de paiement avec leurs images
+
+2. Activer un moyen de paiement :
+   POST /payment-methods/activate-template
+   {
+     "templateId": 3,
+     "numeroCompte": "0651234567",
+     "nomTitulaire": "Jean Dupont",
+     "isDefault": true
+   }
+   → Active le moyen de paiement avec le numéro de compte
+
+3. Gérer ses moyens de paiement :
+   GET /payment-methods
+   → Voir tous ses moyens de paiement activés
+   
+   PATCH /payment-methods/:id/activate
+   → Activer un moyen désactivé
+   
+   PATCH /payment-methods/:id/deactivate
+   → Désactiver un moyen (sauf le défaut)
+   
+   PUT /payment-methods/:id
+   → Modifier les informations d'un moyen
+
+
+================================================================================
+MODÈLES DE DONNÉES
+================================================================================
+
+PaymentMethodTemplate {
+  id: number                    // ID unique (auto-généré)
+  type: string                  // Type du moyen de paiement (cash, mpesa, etc.)
+  name: string                  // Nom affiché (ex: "Orange Money")
+  description: string | null    // Description du moyen de paiement
+  imageUrl: string              // URL de l'image (Cloudinary)
+  isActive: boolean             // Statut actif/inactif
+  displayOrder: number          // Ordre d'affichage
+  createdAt: DateTime           // Date de création
+  updatedAt: DateTime | null    // Date de dernière modification
+}
 
 PaymentMethod {
   id: number                    // ID unique (auto-généré)
   vendeurId: number             // ID du vendeur propriétaire
-  type: string                  // "orange_money" | "master_card"
+  type: string                  // "cash" | "mpesa" | "orange_money" | "airtel_money" | "afrimoney" | "visa" | "master_card"
   numeroCompte: string          // Numéro de compte/téléphone (8-50 caractères)
   nomTitulaire: string | null   // Nom du titulaire (optionnel, max 100 caractères)
   isDefault: boolean            // Moyen de paiement par défaut (false par défaut)
@@ -448,7 +672,7 @@ CODES DE STATUT HTTP
 400 Bad Request     - Requête invalide
 401 Unauthorized    - Non authentifié
 403 Forbidden       - Accès refusé (mauvais rôle ou pas propriétaire)
-404 Not Found       - Ressource non trouvée
+404 Not Found        - Ressource non trouvée
 422 Unprocessable   - Erreur de validation
 500 Internal Server Error - Erreur serveur
 
@@ -457,10 +681,21 @@ CODES DE STATUT HTTP
 EXEMPLES D'UTILISATION AVEC CURL
 ================================================================================
 
-1. Créer la table:
-   curl -X GET http://localhost:3333/payment-methods/create-table
+1. Récupérer tous les moyens de paiement disponibles (templates):
+   curl -X GET http://localhost:3333/payment-methods/templates
 
-2. Ajouter un moyen de paiement:
+2. Activer un moyen de paiement template:
+   curl -X POST http://localhost:3333/payment-methods/activate-template \
+     -H "Content-Type: application/json" \
+     -H "Authorization: Bearer YOUR_TOKEN" \
+     -d '{
+       "templateId": 3,
+       "numeroCompte": "0651234567",
+       "nomTitulaire": "Jean Dupont",
+       "isDefault": true
+     }'
+
+3. Ajouter un moyen de paiement directement:
    curl -X POST http://localhost:3333/payment-methods \
      -H "Content-Type: application/json" \
      -H "Authorization: Bearer YOUR_TOKEN" \
@@ -471,15 +706,15 @@ EXEMPLES D'UTILISATION AVEC CURL
        "isDefault": true
      }'
 
-3. Lister les moyens de paiement du vendeur:
+4. Lister les moyens de paiement du vendeur:
    curl -X GET http://localhost:3333/payment-methods \
      -H "Authorization: Bearer YOUR_TOKEN"
 
-4. Récupérer les moyens de paiement actifs d'un vendeur (pour acheteur):
+5. Récupérer les moyens de paiement actifs d'un vendeur (pour acheteur):
    curl -X GET http://localhost:3333/payment-methods/vendeur/1 \
      -H "Authorization: Bearer YOUR_TOKEN"
 
-5. Modifier un moyen de paiement:
+6. Modifier un moyen de paiement:
    curl -X PUT http://localhost:3333/payment-methods/1 \
      -H "Content-Type: application/json" \
      -H "Authorization: Bearer YOUR_TOKEN" \
@@ -488,15 +723,15 @@ EXEMPLES D'UTILISATION AVEC CURL
        "isDefault": true
      }'
 
-6. Activer un moyen de paiement:
+7. Activer un moyen de paiement:
    curl -X PATCH http://localhost:3333/payment-methods/2/activate \
      -H "Authorization: Bearer YOUR_TOKEN"
 
-7. Désactiver un moyen de paiement:
+8. Désactiver un moyen de paiement:
    curl -X PATCH http://localhost:3333/payment-methods/2/deactivate \
      -H "Authorization: Bearer YOUR_TOKEN"
 
-8. Supprimer un moyen de paiement:
+9. Supprimer un moyen de paiement:
    curl -X DELETE http://localhost:3333/payment-methods/2 \
      -H "Authorization: Bearer YOUR_TOKEN"
 
@@ -509,29 +744,45 @@ NOTES IMPORTANTES
    - Les endpoints de gestion (POST, PUT, DELETE, PATCH) sont réservés aux vendeurs
    - L'endpoint GET /payment-methods/vendeur/:vendeurId est accessible à tous
      les utilisateurs authentifiés (acheteurs, vendeurs, etc.)
+   - L'endpoint GET /payment-methods/templates est PUBLIC (pas d'authentification)
 
-2. Moyen de paiement par défaut:
+2. Templates vs PaymentMethods:
+   - Les templates sont les moyens de paiement prédéfinis dans le système
+   - Les PaymentMethods sont les moyens de paiement activés par les vendeurs
+   - Un vendeur peut activer plusieurs templates en ajoutant son numéro de compte
+
+3. Moyen de paiement par défaut:
    - Un seul moyen de paiement peut être défini comme défaut à la fois
    - Si un nouveau moyen est défini comme défaut, l'ancien perd ce statut
    - Impossible de désactiver le moyen de paiement par défaut
 
-3. Statut actif/inactif:
+4. Statut actif/inactif:
    - Seuls les moyens de paiement actifs (isActive = true) sont visibles
      pour les acheteurs via GET /payment-methods/vendeur/:vendeurId
    - Les vendeurs voient tous leurs moyens de paiement (actifs et inactifs)
      via GET /payment-methods
 
-4. Validation:
+5. Validation:
    - numeroCompte: 8 à 50 caractères
    - nomTitulaire: optionnel, maximum 100 caractères
-   - type: doit être "orange_money" ou "master_card"
+   - type: doit être un des types supportés (cash, mpesa, orange_money, etc.)
 
-5. Sécurité:
+6. Images:
+   - Chaque template a une image associée stockée sur Cloudinary
+   - Les images sont accessibles via l'URL dans le champ imageUrl
+   - Les images sont utilisées pour l'affichage dans l'interface utilisateur
+
+7. Sécurité:
    - Chaque vendeur ne peut gérer que ses propres moyens de paiement
    - Vérification de propriété effectuée sur tous les endpoints de modification
+   - Les templates sont en lecture seule (pas de modification possible)
+
+8. Activation de template:
+   - Si un vendeur active un template qu'il a déjà activé, le moyen de paiement
+     existant sera mis à jour avec les nouvelles informations
+   - Cela permet de modifier facilement le numéro de compte d'un moyen de paiement
 
 
 ================================================================================
 FIN DE LA DOCUMENTATION
 ================================================================================
-

@@ -6,6 +6,7 @@ import { randomUUID } from 'node:crypto'
 import logger from '@adonisjs/core/services/logger'
 import ecommerceCloudinaryService from '#services/ecommerce_cloudinary_service'
 import db from '@adonisjs/lucid/services/db'
+import PaymentMethod from '#models/payment_method'
 
 export default class EcommerceOrdersController {
   /**
@@ -30,8 +31,10 @@ export default class EcommerceOrdersController {
           total DECIMAL(10, 2) NOT NULL,
           package_photo VARCHAR(500),
           package_photo_public_id VARCHAR(500),
+          payment_method_id INTEGER,
           created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-          updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+          updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+          CONSTRAINT fk_payment_method FOREIGN KEY (payment_method_id) REFERENCES payment_methods(id) ON DELETE SET NULL
         );
         
         CREATE INDEX IF NOT EXISTS idx_ecommerce_orders_order_id ON ecommerce_orders(order_id);
@@ -96,6 +99,37 @@ export default class EcommerceOrdersController {
       // Déterminer le vendeur principal (premier produit)
       const vendorId = payload.produits[0].idVendeur
 
+      // Vérifier le moyen de paiement si fourni
+      let paymentMethodId = null
+      if (payload.paymentMethodId) {
+        const paymentMethod = await PaymentMethod.find(payload.paymentMethodId)
+        
+        if (!paymentMethod) {
+          return response.status(404).json({
+            success: false,
+            message: 'Moyen de paiement non trouvé',
+          })
+        }
+
+        // Vérifier que le moyen de paiement appartient au vendeur
+        if (paymentMethod.vendeurId !== vendorId) {
+          return response.status(403).json({
+            success: false,
+            message: 'Le moyen de paiement sélectionné n\'appartient pas au vendeur de cette commande',
+          })
+        }
+
+        // Vérifier que le moyen de paiement est actif
+        if (!paymentMethod.isActive) {
+          return response.status(400).json({
+            success: false,
+            message: 'Le moyen de paiement sélectionné n\'est pas actif',
+          })
+        }
+
+        paymentMethodId = paymentMethod.id
+      }
+
       // Créer la commande
       const order = await EcommerceOrder.create({
         orderId: randomUUID(),
@@ -124,6 +158,7 @@ export default class EcommerceOrdersController {
         total: total,
         packagePhoto: null,
         packagePhotoPublicId: null,
+        paymentMethodId: paymentMethodId,
       })
 
       // Logger la création
@@ -137,10 +172,28 @@ export default class EcommerceOrdersController {
         reason: null,
       })
 
+      // Recharger la commande avec le moyen de paiement si fourni
+      if (paymentMethodId) {
+        await order.load('paymentMethod')
+      }
+
+      // Formater le moyen de paiement pour inclure le type
+      const formattedPaymentMethod = order.paymentMethod
+        ? {
+            id: order.paymentMethod.id,
+            type: order.paymentMethod.type,
+            numeroCompte: order.paymentMethod.numeroCompte,
+            nomTitulaire: order.paymentMethod.nomTitulaire,
+            isDefault: order.paymentMethod.isDefault,
+            isActive: order.paymentMethod.isActive,
+          }
+        : null
+
       return response.status(201).json({
         success: true,
         orderId: order.orderId,
         status: order.status,
+        paymentMethod: formattedPaymentMethod,
         message: 'Commande créée avec succès',
       })
     } catch (error) {
@@ -173,11 +226,30 @@ export default class EcommerceOrdersController {
 
       const orders = await EcommerceOrder.query()
         .where('clientId', user.id)
+        .preload('paymentMethod')
         .orderBy('createdAt', 'desc')
+
+      // Formater les commandes pour inclure le type de moyen de paiement
+      const formattedOrders = orders.map((order) => {
+        const serialized = order.serialize()
+        return {
+          ...serialized,
+          paymentMethod: order.paymentMethod
+            ? {
+                id: order.paymentMethod.id,
+                type: order.paymentMethod.type,
+                numeroCompte: order.paymentMethod.numeroCompte,
+                nomTitulaire: order.paymentMethod.nomTitulaire,
+                isDefault: order.paymentMethod.isDefault,
+                isActive: order.paymentMethod.isActive,
+              }
+            : null,
+        }
+      })
 
       return response.status(200).json({
         success: true,
-        commandes: orders,
+        commandes: formattedOrders,
       })
     } catch (error) {
       logger.error('Erreur récupération commandes acheteur', {
@@ -202,11 +274,30 @@ export default class EcommerceOrdersController {
 
       const orders = await EcommerceOrder.query()
         .where('vendorId', user.id)
+        .preload('paymentMethod')
         .orderBy('createdAt', 'desc')
+
+      // Formater les commandes pour inclure le type de moyen de paiement
+      const formattedOrders = orders.map((order) => {
+        const serialized = order.serialize()
+        return {
+          ...serialized,
+          paymentMethod: order.paymentMethod
+            ? {
+                id: order.paymentMethod.id,
+                type: order.paymentMethod.type,
+                numeroCompte: order.paymentMethod.numeroCompte,
+                nomTitulaire: order.paymentMethod.nomTitulaire,
+                isDefault: order.paymentMethod.isDefault,
+                isActive: order.paymentMethod.isActive,
+              }
+            : null,
+        }
+      })
 
       return response.status(200).json({
         success: true,
-        commandes: orders,
+        commandes: formattedOrders,
       })
     } catch (error) {
       logger.error('Erreur récupération commandes vendeur', {
@@ -233,11 +324,30 @@ export default class EcommerceOrdersController {
           EcommerceOrderStatus.EN_ROUTE,
           EcommerceOrderStatus.DELIVERED,
         ])
+        .preload('paymentMethod')
         .orderBy('createdAt', 'desc')
+
+      // Formater les livraisons pour inclure le type de moyen de paiement
+      const formattedDeliveries = deliveries.map((order) => {
+        const serialized = order.serialize()
+        return {
+          ...serialized,
+          paymentMethod: order.paymentMethod
+            ? {
+                id: order.paymentMethod.id,
+                type: order.paymentMethod.type,
+                numeroCompte: order.paymentMethod.numeroCompte,
+                nomTitulaire: order.paymentMethod.nomTitulaire,
+                isDefault: order.paymentMethod.isDefault,
+                isActive: order.paymentMethod.isActive,
+              }
+            : null,
+        }
+      })
 
       return response.status(200).json({
         success: true,
-        livraison: deliveries,
+        livraison: formattedDeliveries,
       })
     } catch (error) {
       logger.error('Erreur récupération liste livraisons', {
@@ -313,9 +423,30 @@ export default class EcommerceOrdersController {
       order.status = payload.status as EcommerceOrderStatus
       await order.save()
 
+      // Recharger le moyen de paiement
+      await order.load('paymentMethod')
+
+      // Formater le moyen de paiement pour inclure le type
+      const formattedPaymentMethod = order.paymentMethod
+        ? {
+            id: order.paymentMethod.id,
+            type: order.paymentMethod.type,
+            numeroCompte: order.paymentMethod.numeroCompte,
+            nomTitulaire: order.paymentMethod.nomTitulaire,
+            isDefault: order.paymentMethod.isDefault,
+            isActive: order.paymentMethod.isActive,
+          }
+        : null
+
+      const serializedOrder = order.serialize()
+      const formattedOrder = {
+        ...serializedOrder,
+        paymentMethod: formattedPaymentMethod,
+      }
+
       return response.status(200).json({
         success: true,
-        order: order,
+        order: formattedOrder,
         message: `Statut mis à jour de "${oldStatus}" vers "${payload.status}"`,
       })
     } catch (error) {
@@ -392,9 +523,30 @@ export default class EcommerceOrdersController {
         reason: null,
       })
 
+      // Recharger le moyen de paiement
+      await order.load('paymentMethod')
+
+      // Formater le moyen de paiement pour inclure le type
+      const formattedPaymentMethod = order.paymentMethod
+        ? {
+            id: order.paymentMethod.id,
+            type: order.paymentMethod.type,
+            numeroCompte: order.paymentMethod.numeroCompte,
+            nomTitulaire: order.paymentMethod.nomTitulaire,
+            isDefault: order.paymentMethod.isDefault,
+            isActive: order.paymentMethod.isActive,
+          }
+        : null
+
+      const serializedOrder = order.serialize()
+      const formattedOrder = {
+        ...serializedOrder,
+        paymentMethod: formattedPaymentMethod,
+      }
+
       return response.status(200).json({
         success: true,
-        order: order,
+        order: formattedOrder,
         message: 'Livraison prise en charge avec succès',
       })
     } catch (error) {

@@ -18,6 +18,7 @@ export const createOrderValidator = vine.compile(
     numero: vine.string().trim(),
     pays: vine.string().trim().minLength(2),
     codePostale: vine.string().trim(),
+    paymentMethodId: vine.number().optional(),
   })
 )
 

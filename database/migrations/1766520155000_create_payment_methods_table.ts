@@ -15,7 +15,7 @@ export default class extends BaseSchema {
         .onDelete('CASCADE')
         .notNullable()
       table
-        .enum('type', Object.values(Modepaiement))
+        .string('type', 50)
         .notNullable()
         .defaultTo(Modepaiement.ORANGEMONEY)
       table.string('numero_compte', 50).notNullable() // Numéro de téléphone ou numéro de compte
