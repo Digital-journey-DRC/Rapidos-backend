@@ -11,6 +11,7 @@ import Adresse from './adresse.js'
 import Wallet from './wallet.js'
 import AccessToken from './access_token.js'
 import HoraireOuverture from './horaire_ouverture.js'
+import PaymentMethod from './payment_method.js'
 import { UserStatus } from '../Enum/user_status.js'
 
 const AuthFinder = withAuthFinder(() => hash.use('scrypt'), {
@@ -81,4 +82,9 @@ export default class User extends compose(BaseModel, AuthFinder) {
     foreignKey: 'vendeurId',
   })
   declare horairesOuverture: HasMany<typeof HoraireOuverture>
+
+  @hasMany(() => PaymentMethod, {
+    foreignKey: 'vendeurId',
+  })
+  declare paymentMethods: HasMany<typeof PaymentMethod>
 }

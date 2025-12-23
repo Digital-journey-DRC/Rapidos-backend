@@ -1,0 +1,35 @@
+import { BaseSchema } from '@adonisjs/lucid/schema'
+import { Modepaiement } from '../../app/Enum/mode_paiement.js'
+
+export default class extends BaseSchema {
+  protected tableName = 'payment_methods'
+
+  async up() {
+    this.schema.createTable(this.tableName, (table) => {
+      table.increments('id').primary()
+      table
+        .integer('vendeur_id')
+        .unsigned()
+        .references('id')
+        .inTable('users')
+        .onDelete('CASCADE')
+        .notNullable()
+      table
+        .enum('type', Object.values(Modepaiement))
+        .notNullable()
+        .defaultTo(Modepaiement.ORANGEMONEY)
+      table.string('numero_compte', 50).notNullable() // Numéro de téléphone ou numéro de compte
+      table.string('nom_titulaire', 100).nullable() // Nom du titulaire du compte
+      table.boolean('is_default').defaultTo(false).notNullable() // Moyen de paiement par défaut
+      table.timestamp('created_at', { useTz: true }).notNullable().defaultTo(this.now())
+      table.timestamp('updated_at', { useTz: true }).nullable()
+
+      table.index(['vendeur_id'])
+    })
+  }
+
+  async down() {
+    this.schema.dropTable(this.tableName)
+  }
+}
+

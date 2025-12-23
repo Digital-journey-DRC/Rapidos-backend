@@ -9,6 +9,7 @@ const PromotionsController = () => import('#controllers/promotions_controller')
 const HorairesOuvertureController = () => import('#controllers/horaires_ouverture_controller')
 const EventsController = () => import('#controllers/events_controller')
 const EcommerceOrdersController = () => import('#controllers/ecommerce_orders_controller')
+const PaymentMethodsController = () => import('#controllers/payment_methods_controller')
 
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
@@ -16,12 +17,6 @@ import YAML from 'yamljs'
 
 // Route pour servir la page Swagger UI
 router.get('/docs', async ({ response }) => {
-  const swaggerHtml = readFileSync(join(import.meta.dirname, '../resources/swagger.html'), 'utf-8')
-  return response.type('text/html').send(swaggerHtml)
-})
-
-// Route avec slash final pour /docs/
-router.get('/docs/', async ({ response }) => {
   const swaggerHtml = readFileSync(join(import.meta.dirname, '../resources/swagger.html'), 'utf-8')
   return response.type('text/html').send(swaggerHtml)
 })
@@ -327,6 +322,52 @@ router
 
 // ============================================================
 // FIN MODULE E-COMMERCE ORDERS
+// ============================================================
+
+// ============================================================
+// MODULE MOYENS DE PAIEMENT VENDEUR
+// ============================================================
+
+// Endpoint temporaire pour créer la table payment_methods
+router.get('/payment-methods/create-table', [PaymentMethodsController, 'createTable'])
+
+// POST /payment-methods - Ajouter un moyen de paiement (vendeur)
+router
+  .post('/payment-methods', [PaymentMethodsController, 'store'])
+  .use(middleware.auth({ guards: ['api'] }))
+
+// GET /payment-methods/vendeur/:vendeurId - Récupérer les moyens de paiement actifs d'un vendeur (pour acheteurs)
+router
+  .get('/payment-methods/vendeur/:vendeurId', [PaymentMethodsController, 'getByVendeurId'])
+  .use(middleware.auth({ guards: ['api'] }))
+
+// GET /payment-methods - Récupérer tous les moyens de paiement du vendeur connecté
+router
+  .get('/payment-methods', [PaymentMethodsController, 'index'])
+  .use(middleware.auth({ guards: ['api'] }))
+
+// PUT /payment-methods/:id - Modifier un moyen de paiement
+router
+  .put('/payment-methods/:id', [PaymentMethodsController, 'update'])
+  .use(middleware.auth({ guards: ['api'] }))
+
+// DELETE /payment-methods/:id - Supprimer un moyen de paiement
+router
+  .delete('/payment-methods/:id', [PaymentMethodsController, 'destroy'])
+  .use(middleware.auth({ guards: ['api'] }))
+
+// PATCH /payment-methods/:id/activate - Activer un moyen de paiement
+router
+  .patch('/payment-methods/:id/activate', [PaymentMethodsController, 'activate'])
+  .use(middleware.auth({ guards: ['api'] }))
+
+// PATCH /payment-methods/:id/deactivate - Désactiver un moyen de paiement
+router
+  .patch('/payment-methods/:id/deactivate', [PaymentMethodsController, 'deactivate'])
+  .use(middleware.auth({ guards: ['api'] }))
+
+// ============================================================
+// FIN MODULE MOYENS DE PAIEMENT VENDEUR
 // ============================================================
 
 // Route temporaire pour créer la table promotions (GET pour faciliter avec curl)

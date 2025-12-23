@@ -1,0 +1,537 @@
+================================================================================
+DOCUMENTATION API - MOYENS DE PAIEMENT VENDEUR
+================================================================================
+
+Ce document décrit tous les endpoints disponibles pour la gestion des moyens
+de paiement des vendeurs dans l'application Rapidos.
+
+================================================================================
+AUTHENTIFICATION
+================================================================================
+
+Tous les endpoints (sauf create-table) nécessitent une authentification via
+un token Bearer dans le header Authorization.
+
+Header requis:
+  Authorization: Bearer <token>
+
+Pour obtenir un token, utilisez l'endpoint de login:
+  POST /login
+  Body: {
+    "uid": "email_ou_telephone",
+    "password": "mot_de_passe"
+  }
+
+================================================================================
+ENDPOINTS DISPONIBLES
+================================================================================
+
+1. CRÉER LA TABLE (Endpoint temporaire)
+   =====================================
+   
+   GET /payment-methods/create-table
+   
+   Description:
+     Crée la table payment_methods dans la base de données.
+     À utiliser une seule fois lors de la mise en place.
+   
+   Authentification: NON REQUISE
+   
+   Réponse succès (201):
+     {
+       "message": "Table payment_methods créée avec succès"
+     }
+   
+   Réponse si table existe déjà (200):
+     {
+       "message": "La table payment_methods existe déjà"
+     }
+
+
+2. AJOUTER UN MOYEN DE PAIEMENT (Vendeur uniquement)
+   ===================================================
+   
+   POST /payment-methods
+   
+   Description:
+     Permet à un vendeur d'ajouter un nouveau moyen de paiement.
+   
+   Authentification: REQUISE (Vendeur uniquement)
+   
+   Headers:
+     Content-Type: application/json
+     Authorization: Bearer <token>
+   
+   Body (JSON):
+     {
+       "type": "orange_money" | "master_card",
+       "numeroCompte": "0651234567",          // Requis, 8-50 caractères
+       "nomTitulaire": "Jean Dupont",         // Optionnel, max 100 caractères
+       "isDefault": true                      // Optionnel, false par défaut
+     }
+   
+   Règles:
+     - Si isDefault = true, tous les autres moyens de paiement du vendeur
+       perdent leur statut de défaut
+     - Le moyen de paiement est créé avec isActive = true par défaut
+   
+   Réponse succès (201):
+     {
+       "message": "Moyen de paiement ajouté avec succès",
+       "paymentMethod": {
+         "id": 1,
+         "vendeurId": 115,
+         "type": "orange_money",
+         "numeroCompte": "0651234567",
+         "nomTitulaire": "Jean Dupont",
+         "isDefault": true,
+         "isActive": true,
+         "createdAt": "2025-01-22T20:00:00.000Z",
+         "updatedAt": null
+       }
+     }
+   
+   Réponse erreur (403):
+     {
+       "message": "Seuls les vendeurs peuvent ajouter des moyens de paiement"
+     }
+   
+   Réponse erreur (422):
+     {
+       "message": "Validation failed",
+       "errors": [...]
+     }
+
+
+3. LISTER TOUS LES MOYENS DE PAIEMENT DU VENDEUR CONNECTÉ
+   =======================================================
+   
+   GET /payment-methods
+   
+   Description:
+     Récupère tous les moyens de paiement du vendeur connecté (actifs et inactifs).
+   
+   Authentification: REQUISE (Vendeur uniquement)
+   
+   Headers:
+     Authorization: Bearer <token>
+   
+   Réponse succès (200):
+     {
+       "message": "Moyens de paiement récupérés avec succès",
+       "paymentMethods": [
+         {
+           "id": 1,
+           "vendeurId": 115,
+           "type": "orange_money",
+           "numeroCompte": "0651234567",
+           "nomTitulaire": "Jean Dupont",
+           "isDefault": true,
+           "isActive": true,
+           "createdAt": "2025-01-22T20:00:00.000Z",
+           "updatedAt": null
+         },
+         {
+           "id": 2,
+           "vendeurId": 115,
+           "type": "master_card",
+           "numeroCompte": "1234567890123456",
+           "nomTitulaire": "Jean Dupont",
+           "isDefault": false,
+           "isActive": true,
+           "createdAt": "2025-01-22T20:05:00.000Z",
+           "updatedAt": null
+         }
+       ]
+     }
+   
+   Tri:
+     - Les moyens de paiement actifs apparaissent en premier
+     - Puis triés par isDefault (défaut en premier)
+     - Puis par date de création (plus récents en premier)
+   
+   Réponse erreur (403):
+     {
+       "message": "Seuls les vendeurs peuvent consulter leurs moyens de paiement"
+     }
+
+
+4. RÉCUPÉRER LES MOYENS DE PAIEMENT ACTIFS D'UN VENDEUR (Pour acheteurs)
+   =======================================================================
+   
+   GET /payment-methods/vendeur/:vendeurId
+   
+   Description:
+     Permet à un acheteur (ou tout utilisateur authentifié) de récupérer
+     les moyens de paiement actifs d'un vendeur spécifique.
+     Utile lors de la sélection du moyen de paiement lors d'une commande.
+   
+   Authentification: REQUISE (Tous les utilisateurs authentifiés)
+   
+   Headers:
+     Authorization: Bearer <token>
+   
+   Paramètres URL:
+     :vendeurId - ID du vendeur (integer)
+   
+   Réponse succès (200):
+     {
+       "message": "Moyens de paiement du vendeur récupérés avec succès",
+       "vendeur": {
+         "id": 1,
+         "firstName": "Jean",
+         "lastName": "Dupont"
+       },
+       "paymentMethods": [
+         {
+           "id": 1,
+           "vendeurId": 1,
+           "type": "orange_money",
+           "numeroCompte": "0651234567",
+           "nomTitulaire": "Jean Dupont",
+           "isDefault": true,
+           "isActive": true,
+           "createdAt": "2025-01-22T20:00:00.000Z",
+           "updatedAt": null
+         }
+       ]
+     }
+   
+   Note:
+     - Seuls les moyens de paiement avec isActive = true sont retournés
+     - Triés par isDefault (défaut en premier), puis par date de création
+   
+   Réponse erreur (404):
+     {
+       "message": "Vendeur non trouvé"
+     }
+   
+   Réponse erreur (400):
+     {
+       "message": "L'utilisateur spécifié n'est pas un vendeur"
+     }
+
+
+5. MODIFIER UN MOYEN DE PAIEMENT
+   ===============================
+   
+   PUT /payment-methods/:id
+   
+   Description:
+     Permet à un vendeur de modifier un de ses moyens de paiement.
+   
+   Authentification: REQUISE (Vendeur uniquement)
+   
+   Headers:
+     Content-Type: application/json
+     Authorization: Bearer <token>
+   
+   Paramètres URL:
+     :id - ID du moyen de paiement (integer)
+   
+   Body (JSON) - Tous les champs sont optionnels:
+     {
+       "type": "orange_money" | "master_card",
+       "numeroCompte": "0651234568",
+       "nomTitulaire": "Jean Dupont",
+       "isDefault": true,
+       "isActive": true
+     }
+   
+   Règles:
+     - Si isDefault = true, tous les autres moyens de paiement du vendeur
+       perdent leur statut de défaut
+     - Seul le propriétaire du moyen de paiement peut le modifier
+   
+   Réponse succès (200):
+     {
+       "message": "Moyen de paiement mis à jour avec succès",
+       "paymentMethod": {
+         "id": 1,
+         "vendeurId": 115,
+         "type": "orange_money",
+         "numeroCompte": "0651234568",
+         "nomTitulaire": "Jean Dupont",
+         "isDefault": true,
+         "isActive": true,
+         "createdAt": "2025-01-22T20:00:00.000Z",
+         "updatedAt": "2025-01-22T21:00:00.000Z"
+       }
+     }
+   
+   Réponse erreur (403):
+     {
+       "message": "Seuls les vendeurs peuvent modifier leurs moyens de paiement"
+     }
+   
+   Réponse erreur (403):
+     {
+       "message": "Vous n'avez pas le droit de modifier ce moyen de paiement"
+     }
+   
+   Réponse erreur (404):
+     {
+       "message": "Moyen de paiement non trouvé"
+     }
+
+
+6. ACTIVER UN MOYEN DE PAIEMENT
+   ==============================
+   
+   PATCH /payment-methods/:id/activate
+   
+   Description:
+     Active un moyen de paiement désactivé.
+   
+   Authentification: REQUISE (Vendeur uniquement)
+   
+   Headers:
+     Authorization: Bearer <token>
+   
+   Paramètres URL:
+     :id - ID du moyen de paiement (integer)
+   
+   Réponse succès (200):
+     {
+       "message": "Moyen de paiement activé avec succès",
+       "paymentMethod": {
+         "id": 2,
+         "vendeurId": 115,
+         "type": "master_card",
+         "numeroCompte": "1234567890123456",
+         "nomTitulaire": "Jean Dupont",
+         "isDefault": false,
+         "isActive": true,
+         "createdAt": "2025-01-22T20:05:00.000Z",
+         "updatedAt": "2025-01-22T21:30:00.000Z"
+       }
+     }
+   
+   Réponse erreur (403):
+     {
+       "message": "Seuls les vendeurs peuvent activer leurs moyens de paiement"
+     }
+   
+   Réponse erreur (403):
+     {
+       "message": "Vous n'avez pas le droit d'activer ce moyen de paiement"
+     }
+   
+   Réponse erreur (404):
+     {
+       "message": "Moyen de paiement non trouvé"
+     }
+
+
+7. DÉSACTIVER UN MOYEN DE PAIEMENT
+   =================================
+   
+   PATCH /payment-methods/:id/deactivate
+   
+   Description:
+     Désactive un moyen de paiement. Un moyen de paiement désactivé n'apparaîtra
+     plus dans la liste des moyens de paiement disponibles pour les acheteurs.
+   
+   Authentification: REQUISE (Vendeur uniquement)
+   
+   Headers:
+     Authorization: Bearer <token>
+   
+   Paramètres URL:
+     :id - ID du moyen de paiement (integer)
+   
+   Règles:
+     - Impossible de désactiver le moyen de paiement par défaut
+     - Seul le propriétaire du moyen de paiement peut le désactiver
+   
+   Réponse succès (200):
+     {
+       "message": "Moyen de paiement désactivé avec succès",
+       "paymentMethod": {
+         "id": 2,
+         "vendeurId": 115,
+         "type": "master_card",
+         "numeroCompte": "1234567890123456",
+         "nomTitulaire": "Jean Dupont",
+         "isDefault": false,
+         "isActive": false,
+         "createdAt": "2025-01-22T20:05:00.000Z",
+         "updatedAt": "2025-01-22T21:30:00.000Z"
+       }
+     }
+   
+   Réponse erreur (400):
+     {
+       "message": "Impossible de désactiver le moyen de paiement par défaut. Veuillez d'abord définir un autre moyen de paiement par défaut."
+     }
+   
+   Réponse erreur (403):
+     {
+       "message": "Seuls les vendeurs peuvent désactiver leurs moyens de paiement"
+     }
+   
+   Réponse erreur (403):
+     {
+       "message": "Vous n'avez pas le droit de désactiver ce moyen de paiement"
+     }
+   
+   Réponse erreur (404):
+     {
+       "message": "Moyen de paiement non trouvé"
+     }
+
+
+8. SUPPRIMER UN MOYEN DE PAIEMENT
+   ================================
+   
+   DELETE /payment-methods/:id
+   
+   Description:
+     Supprime définitivement un moyen de paiement.
+   
+   Authentification: REQUISE (Vendeur uniquement)
+   
+   Headers:
+     Authorization: Bearer <token>
+   
+   Paramètres URL:
+     :id - ID du moyen de paiement (integer)
+   
+   Règles:
+     - Seul le propriétaire du moyen de paiement peut le supprimer
+     - La suppression est définitive
+   
+   Réponse succès (200):
+     {
+       "message": "Moyen de paiement supprimé avec succès"
+     }
+   
+   Réponse erreur (403):
+     {
+       "message": "Seuls les vendeurs peuvent supprimer leurs moyens de paiement"
+     }
+   
+   Réponse erreur (403):
+     {
+       "message": "Vous n'avez pas le droit de supprimer ce moyen de paiement"
+     }
+   
+   Réponse erreur (404):
+     {
+       "message": "Moyen de paiement non trouvé"
+     }
+
+
+================================================================================
+MODÈLE DE DONNÉES
+================================================================================
+
+PaymentMethod {
+  id: number                    // ID unique (auto-généré)
+  vendeurId: number             // ID du vendeur propriétaire
+  type: string                  // "orange_money" | "master_card"
+  numeroCompte: string          // Numéro de compte/téléphone (8-50 caractères)
+  nomTitulaire: string | null   // Nom du titulaire (optionnel, max 100 caractères)
+  isDefault: boolean            // Moyen de paiement par défaut (false par défaut)
+  isActive: boolean             // Statut actif/inactif (true par défaut)
+  createdAt: DateTime           // Date de création
+  updatedAt: DateTime | null    // Date de dernière modification
+}
+
+
+================================================================================
+CODES DE STATUT HTTP
+================================================================================
+
+200 OK              - Requête réussie
+201 Created         - Ressource créée avec succès
+400 Bad Request     - Requête invalide
+401 Unauthorized    - Non authentifié
+403 Forbidden       - Accès refusé (mauvais rôle ou pas propriétaire)
+404 Not Found       - Ressource non trouvée
+422 Unprocessable   - Erreur de validation
+500 Internal Server Error - Erreur serveur
+
+
+================================================================================
+EXEMPLES D'UTILISATION AVEC CURL
+================================================================================
+
+1. Créer la table:
+   curl -X GET http://localhost:3333/payment-methods/create-table
+
+2. Ajouter un moyen de paiement:
+   curl -X POST http://localhost:3333/payment-methods \
+     -H "Content-Type: application/json" \
+     -H "Authorization: Bearer YOUR_TOKEN" \
+     -d '{
+       "type": "orange_money",
+       "numeroCompte": "0651234567",
+       "nomTitulaire": "Jean Dupont",
+       "isDefault": true
+     }'
+
+3. Lister les moyens de paiement du vendeur:
+   curl -X GET http://localhost:3333/payment-methods \
+     -H "Authorization: Bearer YOUR_TOKEN"
+
+4. Récupérer les moyens de paiement actifs d'un vendeur (pour acheteur):
+   curl -X GET http://localhost:3333/payment-methods/vendeur/1 \
+     -H "Authorization: Bearer YOUR_TOKEN"
+
+5. Modifier un moyen de paiement:
+   curl -X PUT http://localhost:3333/payment-methods/1 \
+     -H "Content-Type: application/json" \
+     -H "Authorization: Bearer YOUR_TOKEN" \
+     -d '{
+       "numeroCompte": "0651234568",
+       "isDefault": true
+     }'
+
+6. Activer un moyen de paiement:
+   curl -X PATCH http://localhost:3333/payment-methods/2/activate \
+     -H "Authorization: Bearer YOUR_TOKEN"
+
+7. Désactiver un moyen de paiement:
+   curl -X PATCH http://localhost:3333/payment-methods/2/deactivate \
+     -H "Authorization: Bearer YOUR_TOKEN"
+
+8. Supprimer un moyen de paiement:
+   curl -X DELETE http://localhost:3333/payment-methods/2 \
+     -H "Authorization: Bearer YOUR_TOKEN"
+
+
+================================================================================
+NOTES IMPORTANTES
+================================================================================
+
+1. Rôles:
+   - Les endpoints de gestion (POST, PUT, DELETE, PATCH) sont réservés aux vendeurs
+   - L'endpoint GET /payment-methods/vendeur/:vendeurId est accessible à tous
+     les utilisateurs authentifiés (acheteurs, vendeurs, etc.)
+
+2. Moyen de paiement par défaut:
+   - Un seul moyen de paiement peut être défini comme défaut à la fois
+   - Si un nouveau moyen est défini comme défaut, l'ancien perd ce statut
+   - Impossible de désactiver le moyen de paiement par défaut
+
+3. Statut actif/inactif:
+   - Seuls les moyens de paiement actifs (isActive = true) sont visibles
+     pour les acheteurs via GET /payment-methods/vendeur/:vendeurId
+   - Les vendeurs voient tous leurs moyens de paiement (actifs et inactifs)
+     via GET /payment-methods
+
+4. Validation:
+   - numeroCompte: 8 à 50 caractères
+   - nomTitulaire: optionnel, maximum 100 caractères
+   - type: doit être "orange_money" ou "master_card"
+
+5. Sécurité:
+   - Chaque vendeur ne peut gérer que ses propres moyens de paiement
+   - Vérification de propriété effectuée sur tous les endpoints de modification
+
+
+================================================================================
+FIN DE LA DOCUMENTATION
+================================================================================
+
