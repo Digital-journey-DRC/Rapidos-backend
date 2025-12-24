@@ -1,0 +1,690 @@
+import Promotion from '#models/promotion';
+import Product from '#models/product';
+import Media from '#models/media';
+import { createPromotionValidator, updatePromotionValidator } from '#validators/promotion';
+import { manageUploadPromotionImages } from '#services/managepromotionimages';
+import logger from '@adonisjs/core/services/logger';
+import db from '@adonisjs/lucid/services/db';
+import { DateTime } from 'luxon';
+import { UserRole } from '../Enum/user_role.js';
+export default class PromotionsController {
+    async createTable({ response }) {
+        try {
+            try {
+                await db.rawQuery('DROP TABLE IF EXISTS promotions CASCADE');
+            }
+            catch (error) {
+            }
+            const migrationSQL = `
+        CREATE TABLE promotions (
+          id SERIAL PRIMARY KEY,
+          product_id INTEGER NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+          image VARCHAR(255) NOT NULL,
+          image_1 VARCHAR(255) NULL,
+          image_2 VARCHAR(255) NULL,
+          image_3 VARCHAR(255) NULL,
+          image_4 VARCHAR(255) NULL,
+          libelle VARCHAR(255) NOT NULL,
+          likes INTEGER DEFAULT 0,
+          delai_promotion TIMESTAMP NOT NULL,
+          nouveau_prix DECIMAL(10, 2) NOT NULL,
+          ancien_prix DECIMAL(10, 2) NOT NULL,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+      `;
+            await db.rawQuery(migrationSQL);
+            const checkTable = await db.rawQuery(`
+        SELECT column_name 
+        FROM information_schema.columns 
+        WHERE table_name = 'promotions' 
+        ORDER BY column_name;
+      `);
+            return response.ok({
+                message: 'Table promotions créée avec succès!',
+                status: 200,
+                columns: checkTable.rows.map((row) => row.column_name),
+            });
+        }
+        catch (error) {
+            if (error.message?.includes('already exists') || error.code === '42P07') {
+                return response.ok({
+                    message: 'La table promotions existe déjà',
+                    status: 200,
+                });
+            }
+            return response.internalServerError({
+                message: 'Erreur lors de la création de la table',
+                error: error.message,
+                status: 500,
+            });
+        }
+    }
+    async index({ response, auth }) {
+        try {
+            const user = auth.user;
+            if (!user) {
+                return response.status(401).json({
+                    message: "Vous devez être connecté pour voir les promotions",
+                });
+            }
+            const now = DateTime.now().toISO();
+            const promotions = await Promotion.query()
+                .preload('product', (productQuery) => {
+                productQuery
+                    .preload('media')
+                    .preload('category')
+                    .preload('vendeur', (vendeurQuery) => {
+                    vendeurQuery.preload('profil', (profilQuery) => {
+                        profilQuery.preload('media');
+                    });
+                });
+            })
+                .where('delaiPromotion', '>', now)
+                .where((query) => {
+                query
+                    .whereNull('dateDebutPromotion')
+                    .orWhere('dateDebutPromotion', '<=', now);
+            })
+                .orderBy('createdAt', 'desc');
+            if (promotions.length === 0) {
+                return response.status(404).json({ message: 'Aucune promotion trouvée' });
+            }
+            const promotionsFormatted = await Promise.all(promotions.map(async (promotion) => {
+                const product = promotion.product;
+                const promotionImages = [];
+                if (promotion.image1)
+                    promotionImages.push(promotion.image1);
+                if (promotion.image2)
+                    promotionImages.push(promotion.image2);
+                if (promotion.image3)
+                    promotionImages.push(promotion.image3);
+                if (promotion.image4)
+                    promotionImages.push(promotion.image4);
+                const allProductMedias = await Media.query()
+                    .where('productId', product.id)
+                    .orderBy('created_at', 'asc');
+                const productMainImage = allProductMedias.length > 0 ? allProductMedias[0].mediaUrl : null;
+                const productSecondaryImages = allProductMedias.length > 1
+                    ? allProductMedias.slice(1).map((media) => media.mediaUrl)
+                    : [];
+                return {
+                    id: promotion.id,
+                    productId: promotion.productId,
+                    image: promotion.image,
+                    images: promotionImages,
+                    libelle: promotion.libelle,
+                    likes: promotion.likes || 0,
+                    dateDebutPromotion: promotion.dateDebutPromotion || DateTime.now(),
+                    delaiPromotion: promotion.delaiPromotion,
+                    nouveauPrix: promotion.nouveauPrix,
+                    ancienPrix: promotion.ancienPrix,
+                    product: {
+                        id: product.id,
+                        name: product.name,
+                        description: product.description,
+                        price: product.price,
+                        stock: product.stock,
+                        category: product.category,
+                        image: productMainImage,
+                        images: productSecondaryImages,
+                        vendeur: product.vendeur,
+                    },
+                    createdAt: promotion.createdAt,
+                    updatedAt: promotion.updatedAt,
+                };
+            }));
+            return response.status(200).json({
+                message: 'Produits en promotion récupérés avec succès',
+                promotions: promotionsFormatted,
+            });
+        }
+        catch (error) {
+            logger.error({
+                message: 'Erreur lors de la récupération des promotions',
+                error: error.message,
+            });
+            return response.status(500).json({
+                message: 'Erreur serveur interne',
+                error: error.message,
+            });
+        }
+    }
+    async show({ params, response, auth }) {
+        const { id } = params;
+        try {
+            const user = auth.user;
+            if (!user) {
+                return response.status(401).json({
+                    message: "Vous devez être connecté pour voir les promotions",
+                });
+            }
+            const now = DateTime.now().toISO();
+            const promotion = await Promotion.query()
+                .where('id', id)
+                .where('delaiPromotion', '>', now)
+                .where((query) => {
+                query
+                    .whereNull('dateDebutPromotion')
+                    .orWhere('dateDebutPromotion', '<=', now);
+            })
+                .preload('product', (productQuery) => {
+                productQuery
+                    .preload('media')
+                    .preload('category')
+                    .preload('vendeur', (vendeurQuery) => {
+                    vendeurQuery.preload('profil', (profilQuery) => {
+                        profilQuery.preload('media');
+                    });
+                });
+            })
+                .firstOrFail();
+            const product = promotion.product;
+            const promotionImages = [];
+            if (promotion.image1)
+                promotionImages.push(promotion.image1);
+            if (promotion.image2)
+                promotionImages.push(promotion.image2);
+            if (promotion.image3)
+                promotionImages.push(promotion.image3);
+            if (promotion.image4)
+                promotionImages.push(promotion.image4);
+            const allProductMedias = await Media.query()
+                .where('productId', product.id)
+                .orderBy('created_at', 'asc');
+            const productMainImage = allProductMedias.length > 0 ? allProductMedias[0].mediaUrl : null;
+            const productSecondaryImages = allProductMedias.length > 1
+                ? allProductMedias.slice(1).map((media) => media.mediaUrl)
+                : [];
+            const promotionFormatted = {
+                id: promotion.id,
+                productId: promotion.productId,
+                image: promotion.image,
+                images: promotionImages,
+                libelle: promotion.libelle,
+                likes: promotion.likes || 0,
+                dateDebutPromotion: promotion.dateDebutPromotion || DateTime.now(),
+                delaiPromotion: promotion.delaiPromotion,
+                nouveauPrix: promotion.nouveauPrix,
+                ancienPrix: promotion.ancienPrix,
+                product: {
+                    id: product.id,
+                    name: product.name,
+                    description: product.description,
+                    price: product.price,
+                    stock: product.stock,
+                    category: product.category,
+                    image: productMainImage,
+                    images: productSecondaryImages,
+                    vendeur: product.vendeur,
+                },
+                createdAt: promotion.createdAt,
+                updatedAt: promotion.updatedAt,
+            };
+            return response.status(200).json({
+                message: 'Promotion récupérée avec succès',
+                promotion: promotionFormatted,
+            });
+        }
+        catch (error) {
+            if (error.code === 'E_ROW_NOT_FOUND') {
+                return response.status(404).json({
+                    message: 'Promotion non trouvée',
+                    error: error.message,
+                });
+            }
+            logger.error({
+                message: 'Erreur lors de la récupération de la promotion',
+                error: error.message,
+            });
+            return response.status(500).json({
+                message: 'Erreur serveur interne',
+                error: error.message,
+            });
+        }
+    }
+    async store({ request, response, auth }) {
+        try {
+            const user = auth.user;
+            if (!user) {
+                return response.status(401).json({
+                    message: "Vous n'êtes pas autorisé à faire cette action",
+                });
+            }
+            if (user.role !== UserRole.Vendeur) {
+                return response.status(403).json({
+                    message: "Seuls les vendeurs peuvent créer des promotions",
+                });
+            }
+            const payload = await request.validateUsing(createPromotionValidator);
+            const product = await Product.findOrFail(payload.productId);
+            if (product.vendeurId !== user.id) {
+                return response.status(403).json({
+                    message: "Vous n'êtes pas autorisé à créer une promotion pour ce produit",
+                });
+            }
+            const now = DateTime.now().toISO();
+            const existingPromotion = await Promotion.query()
+                .where('productId', payload.productId)
+                .where('delaiPromotion', '>', now)
+                .where((query) => {
+                query
+                    .whereNull('dateDebutPromotion')
+                    .orWhere('dateDebutPromotion', '<=', now);
+            })
+                .first();
+            if (existingPromotion) {
+                return response.status(409).json({
+                    message: 'Une promotion active existe déjà pour ce produit',
+                });
+            }
+            if (payload.nouveauPrix >= payload.ancienPrix) {
+                return response.status(422).json({
+                    message: 'Le nouveau prix doit être inférieur à l\'ancien prix',
+                });
+            }
+            const image = request.file('image');
+            const image1 = request.file('image1');
+            const image2 = request.file('image2');
+            const image3 = request.file('image3');
+            const image4 = request.file('image4');
+            if (!image || !image.isValid) {
+                return response.status(422).json({
+                    message: 'L\'image principale est requise',
+                    errors: image?.errors || ['Image principale manquante ou invalide'],
+                });
+            }
+            const { image: uploadedImage, image1: uploadedImage1, image2: uploadedImage2, image3: uploadedImage3, image4: uploadedImage4, errors } = await manageUploadPromotionImages(image, image1 || null, image2 || null, image3 || null, image4 || null);
+            if (!uploadedImage) {
+                return response.status(422).json({
+                    message: 'Erreur lors de l\'upload de l\'image principale',
+                    errors,
+                });
+            }
+            const promotion = await Promotion.create({
+                productId: payload.productId,
+                image: uploadedImage,
+                image1: uploadedImage1 || null,
+                image2: uploadedImage2 || null,
+                image3: uploadedImage3 || null,
+                image4: uploadedImage4 || null,
+                libelle: payload.libelle,
+                likes: payload.likes || 0,
+                dateDebutPromotion: payload.dateDebutPromotion ? DateTime.fromJSDate(payload.dateDebutPromotion) : null,
+                delaiPromotion: DateTime.fromJSDate(payload.delaiPromotion),
+                nouveauPrix: payload.nouveauPrix,
+                ancienPrix: payload.ancienPrix,
+            });
+            if (errors.length > 0) {
+                await promotion.load('product', (productQuery) => {
+                    productQuery.preload('media').preload('category').preload('vendeur');
+                });
+                const images = [];
+                if (promotion.image1)
+                    images.push(promotion.image1);
+                if (promotion.image2)
+                    images.push(promotion.image2);
+                if (promotion.image3)
+                    images.push(promotion.image3);
+                if (promotion.image4)
+                    images.push(promotion.image4);
+                const productData = promotion.product;
+                const promotionFormatted = {
+                    id: promotion.id,
+                    productId: promotion.productId,
+                    image: promotion.image,
+                    images: images,
+                    libelle: promotion.libelle,
+                    likes: promotion.likes || 0,
+                    dateDebutPromotion: promotion.dateDebutPromotion,
+                    delaiPromotion: promotion.delaiPromotion,
+                    nouveauPrix: promotion.nouveauPrix,
+                    ancienPrix: promotion.ancienPrix,
+                    product: {
+                        id: productData.id,
+                        name: productData.name,
+                        description: productData.description,
+                        price: productData.price,
+                        stock: productData.stock,
+                        category: productData.category,
+                        media: productData.media,
+                        vendeur: productData.vendeur,
+                    },
+                    createdAt: promotion.createdAt,
+                    updatedAt: promotion.updatedAt,
+                };
+                return response.status(207).json({
+                    message: 'Promotion créée avec succès, mais certaines images secondaires n\'ont pas pu être uploadées',
+                    promotion: promotionFormatted,
+                    errors,
+                });
+            }
+            await promotion.load('product', (productQuery) => {
+                productQuery.preload('media').preload('category').preload('vendeur');
+            });
+            const imagesArray = [];
+            if (promotion.image1)
+                imagesArray.push(promotion.image1);
+            if (promotion.image2)
+                imagesArray.push(promotion.image2);
+            if (promotion.image3)
+                imagesArray.push(promotion.image3);
+            if (promotion.image4)
+                imagesArray.push(promotion.image4);
+            const productInfo = promotion.product;
+            const promotionFormattedFinal = {
+                id: promotion.id,
+                productId: promotion.productId,
+                image: promotion.image,
+                images: imagesArray,
+                libelle: promotion.libelle,
+                likes: promotion.likes || 0,
+                dateDebutPromotion: promotion.dateDebutPromotion,
+                delaiPromotion: promotion.delaiPromotion,
+                nouveauPrix: promotion.nouveauPrix,
+                ancienPrix: promotion.ancienPrix,
+                product: {
+                    id: productInfo.id,
+                    name: productInfo.name,
+                    description: productInfo.description,
+                    price: productInfo.price,
+                    stock: productInfo.stock,
+                    category: productInfo.category,
+                    media: productInfo.media,
+                    vendeur: productInfo.vendeur,
+                },
+                createdAt: promotion.createdAt,
+                updatedAt: promotion.updatedAt,
+            };
+            return response.created({
+                message: 'Promotion créée avec succès',
+                promotion: promotionFormattedFinal,
+            });
+        }
+        catch (error) {
+            if (error.code === 'E_VALIDATION_FAILURE' || error.code === 'E_VALIDATION_ERROR') {
+                return response.status(422).json({
+                    message: 'Erreur de validation',
+                    errors: error.messages || error.errors || error.message
+                });
+            }
+            if (error.code === 'E_ROW_NOT_FOUND') {
+                return response.status(404).json({
+                    message: 'Produit non trouvé',
+                    error: error.message,
+                });
+            }
+            if (error.code === 'E_FILE_INVALID' ||
+                error.code === 'E_FILE_TOO_LARGE' ||
+                error.code === 'E_FILE_UNSUPPORTED_MEDIA_TYPE') {
+                return response.status(422).json({ message: error.message });
+            }
+            logger.error({
+                message: 'Erreur lors de la création de la promotion',
+                error: error.message,
+            });
+            return response.status(500).json({
+                message: 'Erreur serveur interne',
+                error: error.message,
+            });
+        }
+    }
+    async update({ params, request, response, auth }) {
+        const { id } = params;
+        try {
+            const user = auth.user;
+            if (!user) {
+                return response.status(401).json({
+                    message: "Vous n'êtes pas autorisé à faire cette action",
+                });
+            }
+            if (user.role !== UserRole.Vendeur) {
+                return response.status(403).json({
+                    message: "Seuls les vendeurs peuvent modifier des promotions",
+                });
+            }
+            const promotion = await Promotion.findOrFail(id);
+            await promotion.load('product');
+            if (promotion.product.vendeurId !== user.id) {
+                return response.status(403).json({
+                    message: "Vous n'êtes pas autorisé à modifier cette promotion",
+                });
+            }
+            const payload = await request.validateUsing(updatePromotionValidator);
+            const image = request.file('image');
+            const image1 = request.file('image1');
+            const image2 = request.file('image2');
+            const image3 = request.file('image3');
+            const image4 = request.file('image4');
+            const deleteImage1 = request.input('deleteImage1') === 'true';
+            const deleteImage2 = request.input('deleteImage2') === 'true';
+            const deleteImage3 = request.input('deleteImage3') === 'true';
+            const deleteImage4 = request.input('deleteImage4') === 'true';
+            const updateData = { ...payload };
+            if (image || image1 || image2 || image3 || image4) {
+                const { image: uploadedImage, image1: uploadedImage1, image2: uploadedImage2, image3: uploadedImage3, image4: uploadedImage4, errors } = await manageUploadPromotionImages(image || null, image1 || null, image2 || null, image3 || null, image4 || null);
+                if (uploadedImage)
+                    updateData.image = uploadedImage;
+                if (uploadedImage1 !== null)
+                    updateData.image1 = uploadedImage1;
+                if (uploadedImage2 !== null)
+                    updateData.image2 = uploadedImage2;
+                if (uploadedImage3 !== null)
+                    updateData.image3 = uploadedImage3;
+                if (uploadedImage4 !== null)
+                    updateData.image4 = uploadedImage4;
+                if (image && !uploadedImage) {
+                    return response.status(422).json({
+                        message: 'Erreur lors de l\'upload de l\'image principale',
+                        errors,
+                    });
+                }
+            }
+            if (deleteImage1)
+                updateData.image1 = null;
+            if (deleteImage2)
+                updateData.image2 = null;
+            if (deleteImage3)
+                updateData.image3 = null;
+            if (deleteImage4)
+                updateData.image4 = null;
+            if (payload.nouveauPrix !== undefined && payload.ancienPrix !== undefined) {
+                if (payload.nouveauPrix >= payload.ancienPrix) {
+                    return response.status(422).json({
+                        message: 'Le nouveau prix doit être inférieur à l\'ancien prix',
+                    });
+                }
+            }
+            else if (payload.nouveauPrix !== undefined) {
+                if (payload.nouveauPrix >= promotion.ancienPrix) {
+                    return response.status(422).json({
+                        message: 'Le nouveau prix doit être inférieur à l\'ancien prix',
+                    });
+                }
+            }
+            else if (payload.ancienPrix !== undefined) {
+                if (promotion.nouveauPrix >= payload.ancienPrix) {
+                    return response.status(422).json({
+                        message: 'Le nouveau prix doit être inférieur à l\'ancien prix',
+                    });
+                }
+            }
+            if (payload.dateDebutPromotion) {
+                updateData.dateDebutPromotion = DateTime.fromJSDate(payload.dateDebutPromotion);
+            }
+            if (payload.delaiPromotion) {
+                updateData.delaiPromotion = DateTime.fromJSDate(payload.delaiPromotion);
+            }
+            promotion.merge(updateData);
+            await promotion.save();
+            await promotion.load('product', (productQuery) => {
+                productQuery.preload('media').preload('category').preload('vendeur');
+            });
+            const imagesUpdate = [];
+            if (promotion.image1)
+                imagesUpdate.push(promotion.image1);
+            if (promotion.image2)
+                imagesUpdate.push(promotion.image2);
+            if (promotion.image3)
+                imagesUpdate.push(promotion.image3);
+            if (promotion.image4)
+                imagesUpdate.push(promotion.image4);
+            const productUpdate = promotion.product;
+            const promotionFormattedUpdate = {
+                id: promotion.id,
+                productId: promotion.productId,
+                image: promotion.image,
+                images: imagesUpdate,
+                libelle: promotion.libelle,
+                likes: promotion.likes || 0,
+                dateDebutPromotion: promotion.dateDebutPromotion,
+                delaiPromotion: promotion.delaiPromotion,
+                nouveauPrix: promotion.nouveauPrix,
+                ancienPrix: promotion.ancienPrix,
+                product: {
+                    id: productUpdate.id,
+                    name: productUpdate.name,
+                    description: productUpdate.description,
+                    price: productUpdate.price,
+                    stock: productUpdate.stock,
+                    category: productUpdate.category,
+                    media: productUpdate.media,
+                    vendeur: productUpdate.vendeur,
+                },
+                createdAt: promotion.createdAt,
+                updatedAt: promotion.updatedAt,
+            };
+            return response.status(200).json({
+                message: 'Promotion mise à jour avec succès',
+                promotion: promotionFormattedUpdate,
+            });
+        }
+        catch (error) {
+            if (error.code === 'E_VALIDATION_FAILURE') {
+                return response.status(422).json({ message: error.messages });
+            }
+            if (error.code === 'E_ROW_NOT_FOUND') {
+                return response.status(404).json({
+                    message: 'Promotion non trouvée',
+                    error: error.message,
+                });
+            }
+            if (error.code === 'E_FILE_INVALID' ||
+                error.code === 'E_FILE_TOO_LARGE' ||
+                error.code === 'E_FILE_UNSUPPORTED_MEDIA_TYPE') {
+                return response.status(422).json({ message: error.message });
+            }
+            logger.error({
+                message: 'Erreur lors de la mise à jour de la promotion',
+                error: error.message,
+            });
+            return response.status(500).json({
+                message: 'Erreur serveur interne',
+                error: error.message,
+            });
+        }
+    }
+    async destroy({ params, response, auth }) {
+        const { id } = params;
+        try {
+            const user = auth.user;
+            if (!user) {
+                return response.status(401).json({
+                    message: "Vous n'êtes pas autorisé à faire cette action",
+                });
+            }
+            if (user.role !== UserRole.Vendeur) {
+                return response.status(403).json({
+                    message: "Seuls les vendeurs peuvent supprimer des promotions",
+                });
+            }
+            const promotion = await Promotion.findOrFail(id);
+            await promotion.load('product');
+            if (promotion.product.vendeurId !== user.id) {
+                return response.status(403).json({
+                    message: "Vous n'êtes pas autorisé à supprimer cette promotion",
+                });
+            }
+            await promotion.delete();
+            return response.status(200).json({
+                message: 'Promotion supprimée avec succès',
+                status: true,
+            });
+        }
+        catch (error) {
+            if (error.code === 'E_ROW_NOT_FOUND') {
+                return response.status(404).json({
+                    message: 'Promotion non trouvée',
+                    error: error.message,
+                });
+            }
+            logger.error({
+                message: 'Erreur lors de la suppression de la promotion',
+                error: error.message,
+            });
+            return response.status(500).json({
+                message: 'Erreur serveur interne',
+                error: error.message,
+            });
+        }
+    }
+    async testIndex({ response }) {
+        try {
+            const promotions = await Promotion.query()
+                .preload('product', (productQuery) => {
+                productQuery
+                    .preload('media')
+                    .preload('category')
+                    .preload('vendeur', (vendeurQuery) => {
+                    vendeurQuery.preload('profil', (profilQuery) => {
+                        profilQuery.preload('media');
+                    });
+                });
+            });
+            const promotionsFormatted = promotions.map((promotion) => {
+                const product = promotion.product;
+                const images = [
+                    promotion.image1,
+                    promotion.image2,
+                    promotion.image3,
+                    promotion.image4
+                ].filter((img) => img !== null);
+                return {
+                    id: promotion.id,
+                    image: promotion.image,
+                    images: images,
+                    libelle: promotion.libelle,
+                    likes: promotion.likes || 0,
+                    dateDebutPromotion: promotion.dateDebutPromotion || DateTime.now(),
+                    delaiPromotion: promotion.delaiPromotion,
+                    nouveauPrix: promotion.nouveauPrix,
+                    ancienPrix: promotion.ancienPrix,
+                    product: {
+                        id: product.id,
+                        name: product.name,
+                        description: product.description,
+                        price: product.price,
+                        stock: product.stock,
+                        category: product.category,
+                        media: product.media,
+                        vendeur: product.vendeur,
+                    },
+                    createdAt: promotion.createdAt,
+                    updatedAt: promotion.updatedAt,
+                };
+            });
+            return response.status(200).json({
+                message: 'Promotions récupérées avec succès (TEST)',
+                promotions: promotionsFormatted,
+            });
+        }
+        catch (error) {
+            console.error('Erreur lors de la récupération des promotions:', error);
+            return response.status(500).json({
+                message: 'Erreur lors de la récupération des promotions',
+                error: error.message,
+            });
+        }
+    }
+}
+//# sourceMappingURL=promotions_controller.js.map

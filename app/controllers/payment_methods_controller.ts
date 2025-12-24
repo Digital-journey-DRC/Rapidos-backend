@@ -7,7 +7,6 @@ import {
   activateTemplateValidator,
 } from '#validators/payment_method'
 import { UserRole } from '../Enum/user_role.js'
-import User from '#models/user'
 
 export default class PaymentMethodsController {
   /**

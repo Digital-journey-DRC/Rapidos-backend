@@ -4,7 +4,7 @@ module.exports = {
     {
       name: 'rapidos-api',
       script: 'build/bin/server.js',
-      interpreter: '/Users/stanislasmakengo/.nvm/versions/node/v20.19.2/bin/node',
+      interpreter: '/usr/local/bin/node',
       env: {
         TZ: 'UTC',
         PORT: 3333,
