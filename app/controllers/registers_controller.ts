@@ -11,6 +11,7 @@ import {
   setPasswordValidator,
   UpdateUserValidator,
   UpdateUserValidatorForAdmin,
+  updateVendorLocationValidator,
 } from '#validators/user'
 import type { HttpContext } from '@adonisjs/core/http'
 import logger from '@adonisjs/core/services/logger'
@@ -845,6 +846,120 @@ export default class RegistersController {
       })
       return response.internalServerError({
         message: 'Erreur interne lors de la modification du mot de passe',
+        status: 500,
+        error: error.message,
+      })
+    }
+  }
+
+  /**
+   * POST /users/location
+   * Enregistrer la latitude et longitude du vendeur
+   */
+  async updateVendorLocation({ request, response, auth }: HttpContext) {
+    try {
+      const user = auth.user!
+
+      // Vérifier que l'utilisateur est un vendeur
+      if (user.role !== UserRole.Vendeur) {
+        return response.forbidden({
+          message: 'Seuls les vendeurs peuvent enregistrer leur localisation',
+          status: 403,
+        })
+      }
+
+      // Vérifier si les colonnes existent, sinon les créer
+      const dbService = await import('@adonisjs/lucid/services/db')
+      const db = dbService.default
+      
+      const columnsExist = await db.rawQuery(`
+        SELECT column_name 
+        FROM information_schema.columns 
+        WHERE table_name = 'users' 
+        AND column_name IN ('latitude', 'longitude');
+      `)
+      
+      const existingColumns = columnsExist.rows.map((r: any) => r.column_name)
+      
+      if (!existingColumns.includes('latitude')) {
+        await db.rawQuery(`
+          ALTER TABLE users 
+          ADD COLUMN IF NOT EXISTS latitude DECIMAL(10, 8) NULL;
+        `)
+      }
+      
+      if (!existingColumns.includes('longitude')) {
+        await db.rawQuery(`
+          ALTER TABLE users 
+          ADD COLUMN IF NOT EXISTS longitude DECIMAL(11, 8) NULL;
+        `)
+      }
+
+      const payload = await request.validateUsing(updateVendorLocationValidator)
+
+      // Mettre à jour la localisation du vendeur
+      user.latitude = payload.latitude
+      user.longitude = payload.longitude
+      await user.save()
+
+      logger.info('Localisation du vendeur mise à jour', {
+        userId: user.id,
+        latitude: payload.latitude,
+        longitude: payload.longitude,
+      })
+
+      return response.ok({
+        message: 'Localisation enregistrée avec succès',
+        location: {
+          latitude: user.latitude,
+          longitude: user.longitude,
+        },
+        status: 200,
+      })
+    } catch (error) {
+      logger.error('Erreur lors de l\'enregistrement de la localisation', {
+        message: error.message,
+        stack: error.stack,
+      })
+      return response.internalServerError({
+        message: 'Erreur interne lors de l\'enregistrement de la localisation',
+        status: 500,
+        error: error.message,
+      })
+    }
+  }
+
+  /**
+   * GET /users/location
+   * Récupérer la latitude et longitude du vendeur connecté
+   */
+  async getVendorLocation({ response, auth }: HttpContext) {
+    try {
+      const user = auth.user!
+
+      // Vérifier que l'utilisateur est un vendeur
+      if (user.role !== UserRole.Vendeur) {
+        return response.forbidden({
+          message: 'Seuls les vendeurs peuvent consulter leur localisation',
+          status: 403,
+        })
+      }
+
+      return response.ok({
+        message: 'Localisation récupérée avec succès',
+        location: {
+          latitude: user.latitude,
+          longitude: user.longitude,
+        },
+        status: 200,
+      })
+    } catch (error) {
+      logger.error('Erreur lors de la récupération de la localisation', {
+        message: error.message,
+        stack: error.stack,
+      })
+      return response.internalServerError({
+        message: 'Erreur interne lors de la récupération de la localisation',
         status: 500,
         error: error.message,
       })

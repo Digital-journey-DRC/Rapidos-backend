@@ -59,6 +59,12 @@ export default class User extends compose(BaseModel, AuthFinder) {
   @column()
   declare userStatus: UserStatus | null
 
+  @column()
+  declare latitude: number | null
+
+  @column()
+  declare longitude: number | null
+
   static accessTokens = DbAccessTokensProvider.forModel(User, {
     expiresIn: '30 days',
   })

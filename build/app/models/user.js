@@ -82,6 +82,14 @@ __decorate([
     __metadata("design:type", Object)
 ], User.prototype, "userStatus", void 0);
 __decorate([
+    column(),
+    __metadata("design:type", Object)
+], User.prototype, "latitude", void 0);
+__decorate([
+    column(),
+    __metadata("design:type", Object)
+], User.prototype, "longitude", void 0);
+__decorate([
     hasOne(() => Profil, {
         foreignKey: 'userId',
         localKey: 'id',

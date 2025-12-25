@@ -44,6 +44,12 @@ router
 router
     .post('/users/update/:userId', [RegistersController, 'updateUser'])
     .use(middleware.auth({ guards: ['api'] }));
+router
+    .post('/users/location', [RegistersController, 'updateVendorLocation'])
+    .use(middleware.auth({ guards: ['api'] }));
+router
+    .get('/users/location', [RegistersController, 'getVendorLocation'])
+    .use(middleware.auth({ guards: ['api'] }));
 router.get('/users/me', [RegistersController, 'getUser']).use(middleware.auth({ guards: ['api'] }));
 router.get('/users', [RegistersController, 'getAllUsers']).use(middleware.auth({ guards: ['api'] }));
 router

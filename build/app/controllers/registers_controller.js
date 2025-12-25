@@ -6,7 +6,7 @@ import { createUser } from '#services/setuserotp';
 import smsservice from '#services/smsservice';
 import { validateAndActivateUserOtp } from '#services/validateuserotp';
 import abilities from '#start/abilities';
-import { registerUserValidator, setPasswordValidator, UpdateUserValidator, UpdateUserValidatorForAdmin, } from '#validators/user';
+import { registerUserValidator, setPasswordValidator, UpdateUserValidator, UpdateUserValidatorForAdmin, updateVendorLocationValidator, } from '#validators/user';
 import logger from '@adonisjs/core/services/logger';
 import { UserRole } from '../Enum/user_role.js';
 import { UserStatus } from '../Enum/user_status.js';
@@ -733,6 +733,96 @@ export default class RegistersController {
             });
             return response.internalServerError({
                 message: 'Erreur interne lors de la modification du mot de passe',
+                status: 500,
+                error: error.message,
+            });
+        }
+    }
+    async updateVendorLocation({ request, response, auth }) {
+        try {
+            const user = auth.user;
+            if (user.role !== UserRole.Vendeur) {
+                return response.forbidden({
+                    message: 'Seuls les vendeurs peuvent enregistrer leur localisation',
+                    status: 403,
+                });
+            }
+            const dbService = await import('@adonisjs/lucid/services/db');
+            const db = dbService.default;
+            const columnsExist = await db.rawQuery(`
+        SELECT column_name 
+        FROM information_schema.columns 
+        WHERE table_name = 'users' 
+        AND column_name IN ('latitude', 'longitude');
+      `);
+            const existingColumns = columnsExist.rows.map((r) => r.column_name);
+            if (!existingColumns.includes('latitude')) {
+                await db.rawQuery(`
+          ALTER TABLE users 
+          ADD COLUMN IF NOT EXISTS latitude DECIMAL(10, 8) NULL;
+        `);
+            }
+            if (!existingColumns.includes('longitude')) {
+                await db.rawQuery(`
+          ALTER TABLE users 
+          ADD COLUMN IF NOT EXISTS longitude DECIMAL(11, 8) NULL;
+        `);
+            }
+            const payload = await request.validateUsing(updateVendorLocationValidator);
+            user.latitude = payload.latitude;
+            user.longitude = payload.longitude;
+            await user.save();
+            logger.info('Localisation du vendeur mise à jour', {
+                userId: user.id,
+                latitude: payload.latitude,
+                longitude: payload.longitude,
+            });
+            return response.ok({
+                message: 'Localisation enregistrée avec succès',
+                location: {
+                    latitude: user.latitude,
+                    longitude: user.longitude,
+                },
+                status: 200,
+            });
+        }
+        catch (error) {
+            logger.error('Erreur lors de l\'enregistrement de la localisation', {
+                message: error.message,
+                stack: error.stack,
+            });
+            return response.internalServerError({
+                message: 'Erreur interne lors de l\'enregistrement de la localisation',
+                status: 500,
+                error: error.message,
+            });
+        }
+    }
+    async getVendorLocation({ response, auth }) {
+        try {
+            const user = auth.user;
+            if (user.role !== UserRole.Vendeur) {
+                return response.forbidden({
+                    message: 'Seuls les vendeurs peuvent consulter leur localisation',
+                    status: 403,
+                });
+            }
+            return response.ok({
+                message: 'Localisation récupérée avec succès',
+                location: {
+                    latitude: user.latitude,
+                    longitude: user.longitude,
+                },
+                status: 200,
+            });
+        }
+        catch (error) {
+            logger.error('Erreur lors de la récupération de la localisation', {
+                message: error.message,
+                stack: error.stack,
+            });
+            return response.internalServerError({
+                message: 'Erreur interne lors de la récupération de la localisation',
                 status: 500,
                 error: error.message,
             });

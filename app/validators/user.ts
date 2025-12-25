@@ -81,3 +81,10 @@ export const setPasswordValidator = vine.compile(
     confirmNewPassword: vine.string().minLength(12).maxLength(64).sameAs('newPassword'),
   })
 )
+
+export const updateVendorLocationValidator = vine.compile(
+  vine.object({
+    latitude: vine.number().min(-90).max(90),
+    longitude: vine.number().min(-180).max(180),
+  })
+)

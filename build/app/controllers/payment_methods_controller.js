@@ -122,6 +122,32 @@ export default class PaymentMethodsController {
                     message: 'Seuls les vendeurs peuvent consulter leurs moyens de paiement',
                 });
             }
+            const dbService = await import('@adonisjs/lucid/services/db');
+            const db = dbService.default;
+            const tableExists = await db.rawQuery(`
+        SELECT EXISTS (
+          SELECT FROM information_schema.tables 
+          WHERE table_schema = 'public' 
+          AND table_name = 'payment_methods'
+        );
+      `);
+            if (!tableExists.rows[0].exists) {
+                await db.rawQuery(`
+          CREATE TABLE payment_methods (
+            id SERIAL PRIMARY KEY,
+            vendeur_id INTEGER NOT NULL,
+            type VARCHAR(50) NOT NULL DEFAULT 'orange_money' CHECK (type IN ('cash', 'mpesa', 'orange_money', 'airtel_money', 'afrimoney', 'visa', 'master_card')),
+            numero_compte VARCHAR(50) NOT NULL,
+            nom_titulaire VARCHAR(100),
+            is_default BOOLEAN NOT NULL DEFAULT false,
+            is_active BOOLEAN NOT NULL DEFAULT true,
+            created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+            updated_at TIMESTAMP WITH TIME ZONE,
+            CONSTRAINT fk_vendeur FOREIGN KEY (vendeur_id) REFERENCES users(id) ON DELETE CASCADE
+          );
+        `);
+                await db.rawQuery('CREATE INDEX idx_payment_methods_vendeur ON payment_methods(vendeur_id)');
+            }
             const paymentMethods = await PaymentMethod.query()
                 .where('vendeur_id', user.id)
                 .orderBy('is_active', 'desc')
