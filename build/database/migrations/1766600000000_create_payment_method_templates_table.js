@@ -3,6 +3,10 @@ import { Modepaiement } from '../../app/Enum/mode_paiement.js';
 export default class extends BaseSchema {
     tableName = 'payment_method_templates';
     async up() {
+        const exists = await this.schema.hasTable(this.tableName);
+        if (exists) {
+            return;
+        }
         this.schema.createTable(this.tableName, (table) => {
             table.increments('id').primary();
             table
@@ -17,12 +21,18 @@ export default class extends BaseSchema {
             table.timestamp('created_at', { useTz: true }).notNullable().defaultTo(this.now());
             table.timestamp('updated_at', { useTz: true }).nullable();
         });
+    }
+    async deferUp() {
+        const count = await this.db.from('payment_method_templates').count('* as total');
+        if (Number(count[0].total) > 0) {
+            return;
+        }
         const templates = [
             {
                 type: Modepaiement.CASH,
                 name: 'Cash',
                 description: 'Paiement en espèces',
-                image_url: 'https://res.cloudinary.com/dnn2ght5x/image/upload/v1735000000/payment_methods/cash.png',
+                image_url: 'https://res.cloudinary.com/deb9kfhnx/image/upload/v1766690324/rapidons/pnyywyyilm5996vdrj0h.jpg',
                 is_active: true,
                 display_order: 1,
             },
@@ -30,7 +40,7 @@ export default class extends BaseSchema {
                 type: Modepaiement.MPESA,
                 name: 'Mpesa',
                 description: 'Paiement mobile Mpesa',
-                image_url: 'https://res.cloudinary.com/dnn2ght5x/image/upload/v1735000000/payment_methods/mpesa.png',
+                image_url: 'https://res.cloudinary.com/deb9kfhnx/image/upload/v1766690325/rapidons/ww0djkzaf1a7xlh7pd8z.png',
                 is_active: true,
                 display_order: 2,
             },
@@ -38,7 +48,7 @@ export default class extends BaseSchema {
                 type: Modepaiement.ORANGEMONEY,
                 name: 'Orange Money',
                 description: 'Paiement mobile Orange Money',
-                image_url: 'https://res.cloudinary.com/dnn2ght5x/image/upload/v1735000000/payment_methods/orange_money.png',
+                image_url: 'https://res.cloudinary.com/deb9kfhnx/image/upload/v1766690323/rapidons/p2a5dall7jhxq475ahgg.png',
                 is_active: true,
                 display_order: 3,
             },
@@ -46,7 +56,7 @@ export default class extends BaseSchema {
                 type: Modepaiement.AIRTELMONEY,
                 name: 'Airtel Money',
                 description: 'Paiement mobile Airtel Money',
-                image_url: 'https://res.cloudinary.com/dnn2ght5x/image/upload/v1735000000/payment_methods/airtel_money.png',
+                image_url: 'https://res.cloudinary.com/deb9kfhnx/image/upload/v1766690324/rapidons/tcp28yzu0mi2wfzgjxrj.png',
                 is_active: true,
                 display_order: 4,
             },
@@ -54,7 +64,7 @@ export default class extends BaseSchema {
                 type: Modepaiement.AFRIMONEY,
                 name: 'Afrimoney',
                 description: 'Paiement mobile Afrimoney',
-                image_url: 'https://res.cloudinary.com/dnn2ght5x/image/upload/v1735000000/payment_methods/afrimoney.png',
+                image_url: 'https://res.cloudinary.com/deb9kfhnx/image/upload/v1766690323/rapidons/ayrodx5ewctpm2zeeojd.png',
                 is_active: true,
                 display_order: 5,
             },
@@ -62,7 +72,7 @@ export default class extends BaseSchema {
                 type: Modepaiement.VISA,
                 name: 'Visa',
                 description: 'Carte bancaire Visa',
-                image_url: 'https://res.cloudinary.com/dnn2ght5x/image/upload/v1735000000/payment_methods/visa.png',
+                image_url: 'https://res.cloudinary.com/deb9kfhnx/image/upload/v1766690325/rapidons/bzcqoiuzajnjmhtxmvwr.webp',
                 is_active: true,
                 display_order: 6,
             },

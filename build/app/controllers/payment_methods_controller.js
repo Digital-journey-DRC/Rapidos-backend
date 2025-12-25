@@ -307,6 +307,53 @@ export default class PaymentMethodsController {
     }
     async getTemplates({ response }) {
         try {
+            const dbService = await import('@adonisjs/lucid/services/db');
+            const db = dbService.default;
+            const tableExists = await db.rawQuery(`
+        SELECT EXISTS (
+          SELECT FROM information_schema.tables 
+          WHERE table_schema = 'public' 
+          AND table_name = 'payment_method_templates'
+        );
+      `);
+            if (!tableExists.rows[0].exists) {
+                await db.rawQuery(`
+          CREATE TABLE payment_method_templates (
+            id SERIAL PRIMARY KEY,
+            type VARCHAR(255) NOT NULL UNIQUE,
+            name VARCHAR(100) NOT NULL,
+            description VARCHAR(255),
+            image_url VARCHAR(500) NOT NULL,
+            is_active BOOLEAN NOT NULL DEFAULT true,
+            display_order INTEGER NOT NULL DEFAULT 0,
+            created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+            updated_at TIMESTAMPTZ
+          );
+        `);
+                await db.rawQuery(`
+          INSERT INTO payment_method_templates (type, name, description, image_url, is_active, display_order) VALUES
+          ('cash', 'Cash', 'Paiement en espèces', 'https://res.cloudinary.com/deb9kfhnx/image/upload/v1766690324/rapidons/pnyywyyilm5996vdrj0h.jpg', true, 1),
+          ('mpesa', 'Mpesa', 'Paiement mobile Mpesa', 'https://res.cloudinary.com/deb9kfhnx/image/upload/v1766690325/rapidons/ww0djkzaf1a7xlh7pd8z.png', true, 2),
+          ('orange_money', 'Orange Money', 'Paiement mobile Orange Money', 'https://res.cloudinary.com/deb9kfhnx/image/upload/v1766690323/rapidons/p2a5dall7jhxq475ahgg.png', true, 3),
+          ('airtel_money', 'Airtel Money', 'Paiement mobile Airtel Money', 'https://res.cloudinary.com/deb9kfhnx/image/upload/v1766690324/rapidons/tcp28yzu0mi2wfzgjxrj.png', true, 4),
+          ('afrimoney', 'Afrimoney', 'Paiement mobile Afrimoney', 'https://res.cloudinary.com/deb9kfhnx/image/upload/v1766690323/rapidons/ayrodx5ewctpm2zeeojd.png', true, 5),
+          ('visa', 'Visa', 'Carte bancaire Visa', 'https://res.cloudinary.com/deb9kfhnx/image/upload/v1766690325/rapidons/bzcqoiuzajnjmhtxmvwr.webp', true, 6);
+        `);
+            }
+            else {
+                await db.rawQuery(`
+          UPDATE payment_method_templates 
+          SET image_url = CASE type
+            WHEN 'cash' THEN 'https://res.cloudinary.com/deb9kfhnx/image/upload/v1766690324/rapidons/pnyywyyilm5996vdrj0h.jpg'
+            WHEN 'mpesa' THEN 'https://res.cloudinary.com/deb9kfhnx/image/upload/v1766690325/rapidons/ww0djkzaf1a7xlh7pd8z.png'
+            WHEN 'orange_money' THEN 'https://res.cloudinary.com/deb9kfhnx/image/upload/v1766690323/rapidons/p2a5dall7jhxq475ahgg.png'
+            WHEN 'airtel_money' THEN 'https://res.cloudinary.com/deb9kfhnx/image/upload/v1766690324/rapidons/tcp28yzu0mi2wfzgjxrj.png'
+            WHEN 'afrimoney' THEN 'https://res.cloudinary.com/deb9kfhnx/image/upload/v1766690323/rapidons/ayrodx5ewctpm2zeeojd.png'
+            WHEN 'visa' THEN 'https://res.cloudinary.com/deb9kfhnx/image/upload/v1766690325/rapidons/bzcqoiuzajnjmhtxmvwr.webp'
+          END
+          WHERE type IN ('cash', 'mpesa', 'orange_money', 'airtel_money', 'afrimoney', 'visa');
+        `);
+            }
             const templates = await PaymentMethodTemplate.query()
                 .where('is_active', true)
                 .orderBy('display_order', 'asc');
