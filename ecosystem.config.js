@@ -1,4 +1,4 @@
-module.exports = {
+export default {
   apps: [
     {
       name: 'rapidos-backend',
@@ -9,6 +9,9 @@ module.exports = {
       watch: false,
       autorestart: true,
       max_memory_restart: '1G',
+      env: {
+        NODE_ENV: 'production',
+      },
     },
   ],
 }

@@ -834,52 +834,64 @@ export default class ProductsController {
     async getRandomProducts({ response }) {
         try {
             const randomProducts = await Product.query()
-                .select(['id', 'name', 'description', 'price', 'stock'])
                 .where('stock', '>', 0)
-                .preload('category')
-                .preload('vendeur')
+                .whereNotNull('categorieId')
                 .orderByRaw('RANDOM()')
                 .limit(10);
+            const categoryIds = randomProducts
+                .map((p) => p.categorieId)
+                .filter((id) => id !== null && id !== undefined);
+            let categoriesMap = new Map();
+            if (categoryIds.length > 0) {
+                const categories = await Category.query().whereIn('id', categoryIds);
+                categoriesMap = new Map(categories.map((c) => [c.id, c]));
+            }
             if (randomProducts.length === 0) {
                 return response.status(404).json({ message: 'Aucun produit trouvé', products: [] });
             }
-            const productsFormatted = await Promise.all(randomProducts.map(async (product) => {
-                const allMedias = await Media.query()
-                    .where('productId', product.id)
-                    .orderBy('created_at', 'asc');
-                const mainImage = allMedias.length > 0 ? allMedias[0].mediaUrl : null;
-                const images = allMedias.length > 1 ? allMedias.slice(1).map((media) => media.mediaUrl) : [];
-                const serialized = product.serialize();
-                let vendeurWithoutProfil = null;
-                if (serialized.vendeur) {
-                    const v = serialized.vendeur;
-                    vendeurWithoutProfil = {
-                        id: v.id,
-                        firstName: v.firstName,
-                        lastName: v.lastName,
-                        email: v.email,
-                        phone: v.phone,
-                        secureOtp: v.secureOtp,
-                        otpExpiredAt: v.otpExpiredAt,
-                        termsAccepted: v.termsAccepted,
-                        role: v.role,
-                        createdAt: v.createdAt,
-                        updatedAt: v.updatedAt,
-                        userStatus: v.userStatus,
-                    };
+            const vendeurIds = randomProducts
+                .map((p) => p.vendeurId)
+                .filter((id) => id !== null && id !== undefined);
+            let vendeursMap = new Map();
+            if (vendeurIds.length > 0) {
+                const vendeurs = await User.query().whereIn('id', vendeurIds);
+                vendeursMap = new Map(vendeurs.map((v) => [v.id, v]));
+            }
+            const productIds = randomProducts.map((p) => p.id);
+            const allMedias = await Media.query()
+                .whereIn('productId', productIds)
+                .orderBy('product_id', 'asc')
+                .orderBy('created_at', 'asc');
+            const mediasByProduct = {};
+            for (const media of allMedias) {
+                if (!mediasByProduct[media.productId]) {
+                    mediasByProduct[media.productId] = [];
                 }
+                mediasByProduct[media.productId].push(media);
+            }
+            const productsFormatted = randomProducts.map((product) => {
+                const productMedias = mediasByProduct[product.id] || [];
+                const mainImage = productMedias.length > 0 ? productMedias[0].mediaUrl : null;
+                const images = productMedias.length > 1 ? productMedias.slice(1).map((media) => media.mediaUrl) : [];
+                const categoryData = product.categorieId && categoriesMap.has(product.categorieId)
+                    ? categoriesMap.get(product.categorieId)
+                    : null;
+                const category = categoryData ? categoryData.serialize() : null;
+                const vendeur = product.vendeurId && vendeursMap.has(product.vendeurId)
+                    ? vendeursMap.get(product.vendeurId).serialize()
+                    : null;
                 return {
-                    id: serialized.id,
-                    name: serialized.name,
-                    description: serialized.description,
-                    price: serialized.price,
-                    stock: serialized.stock,
-                    category: serialized.category,
+                    id: product.id,
+                    name: product.name,
+                    description: product.description,
+                    price: product.price,
+                    stock: product.stock,
+                    category: category,
                     image: mainImage,
                     images: images,
-                    vendeur: vendeurWithoutProfil,
+                    vendeur: vendeur,
                 };
-            }));
+            });
             return response.status(200).json({ products: productsFormatted });
         }
         catch (error) {

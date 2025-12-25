@@ -1046,68 +1046,88 @@ export default class ProductsController {
    */
   async getRandomProducts({ response }: HttpContext) {
     try {
-      // Récupérer 10 produits aléatoires en stock
+      // Récupérer 10 produits aléatoires en stock avec catégorie
+      // Ne pas utiliser preload pour éviter les problèmes de chargement automatique
       const randomProducts = await Product.query()
-        .select(['id', 'name', 'description', 'price', 'stock'])
         .where('stock', '>', 0)
-        .preload('category')
-        .preload('vendeur')
+        .whereNotNull('categorieId')
         .orderByRaw('RANDOM()')
         .limit(10)
+
+      // Charger les catégories séparément pour éviter les erreurs de preload
+      const categoryIds = randomProducts
+        .map((p) => p.categorieId)
+        .filter((id): id is number => id !== null && id !== undefined)
+      
+      let categoriesMap = new Map()
+      if (categoryIds.length > 0) {
+        const categories = await Category.query().whereIn('id', categoryIds)
+        categoriesMap = new Map(categories.map((c) => [c.id, c]))
+      }
+
+      // Les catégories seront utilisées directement depuis categoriesMap lors du formatage
 
       if (randomProducts.length === 0) {
         return response.status(404).json({ message: 'Aucun produit trouvé', products: [] })
       }
 
+      // Charger tous les vendeurs en une seule requête pour éviter le pool de connexions
+      const vendeurIds = randomProducts
+        .map((p) => p.vendeurId)
+        .filter((id): id is number => id !== null && id !== undefined)
+      
+      let vendeursMap = new Map()
+      if (vendeurIds.length > 0) {
+        const vendeurs = await User.query().whereIn('id', vendeurIds)
+        vendeursMap = new Map(vendeurs.map((v) => [v.id, v]))
+      }
+
+      // Récupérer tous les médias en une seule requête pour éviter le pool de connexions
+      const productIds = randomProducts.map((p) => p.id)
+      const allMedias = await Media.query()
+        .whereIn('productId', productIds)
+        .orderBy('product_id', 'asc')
+        .orderBy('created_at', 'asc')
+
+      // Grouper les médias par produit
+      const mediasByProduct: Record<number, typeof allMedias> = {}
+      for (const media of allMedias) {
+        if (!mediasByProduct[media.productId]) {
+          mediasByProduct[media.productId] = []
+        }
+        mediasByProduct[media.productId].push(media)
+      }
+
       // Formater exactement comme getAllProducts (même structure)
-      const productsFormatted = await Promise.all(
-        randomProducts.map(async (product) => {
-          // Récupérer tous les médias du produit
-          const allMedias = await Media.query()
-            .where('productId', product.id)
-            .orderBy('created_at', 'asc')
+      const productsFormatted = randomProducts.map((product) => {
+        const productMedias = mediasByProduct[product.id] || []
+        const mainImage = productMedias.length > 0 ? productMedias[0].mediaUrl : null
+        const images = productMedias.length > 1 ? productMedias.slice(1).map((media) => media.mediaUrl) : []
 
-          // Image principale (première image ou null)
-          const mainImage = allMedias.length > 0 ? allMedias[0].mediaUrl : null
-
-          // Tableau des images supplémentaires (toutes sauf la première)
-          const images = allMedias.length > 1 ? allMedias.slice(1).map((media) => media.mediaUrl) : []
-
-          // Utiliser serialize() puis extraire uniquement les champs souhaités
-          const serialized = product.serialize()
-          // Exclure profil de vendeur pour avoir la même structure que getAllProducts
-          let vendeurWithoutProfil = null
-          if (serialized.vendeur) {
-            const v = serialized.vendeur as any
-            // Créer un nouvel objet avec seulement les propriétés souhaitées (sans profil)
-            vendeurWithoutProfil = {
-              id: v.id,
-              firstName: v.firstName,
-              lastName: v.lastName,
-              email: v.email,
-              phone: v.phone,
-              secureOtp: v.secureOtp,
-              otpExpiredAt: v.otpExpiredAt,
-              termsAccepted: v.termsAccepted,
-              role: v.role,
-              createdAt: v.createdAt,
-              updatedAt: v.updatedAt,
-              userStatus: v.userStatus,
-            }
-          }
-          return {
-            id: serialized.id,
-            name: serialized.name,
-            description: serialized.description,
-            price: serialized.price,
-            stock: serialized.stock,
-            category: serialized.category,
-            image: mainImage, // Image principale Cloudinary
-            images: images, // Tableau des images supplémentaires Cloudinary
-            vendeur: vendeurWithoutProfil,
-          }
-        })
-      )
+        // Utiliser serialize() pour avoir exactement la même structure que getAllProducts
+        // Utiliser la category chargée manuellement et la sérialiser
+        const categoryData = product.categorieId && categoriesMap.has(product.categorieId)
+          ? categoriesMap.get(product.categorieId)!
+          : null
+        const category = categoryData ? categoryData.serialize() : null
+        
+        // Utiliser le vendeur chargé manuellement depuis vendeursMap et le sérialiser
+        const vendeur = product.vendeurId && vendeursMap.has(product.vendeurId)
+          ? vendeursMap.get(product.vendeurId)!.serialize()
+          : null
+        
+        return {
+          id: product.id,
+          name: product.name,
+          description: product.description,
+          price: product.price,
+          stock: product.stock,
+          category: category,
+          image: mainImage, // Image principale Cloudinary
+          images: images, // Tableau des images supplémentaires Cloudinary
+          vendeur: vendeur,
+        }
+      })
 
       return response.status(200).json({ products: productsFormatted })
     } catch (error) {
