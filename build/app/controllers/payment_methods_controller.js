@@ -96,6 +96,16 @@ export default class PaymentMethodsController {
                 .where('is_active', true)
                 .orderBy('is_default', 'desc')
                 .orderBy('created_at', 'desc');
+            const templates = await PaymentMethodTemplate.query();
+            const templatesMap = new Map(templates.map(t => [t.type, t]));
+            const enrichedPaymentMethods = paymentMethods.map(pm => {
+                const template = templatesMap.get(pm.type);
+                return {
+                    ...pm.toJSON(),
+                    imageUrl: template?.imageUrl || null,
+                    name: template?.name || pm.type,
+                };
+            });
             return response.ok({
                 message: 'Moyens de paiement du vendeur récupérés avec succès',
                 vendeur: {
@@ -103,7 +113,7 @@ export default class PaymentMethodsController {
                     firstName: vendeur.firstName,
                     lastName: vendeur.lastName,
                 },
-                paymentMethods: paymentMethods,
+                paymentMethods: enrichedPaymentMethods,
             });
         }
         catch (error) {
