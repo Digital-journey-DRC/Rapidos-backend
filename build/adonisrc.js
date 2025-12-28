@@ -31,9 +31,19 @@ export default defineConfig({
         ],
         forceExit: false,
     },
-    metaFiles: [{
+    metaFiles: [
+        {
             pattern: 'public/**',
             reloadServer: false,
-        }]
+        },
+        {
+            pattern: 'resources/**',
+            reloadServer: false,
+        },
+        {
+            pattern: 'docs/**',
+            reloadServer: false,
+        }
+    ]
 });
 //# sourceMappingURL=adonisrc.js.map

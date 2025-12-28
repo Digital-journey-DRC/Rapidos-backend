@@ -4,9 +4,11 @@ import PaymentMethod from './payment_method.js'
 import type { BelongsTo } from '@adonisjs/lucid/types/relations'
 
 export enum EcommerceOrderStatus {
+  PENDING_PAYMENT = 'pending_payment',
   PENDING = 'pending',
   EN_PREPARATION = 'colis en cours de préparation',
   PRET_A_EXPEDIER = 'prêt à expédier',
+  ACCEPTE_LIVREUR = 'accepté par livreur',
   EN_ROUTE = 'en route pour livraison',
   DELIVERED = 'delivered',
   CANCELLED = 'cancelled',
@@ -41,8 +43,20 @@ export default class EcommerceOrder extends BaseModel {
   declare deliveryPersonId: number | null
 
   @column({
-    prepare: (value: any) => JSON.stringify(value),
-    consume: (value: string) => JSON.parse(value),
+    prepare: (value: any) => {
+      if (typeof value === 'string') return value
+      return JSON.stringify(value)
+    },
+    consume: (value: any) => {
+      if (typeof value === 'string') {
+        try {
+          return JSON.parse(value)
+        } catch {
+          return []
+        }
+      }
+      return value || []
+    },
   })
   declare items: Array<{
     productId: number
@@ -53,8 +67,20 @@ export default class EcommerceOrder extends BaseModel {
   }>
 
   @column({
-    prepare: (value: any) => JSON.stringify(value),
-    consume: (value: string) => JSON.parse(value),
+    prepare: (value: any) => {
+      if (typeof value === 'string') return value
+      return JSON.stringify(value)
+    },
+    consume: (value: any) => {
+      if (typeof value === 'string') {
+        try {
+          return JSON.parse(value)
+        } catch {
+          return {}
+        }
+      }
+      return value || {}
+    },
   })
   declare address: {
     ville: string
@@ -76,7 +102,25 @@ export default class EcommerceOrder extends BaseModel {
   declare packagePhotoPublicId: string | null
 
   @column()
+  declare codeColis: string | null
+
+  @column()
   declare paymentMethodId: number | null
+
+  @column()
+  declare numeroPayment: string | null
+
+  @column()
+  declare latitude: number | null
+
+  @column()
+  declare longitude: number | null
+
+  @column()
+  declare distanceKm: number | null
+
+  @column()
+  declare deliveryFee: number | null
 
   @column.dateTime({ autoCreate: true })
   declare createdAt: DateTime

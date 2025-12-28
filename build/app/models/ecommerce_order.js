@@ -12,9 +12,11 @@ import { BaseModel, belongsTo, column } from '@adonisjs/lucid/orm';
 import PaymentMethod from './payment_method.js';
 export var EcommerceOrderStatus;
 (function (EcommerceOrderStatus) {
+    EcommerceOrderStatus["PENDING_PAYMENT"] = "pending_payment";
     EcommerceOrderStatus["PENDING"] = "pending";
     EcommerceOrderStatus["EN_PREPARATION"] = "colis en cours de pr\u00E9paration";
     EcommerceOrderStatus["PRET_A_EXPEDIER"] = "pr\u00EAt \u00E0 exp\u00E9dier";
+    EcommerceOrderStatus["ACCEPTE_LIVREUR"] = "accept\u00E9 par livreur";
     EcommerceOrderStatus["EN_ROUTE"] = "en route pour livraison";
     EcommerceOrderStatus["DELIVERED"] = "delivered";
     EcommerceOrderStatus["CANCELLED"] = "cancelled";
@@ -57,15 +59,43 @@ __decorate([
 ], EcommerceOrder.prototype, "deliveryPersonId", void 0);
 __decorate([
     column({
-        prepare: (value) => JSON.stringify(value),
-        consume: (value) => JSON.parse(value),
+        prepare: (value) => {
+            if (typeof value === 'string')
+                return value;
+            return JSON.stringify(value);
+        },
+        consume: (value) => {
+            if (typeof value === 'string') {
+                try {
+                    return JSON.parse(value);
+                }
+                catch {
+                    return [];
+                }
+            }
+            return value || [];
+        },
     }),
     __metadata("design:type", Array)
 ], EcommerceOrder.prototype, "items", void 0);
 __decorate([
     column({
-        prepare: (value) => JSON.stringify(value),
-        consume: (value) => JSON.parse(value),
+        prepare: (value) => {
+            if (typeof value === 'string')
+                return value;
+            return JSON.stringify(value);
+        },
+        consume: (value) => {
+            if (typeof value === 'string') {
+                try {
+                    return JSON.parse(value);
+                }
+                catch {
+                    return {};
+                }
+            }
+            return value || {};
+        },
     }),
     __metadata("design:type", Object)
 ], EcommerceOrder.prototype, "address", void 0);
@@ -84,7 +114,31 @@ __decorate([
 __decorate([
     column(),
     __metadata("design:type", Object)
+], EcommerceOrder.prototype, "codeColis", void 0);
+__decorate([
+    column(),
+    __metadata("design:type", Object)
 ], EcommerceOrder.prototype, "paymentMethodId", void 0);
+__decorate([
+    column(),
+    __metadata("design:type", Object)
+], EcommerceOrder.prototype, "numeroPayment", void 0);
+__decorate([
+    column(),
+    __metadata("design:type", Object)
+], EcommerceOrder.prototype, "latitude", void 0);
+__decorate([
+    column(),
+    __metadata("design:type", Object)
+], EcommerceOrder.prototype, "longitude", void 0);
+__decorate([
+    column(),
+    __metadata("design:type", Object)
+], EcommerceOrder.prototype, "distanceKm", void 0);
+__decorate([
+    column(),
+    __metadata("design:type", Object)
+], EcommerceOrder.prototype, "deliveryFee", void 0);
 __decorate([
     column.dateTime({ autoCreate: true }),
     __metadata("design:type", DateTime)

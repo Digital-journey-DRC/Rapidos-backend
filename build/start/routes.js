@@ -204,6 +204,18 @@ router
     .post('/ecommerce/commandes/store', [EcommerceOrdersController, 'store'])
     .use(middleware.auth({ guards: ['api'] }));
 router
+    .post('/ecommerce/commandes/initialize', [EcommerceOrdersController, 'initialize'])
+    .use(middleware.auth({ guards: ['api'] }));
+router
+    .get('/ecommerce/commandes/buyer/me', [EcommerceOrdersController, 'getBuyerOrders'])
+    .use(middleware.auth({ guards: ['api'] }));
+router
+    .patch('/ecommerce/commandes/:id/payment-method', [EcommerceOrdersController, 'updatePaymentMethod'])
+    .use(middleware.auth({ guards: ['api'] }));
+router
+    .patch('/ecommerce/commandes/batch-update-payment-methods', [EcommerceOrdersController, 'batchUpdatePaymentMethods'])
+    .use(middleware.auth({ guards: ['api'] }));
+router
     .get('/ecommerce/commandes/acheteur', [EcommerceOrdersController, 'getOrdersByBuyer'])
     .use(middleware.auth({ guards: ['api'] }));
 router
@@ -216,10 +228,10 @@ router
     .patch('/ecommerce/commandes/:id/status', [EcommerceOrdersController, 'updateStatus'])
     .use(middleware.auth({ guards: ['api'] }));
 router
-    .post('/ecommerce/livraison/:orderId/take', [EcommerceOrdersController, 'takeDelivery'])
+    .post('/ecommerce/commandes/:id/upload-package-photo', [EcommerceOrdersController, 'uploadPackagePhoto'])
     .use(middleware.auth({ guards: ['api'] }));
 router
-    .post('/ecommerce/upload/package-photo', [EcommerceOrdersController, 'uploadPackagePhoto'])
+    .post('/ecommerce/livraison/:orderId/take', [EcommerceOrdersController, 'takeDelivery'])
     .use(middleware.auth({ guards: ['api'] }));
 router.get('/payment-methods/create-table', [PaymentMethodsController, 'createTable']);
 router

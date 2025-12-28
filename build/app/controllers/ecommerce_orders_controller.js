@@ -1,11 +1,16 @@
 import EcommerceOrder, { EcommerceOrderStatus } from '#models/ecommerce_order';
 import EcommerceOrderLog from '#models/ecommerce_order_log';
-import { createOrderValidator, updateStatusValidator } from '#validators/ecommerce_order';
+import { createOrderValidator, updateStatusValidator, initializeOrderValidator, updatePaymentMethodValidator, batchUpdatePaymentMethodsValidator } from '#validators/ecommerce_order';
 import { randomUUID } from 'node:crypto';
 import logger from '@adonisjs/core/services/logger';
 import ecommerceCloudinaryService from '#services/ecommerce_cloudinary_service';
 import db from '@adonisjs/lucid/services/db';
 import PaymentMethod from '#models/payment_method';
+import PaymentMethodTemplate from '#models/payment_method_template';
+import { DistanceCalculator } from '#services/distance_calculator';
+import Product from '#models/product';
+import User from '#models/user';
+import Media from '#models/media';
 export default class EcommerceOrdersController {
     async createTables({ response }) {
         try {
@@ -140,16 +145,22 @@ export default class EcommerceOrdersController {
             if (paymentMethodId) {
                 await order.load('paymentMethod');
             }
-            const formattedPaymentMethod = order.paymentMethod
-                ? {
+            let formattedPaymentMethod = null;
+            if (order.paymentMethod) {
+                const template = await PaymentMethodTemplate.query()
+                    .where('type', order.paymentMethod.type)
+                    .first();
+                formattedPaymentMethod = {
                     id: order.paymentMethod.id,
                     type: order.paymentMethod.type,
                     numeroCompte: order.paymentMethod.numeroCompte,
                     nomTitulaire: order.paymentMethod.nomTitulaire,
                     isDefault: order.paymentMethod.isDefault,
                     isActive: order.paymentMethod.isActive,
-                }
-                : null;
+                    imageUrl: template?.imageUrl || null,
+                    name: template?.name || order.paymentMethod.type,
+                };
+            }
             return response.status(201).json({
                 success: true,
                 orderId: order.orderId,
@@ -182,20 +193,28 @@ export default class EcommerceOrdersController {
                 .where('clientId', user.id)
                 .preload('paymentMethod')
                 .orderBy('createdAt', 'desc');
+            const templates = await PaymentMethodTemplate.query();
+            const templatesMap = new Map(templates.map(t => [t.type, t]));
             const formattedOrders = orders.map((order) => {
                 const serialized = order.serialize();
-                return {
-                    ...serialized,
-                    paymentMethod: order.paymentMethod
-                        ? {
+                const paymentMethod = order.paymentMethod
+                    ? (() => {
+                        const template = templatesMap.get(order.paymentMethod.type);
+                        return {
                             id: order.paymentMethod.id,
                             type: order.paymentMethod.type,
                             numeroCompte: order.paymentMethod.numeroCompte,
                             nomTitulaire: order.paymentMethod.nomTitulaire,
                             isDefault: order.paymentMethod.isDefault,
                             isActive: order.paymentMethod.isActive,
-                        }
-                        : null,
+                            imageUrl: template?.imageUrl || null,
+                            name: template?.name || order.paymentMethod.type,
+                        };
+                    })()
+                    : null;
+                return {
+                    ...serialized,
+                    paymentMethod,
                 };
             });
             return response.status(200).json({
@@ -221,20 +240,28 @@ export default class EcommerceOrdersController {
                 .where('vendorId', user.id)
                 .preload('paymentMethod')
                 .orderBy('createdAt', 'desc');
+            const templates = await PaymentMethodTemplate.query();
+            const templatesMap = new Map(templates.map(t => [t.type, t]));
             const formattedOrders = orders.map((order) => {
                 const serialized = order.serialize();
-                return {
-                    ...serialized,
-                    paymentMethod: order.paymentMethod
-                        ? {
+                const paymentMethod = order.paymentMethod
+                    ? (() => {
+                        const template = templatesMap.get(order.paymentMethod.type);
+                        return {
                             id: order.paymentMethod.id,
                             type: order.paymentMethod.type,
                             numeroCompte: order.paymentMethod.numeroCompte,
                             nomTitulaire: order.paymentMethod.nomTitulaire,
                             isDefault: order.paymentMethod.isDefault,
                             isActive: order.paymentMethod.isActive,
-                        }
-                        : null,
+                            imageUrl: template?.imageUrl || null,
+                            name: template?.name || order.paymentMethod.type,
+                        };
+                    })()
+                    : null;
+                return {
+                    ...serialized,
+                    paymentMethod,
                 };
             });
             return response.status(200).json({
@@ -314,12 +341,71 @@ export default class EcommerceOrdersController {
                     message: canTransition.reason,
                 });
             }
-            if (payload.status === EcommerceOrderStatus.PRET_A_EXPEDIER &&
-                !order.packagePhoto) {
-                return response.status(400).json({
-                    success: false,
-                    message: 'Photo du colis obligatoire pour marquer prêt à expédier',
-                });
+            if (payload.status === EcommerceOrderStatus.PRET_A_EXPEDIER) {
+                if (!order.packagePhoto || !order.codeColis) {
+                    return response.status(400).json({
+                        success: false,
+                        message: 'Photo du colis et code obligatoires pour marquer prêt à expédier. Utilisez l\'endpoint /upload-package-photo d\'abord.',
+                    });
+                }
+            }
+            if (payload.status === EcommerceOrderStatus.EN_ROUTE) {
+                if (!order.deliveryPersonId || order.deliveryPersonId !== user.id) {
+                    return response.status(403).json({
+                        success: false,
+                        message: 'Cette commande ne vous est pas assignée.',
+                    });
+                }
+                const codeColis = request.input('codeColis');
+                if (!codeColis) {
+                    return response.status(400).json({
+                        success: false,
+                        message: 'Le code du colis est requis pour marquer en route.',
+                    });
+                }
+                if (codeColis !== order.codeColis) {
+                    return response.status(400).json({
+                        success: false,
+                        message: 'Code du colis incorrect. Vérifiez avec le vendeur.',
+                    });
+                }
+                let newCodeColis;
+                let isUnique = false;
+                let attempts = 0;
+                const maxAttempts = 100;
+                while (!isUnique && attempts < maxAttempts) {
+                    newCodeColis = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
+                    const existingOrder = await EcommerceOrder.query()
+                        .where('code_colis', newCodeColis)
+                        .andWhere('id', '!=', order.id)
+                        .first();
+                    if (!existingOrder) {
+                        isUnique = true;
+                    }
+                    attempts++;
+                }
+                if (!isUnique) {
+                    return response.status(500).json({
+                        success: false,
+                        message: 'Impossible de générer un nouveau code. Veuillez réessayer.',
+                    });
+                }
+                order.codeColis = newCodeColis;
+            }
+            if (payload.status === EcommerceOrderStatus.DELIVERED) {
+                const codeColis = request.input('codeColis');
+                if (!codeColis) {
+                    return response.status(400).json({
+                        success: false,
+                        message: 'Le code de confirmation est requis pour marquer comme livré.',
+                    });
+                }
+                if (codeColis !== order.codeColis) {
+                    return response.status(400).json({
+                        success: false,
+                        message: 'Code de confirmation incorrect.',
+                    });
+                }
             }
             await EcommerceOrderLog.create({
                 logId: randomUUID(),
@@ -349,11 +435,17 @@ export default class EcommerceOrdersController {
                 ...serializedOrder,
                 paymentMethod: formattedPaymentMethod,
             };
-            return response.status(200).json({
+            let message = `Statut mis à jour de "${oldStatus}" vers "${payload.status}"`;
+            const responseData = {
                 success: true,
                 order: formattedOrder,
-                message: `Statut mis à jour de "${oldStatus}" vers "${payload.status}"`,
-            });
+                message: message,
+            };
+            if (payload.status === EcommerceOrderStatus.EN_ROUTE && order.codeColis) {
+                responseData.newCodeColis = order.codeColis;
+                responseData.message = `${message}. Nouveau code de confirmation généré : ${order.codeColis}`;
+            }
+            return response.status(200).json(responseData);
         }
         catch (error) {
             logger.error('Erreur mise à jour statut commande', {
@@ -402,16 +494,16 @@ export default class EcommerceOrdersController {
                 });
             }
             order.deliveryPersonId = user.id;
-            order.status = EcommerceOrderStatus.EN_ROUTE;
+            order.status = EcommerceOrderStatus.ACCEPTE_LIVREUR;
             await order.save();
             await EcommerceOrderLog.create({
                 logId: randomUUID(),
                 orderId: order.orderId,
                 oldStatus: EcommerceOrderStatus.PRET_A_EXPEDIER,
-                newStatus: EcommerceOrderStatus.EN_ROUTE,
+                newStatus: EcommerceOrderStatus.ACCEPTE_LIVREUR,
                 changedBy: user.id,
                 changedByRole: user.role,
-                reason: null,
+                reason: 'Livraison acceptée par le livreur',
             });
             await order.load('paymentMethod');
             const formattedPaymentMethod = order.paymentMethod
@@ -446,80 +538,15 @@ export default class EcommerceOrdersController {
             });
         }
     }
-    async uploadPackagePhoto({ request, response, auth }) {
-        try {
-            const user = auth.user;
-            const orderId = request.input('orderId');
-            if (user.role !== 'vendeur') {
-                return response.status(403).json({
-                    success: false,
-                    message: 'Seuls les vendeurs peuvent uploader une photo',
-                });
-            }
-            const photo = request.file('photo', {
-                size: '5mb',
-                extnames: ['jpg', 'jpeg', 'png', 'webp'],
-            });
-            if (!photo || !photo.isValid || !photo.tmpPath) {
-                return response.status(400).json({
-                    success: false,
-                    message: 'Aucune image valide fournie',
-                });
-            }
-            if (!orderId) {
-                return response.status(400).json({
-                    success: false,
-                    message: 'orderId requis',
-                });
-            }
-            const order = await EcommerceOrder.findBy('orderId', orderId);
-            if (!order) {
-                return response.status(404).json({
-                    success: false,
-                    message: 'Commande non trouvée',
-                });
-            }
-            if (order.vendorId !== user.id) {
-                return response.status(403).json({
-                    success: false,
-                    message: 'Vous n\'êtes pas autorisé à modifier cette commande',
-                });
-            }
-            if (order.status !== EcommerceOrderStatus.EN_PREPARATION) {
-                return response.status(400).json({
-                    success: false,
-                    message: 'Statut invalide pour upload (doit être "en cours de préparation")',
-                });
-            }
-            if (order.packagePhotoPublicId) {
-                await ecommerceCloudinaryService.deletePhoto(order.packagePhotoPublicId);
-            }
-            const uploadResult = await ecommerceCloudinaryService.uploadPackagePhoto(photo.tmpPath, orderId);
-            order.packagePhoto = uploadResult.url;
-            order.packagePhotoPublicId = uploadResult.publicId;
-            await order.save();
-            return response.status(200).json({
-                success: true,
-                photoUrl: uploadResult.url,
-                message: 'Photo uploadée avec succès',
-            });
-        }
-        catch (error) {
-            logger.error('Erreur upload photo colis', {
-                error: error.message,
-                stack: error.stack,
-            });
-            return response.status(500).json({
-                success: false,
-                message: 'Erreur lors de l\'upload de la photo',
-            });
-        }
-    }
     canTransitionStatus(currentStatus, newStatus, userRole, userId, order) {
         if (currentStatus === EcommerceOrderStatus.DELIVERED) {
             return { allowed: false, reason: 'La commande est déjà livrée' };
         }
         const transitions = {
+            [EcommerceOrderStatus.PENDING_PAYMENT]: {
+                [EcommerceOrderStatus.PENDING]: ['acheteur', 'vendeur'],
+                [EcommerceOrderStatus.CANCELLED]: ['acheteur', 'vendeur'],
+            },
             [EcommerceOrderStatus.PENDING]: {
                 [EcommerceOrderStatus.EN_PREPARATION]: ['vendeur'],
                 [EcommerceOrderStatus.CANCELLED]: ['client', 'vendeur'],
@@ -530,6 +557,10 @@ export default class EcommerceOrdersController {
                 [EcommerceOrderStatus.CANCELLED]: ['client', 'vendeur'],
             },
             [EcommerceOrderStatus.PRET_A_EXPEDIER]: {
+                [EcommerceOrderStatus.ACCEPTE_LIVREUR]: ['livreur'],
+                [EcommerceOrderStatus.CANCELLED]: ['client', 'vendeur', 'livreur'],
+            },
+            [EcommerceOrderStatus.ACCEPTE_LIVREUR]: {
                 [EcommerceOrderStatus.EN_ROUTE]: ['livreur'],
                 [EcommerceOrderStatus.CANCELLED]: ['client', 'vendeur', 'livreur'],
             },
@@ -558,6 +589,576 @@ export default class EcommerceOrdersController {
             return { allowed: false, reason: 'Vous n\'êtes pas le client de cette commande' };
         }
         return { allowed: true };
+    }
+    async initialize({ request, response, auth }) {
+        try {
+            const user = auth.user;
+            const payload = await request.validateUsing(initializeOrderValidator);
+            const productIds = payload.products.map(p => p.productId);
+            const products = await Product.query().whereIn('id', productIds);
+            const allMedias = await Media.query()
+                .whereIn('product_id', productIds)
+                .orderBy('created_at', 'asc');
+            const mediasByProduct = new Map();
+            for (const media of allMedias) {
+                if (!mediasByProduct.has(media.productId)) {
+                    mediasByProduct.set(media.productId, []);
+                }
+                mediasByProduct.get(media.productId).push(media);
+            }
+            if (products.length !== productIds.length) {
+                return response.status(404).json({
+                    success: false,
+                    message: 'Un ou plusieurs produits n\'existent pas',
+                });
+            }
+            const quantityMap = new Map(payload.products.map(p => [p.productId, p.quantite]));
+            const productsByVendor = new Map();
+            for (const product of products) {
+                const vendorId = product.vendeurId;
+                const quantite = quantityMap.get(product.id);
+                if (!productsByVendor.has(vendorId)) {
+                    productsByVendor.set(vendorId, []);
+                }
+                productsByVendor.get(vendorId).push({ product, quantite });
+            }
+            const vendorIds = Array.from(productsByVendor.keys());
+            const vendors = await User.query().whereIn('id', vendorIds);
+            const vendorMap = new Map(vendors.map(v => [v.id, v]));
+            const createdOrders = [];
+            for (const [vendorId, vendorProducts] of productsByVendor) {
+                const vendor = vendorMap.get(vendorId);
+                if (!vendor) {
+                    logger.warn(`Vendeur ${vendorId} non trouvé`);
+                    continue;
+                }
+                if (!vendor.latitude || !vendor.longitude) {
+                    return response.status(400).json({
+                        success: false,
+                        message: `Le vendeur ${vendor.firstName} ${vendor.lastName} n'a pas de position GPS enregistrée`,
+                    });
+                }
+                const distance = DistanceCalculator.calculateDistance({ latitude: payload.latitude, longitude: payload.longitude }, { latitude: vendor.latitude, longitude: vendor.longitude });
+                const deliveryFee = DistanceCalculator.calculateDeliveryFee(distance);
+                const totalProduits = vendorProducts.reduce((sum, { product, quantite }) => sum + product.price * quantite, 0);
+                const defaultPaymentMethod = await PaymentMethod.query()
+                    .where('vendeur_id', vendorId)
+                    .where('is_default', true)
+                    .where('is_active', true)
+                    .first();
+                if (!defaultPaymentMethod) {
+                    return response.status(400).json({
+                        success: false,
+                        message: `Le vendeur ${vendor.firstName} ${vendor.lastName} n'a pas de moyen de paiement par défaut actif`,
+                    });
+                }
+                const order = await EcommerceOrder.create({
+                    orderId: randomUUID(),
+                    status: EcommerceOrderStatus.PENDING_PAYMENT,
+                    clientId: user.id,
+                    client: user.fullName || user.email,
+                    phone: user.phone || '',
+                    vendorId: vendorId,
+                    deliveryPersonId: null,
+                    items: vendorProducts.map(({ product, quantite }) => ({
+                        productId: product.id,
+                        name: product.name,
+                        price: product.price,
+                        quantity: quantite,
+                        idVendeur: vendorId,
+                    })),
+                    address: {
+                        ville: '',
+                        commune: '',
+                        quartier: '',
+                        avenue: '',
+                        numero: '',
+                        pays: '',
+                        codePostale: '',
+                    },
+                    total: totalProduits,
+                    latitude: payload.latitude,
+                    longitude: payload.longitude,
+                    distanceKm: distance,
+                    deliveryFee: deliveryFee,
+                    packagePhoto: null,
+                    packagePhotoPublicId: null,
+                    paymentMethodId: defaultPaymentMethod.id,
+                });
+                await EcommerceOrderLog.create({
+                    logId: randomUUID(),
+                    orderId: order.orderId,
+                    oldStatus: '',
+                    newStatus: EcommerceOrderStatus.PENDING_PAYMENT,
+                    changedBy: user.id,
+                    changedByRole: user.role,
+                    reason: 'Initialisation de la commande',
+                });
+                await order.load('paymentMethod');
+                const template = await PaymentMethodTemplate.query()
+                    .where('type', order.paymentMethod.type)
+                    .first();
+                createdOrders.push({
+                    id: order.id,
+                    orderId: order.orderId,
+                    vendeurId: vendorId,
+                    vendeur: {
+                        id: vendor.id,
+                        firstName: vendor.firstName,
+                        lastName: vendor.lastName,
+                    },
+                    products: vendorProducts.map(({ product, quantite }) => {
+                        const productMedias = mediasByProduct.get(product.id) || [];
+                        const mainImage = productMedias.length > 0 ? productMedias[0].mediaUrl : null;
+                        const secondaryImages = productMedias.length > 1
+                            ? productMedias.slice(1).map(m => m.mediaUrl)
+                            : [];
+                        return {
+                            id: product.id,
+                            name: product.name,
+                            prix: product.price,
+                            quantite: quantite,
+                            imageUrl: mainImage,
+                            images: secondaryImages,
+                        };
+                    }),
+                    totalProduits: totalProduits,
+                    deliveryFee: deliveryFee,
+                    distanceKm: distance,
+                    totalAvecLivraison: totalProduits + deliveryFee,
+                    status: order.status,
+                    paymentMethod: {
+                        id: order.paymentMethod.id,
+                        type: order.paymentMethod.type,
+                        name: template?.name || order.paymentMethod.type,
+                        imageUrl: template?.imageUrl || null,
+                        numeroCompte: order.paymentMethod.numeroCompte,
+                    },
+                    createdAt: order.createdAt,
+                });
+            }
+            const summary = {
+                totalOrders: createdOrders.length,
+                totalProducts: createdOrders.reduce((sum, o) => sum + o.totalProduits, 0),
+                totalDelivery: createdOrders.reduce((sum, o) => sum + o.deliveryFee, 0),
+                grandTotal: createdOrders.reduce((sum, o) => sum + o.totalAvecLivraison, 0),
+            };
+            return response.status(201).json({
+                success: true,
+                message: 'Commandes initialisées avec succès',
+                orders: createdOrders,
+                summary: summary,
+            });
+        }
+        catch (error) {
+            logger.error('Erreur lors de l\'initialisation des commandes:', error);
+            return response.status(500).json({
+                success: false,
+                message: 'Erreur lors de l\'initialisation des commandes',
+                error: error.message,
+            });
+        }
+    }
+    async getBuyerOrders({ request, response, auth }) {
+        try {
+            const user = auth.user;
+            const { status, vendeurId } = request.qs();
+            const query = EcommerceOrder.query()
+                .where('client_id', user.id)
+                .preload('paymentMethod')
+                .orderBy('created_at', 'desc');
+            if (status) {
+                query.where('status', status);
+            }
+            if (vendeurId) {
+                query.where('vendor_id', Number(vendeurId));
+            }
+            const orders = await query;
+            const enrichedOrders = await Promise.all(orders.map(async (order) => {
+                const vendor = await User.find(order.vendorId);
+                let formattedPaymentMethod = null;
+                if (order.paymentMethod) {
+                    const template = await PaymentMethodTemplate.query()
+                        .where('type', order.paymentMethod.type)
+                        .first();
+                    formattedPaymentMethod = {
+                        id: order.paymentMethod.id,
+                        type: order.paymentMethod.type,
+                        name: template?.name || order.paymentMethod.type,
+                        imageUrl: template?.imageUrl || null,
+                        numeroCompte: order.paymentMethod.numeroCompte,
+                        nomTitulaire: order.paymentMethod.nomTitulaire,
+                        isDefault: order.paymentMethod.isDefault,
+                        isActive: order.paymentMethod.isActive,
+                    };
+                }
+                return {
+                    id: order.id,
+                    orderId: order.orderId,
+                    status: order.status,
+                    vendeurId: order.vendorId,
+                    vendeur: vendor ? {
+                        id: vendor.id,
+                        firstName: vendor.firstName,
+                        lastName: vendor.lastName,
+                        phone: vendor.phone,
+                    } : null,
+                    products: order.items,
+                    total: order.total,
+                    deliveryFee: order.deliveryFee,
+                    distanceKm: order.distanceKm,
+                    totalAvecLivraison: order.deliveryFee ? Number(order.total) + order.deliveryFee : Number(order.total),
+                    address: order.address,
+                    latitude: order.latitude,
+                    longitude: order.longitude,
+                    paymentMethod: formattedPaymentMethod,
+                    deliveryPersonId: order.deliveryPersonId,
+                    createdAt: order.createdAt,
+                    updatedAt: order.updatedAt,
+                };
+            }));
+            const stats = {
+                total: orders.length,
+                pending_payment: orders.filter(o => o.status === EcommerceOrderStatus.PENDING_PAYMENT).length,
+                pending: orders.filter(o => o.status === EcommerceOrderStatus.PENDING).length,
+                in_preparation: orders.filter(o => o.status === EcommerceOrderStatus.EN_PREPARATION).length,
+                ready_to_ship: orders.filter(o => o.status === EcommerceOrderStatus.PRET_A_EXPEDIER).length,
+                in_delivery: orders.filter(o => o.status === EcommerceOrderStatus.EN_ROUTE).length,
+                delivered: orders.filter(o => o.status === EcommerceOrderStatus.DELIVERED).length,
+                cancelled: orders.filter(o => o.status === EcommerceOrderStatus.CANCELLED).length,
+                rejected: orders.filter(o => o.status === EcommerceOrderStatus.REJECTED).length,
+            };
+            return response.status(200).json({
+                success: true,
+                message: 'Vos commandes récupérées avec succès',
+                orders: enrichedOrders,
+                stats: stats,
+            });
+        }
+        catch (error) {
+            logger.error('Erreur lors de la récupération des commandes de l\'acheteur:', error);
+            return response.status(500).json({
+                success: false,
+                message: 'Erreur lors de la récupération de vos commandes',
+                error: error.message,
+            });
+        }
+    }
+    async updatePaymentMethod({ request, response, auth, params }) {
+        try {
+            const user = auth.user;
+            const orderId = params.id;
+            const payload = await request.validateUsing(updatePaymentMethodValidator);
+            const order = await EcommerceOrder.find(orderId);
+            if (!order) {
+                return response.status(404).json({
+                    success: false,
+                    message: 'Commande non trouvée',
+                });
+            }
+            if (order.clientId !== user.id) {
+                return response.status(403).json({
+                    success: false,
+                    message: 'Vous n\'êtes pas autorisé à modifier cette commande',
+                });
+            }
+            if (order.status !== EcommerceOrderStatus.PENDING_PAYMENT) {
+                return response.status(400).json({
+                    success: false,
+                    message: 'Impossible de modifier le moyen de paiement. La commande n\'est plus en attente de paiement.',
+                });
+            }
+            const newPaymentMethod = await PaymentMethod.find(payload.paymentMethodId);
+            if (!newPaymentMethod) {
+                return response.status(404).json({
+                    success: false,
+                    message: 'Moyen de paiement non trouvé',
+                });
+            }
+            if (newPaymentMethod.vendeurId !== order.vendorId) {
+                return response.status(403).json({
+                    success: false,
+                    message: 'Le moyen de paiement sélectionné n\'appartient pas au vendeur de cette commande',
+                });
+            }
+            if (!newPaymentMethod.isActive) {
+                return response.status(400).json({
+                    success: false,
+                    message: 'Le moyen de paiement sélectionné n\'est pas actif',
+                });
+            }
+            order.paymentMethodId = newPaymentMethod.id;
+            if (payload.numeroPayment) {
+                order.numeroPayment = payload.numeroPayment;
+            }
+            if (order.status === EcommerceOrderStatus.PENDING_PAYMENT) {
+                order.status = EcommerceOrderStatus.PENDING;
+                await EcommerceOrderLog.create({
+                    logId: randomUUID(),
+                    orderId: order.orderId,
+                    oldStatus: EcommerceOrderStatus.PENDING_PAYMENT,
+                    newStatus: EcommerceOrderStatus.PENDING,
+                    changedBy: user.id,
+                    changedByRole: user.role,
+                    reason: 'Moyen de paiement confirmé',
+                });
+            }
+            await order.save();
+            await order.load('paymentMethod');
+            const template = await PaymentMethodTemplate.query()
+                .where('type', order.paymentMethod.type)
+                .first();
+            return response.status(200).json({
+                success: true,
+                message: 'Moyen de paiement mis à jour avec succès',
+                order: {
+                    id: order.id,
+                    orderId: order.orderId,
+                    vendeurId: order.vendorId,
+                    totalAvecLivraison: order.deliveryFee ? order.total + order.deliveryFee : order.total,
+                    status: order.status,
+                    paymentMethod: {
+                        id: order.paymentMethod.id,
+                        type: order.paymentMethod.type,
+                        name: template?.name || order.paymentMethod.type,
+                        imageUrl: template?.imageUrl || null,
+                        numeroCompte: order.paymentMethod.numeroCompte,
+                    },
+                    updatedAt: order.updatedAt,
+                },
+            });
+        }
+        catch (error) {
+            logger.error('Erreur lors de la modification du moyen de paiement:', error);
+            return response.status(500).json({
+                success: false,
+                message: 'Erreur lors de la modification du moyen de paiement',
+                error: error.message,
+            });
+        }
+    }
+    async batchUpdatePaymentMethods({ request, response, auth }) {
+        const trx = await db.transaction();
+        try {
+            const user = auth.user;
+            const payload = await request.validateUsing(batchUpdatePaymentMethodsValidator);
+            const commandeIds = payload.updates.map(u => u.commandeId);
+            const orders = await EcommerceOrder.query()
+                .whereIn('id', commandeIds)
+                .where('client_id', user.id)
+                .useTransaction(trx);
+            if (orders.length !== commandeIds.length) {
+                await trx.rollback();
+                return response.status(404).json({
+                    success: false,
+                    message: 'Une ou plusieurs commandes n\'existent pas ou ne vous appartiennent pas',
+                });
+            }
+            const notPendingOrders = orders.filter(o => o.status !== EcommerceOrderStatus.PENDING_PAYMENT);
+            if (notPendingOrders.length > 0) {
+                await trx.rollback();
+                return response.status(400).json({
+                    success: false,
+                    message: 'Certaines commandes ne sont plus modifiables (statut différent de pending_payment)',
+                    orderIds: notPendingOrders.map(o => o.id),
+                });
+            }
+            const orderMap = new Map(orders.map(o => [o.id, o]));
+            const paymentMethodIds = payload.updates.map(u => u.paymentMethodId);
+            const paymentMethods = await PaymentMethod.query()
+                .whereIn('id', paymentMethodIds)
+                .useTransaction(trx);
+            const paymentMethodMap = new Map(paymentMethods.map(pm => [pm.id, pm]));
+            const updatedOrders = [];
+            for (const update of payload.updates) {
+                const order = orderMap.get(update.commandeId);
+                const paymentMethod = paymentMethodMap.get(update.paymentMethodId);
+                if (!paymentMethod) {
+                    await trx.rollback();
+                    return response.status(404).json({
+                        success: false,
+                        message: `Le moyen de paiement ${update.paymentMethodId} n'existe pas`,
+                        commandeId: update.commandeId,
+                    });
+                }
+                if (paymentMethod.vendeurId !== order.vendorId) {
+                    await trx.rollback();
+                    return response.status(403).json({
+                        success: false,
+                        message: `Le moyen de paiement ${update.paymentMethodId} n'appartient pas au vendeur de la commande ${update.commandeId}`,
+                    });
+                }
+                if (!paymentMethod.isActive) {
+                    await trx.rollback();
+                    return response.status(400).json({
+                        success: false,
+                        message: `Le moyen de paiement ${update.paymentMethodId} n'est pas actif`,
+                        commandeId: update.commandeId,
+                    });
+                }
+                order.paymentMethodId = paymentMethod.id;
+                if (update.numeroPayment) {
+                    order.numeroPayment = update.numeroPayment;
+                }
+                if (order.status === EcommerceOrderStatus.PENDING_PAYMENT) {
+                    order.status = EcommerceOrderStatus.PENDING;
+                    await EcommerceOrderLog.create({
+                        logId: randomUUID(),
+                        orderId: order.orderId,
+                        oldStatus: EcommerceOrderStatus.PENDING_PAYMENT,
+                        newStatus: EcommerceOrderStatus.PENDING,
+                        changedBy: user.id,
+                        changedByRole: user.role,
+                        reason: 'Moyen de paiement confirmé (batch)',
+                    }, { client: trx });
+                }
+                await order.useTransaction(trx).save();
+                updatedOrders.push({
+                    commandeId: order.id,
+                    orderId: order.orderId,
+                    vendeurId: order.vendorId,
+                    oldPaymentMethodId: order.paymentMethodId,
+                    newPaymentMethodId: paymentMethod.id,
+                });
+            }
+            await trx.commit();
+            const finalOrders = await EcommerceOrder.query()
+                .whereIn('id', commandeIds)
+                .preload('paymentMethod');
+            const enrichedOrders = await Promise.all(finalOrders.map(async (order) => {
+                const template = await PaymentMethodTemplate.query()
+                    .where('type', order.paymentMethod.type)
+                    .first();
+                return {
+                    id: order.id,
+                    orderId: order.orderId,
+                    vendeurId: order.vendorId,
+                    status: order.status,
+                    total: order.total,
+                    deliveryFee: order.deliveryFee,
+                    totalAvecLivraison: order.deliveryFee ? Number(order.total) + order.deliveryFee : Number(order.total),
+                    paymentMethod: {
+                        id: order.paymentMethod.id,
+                        type: order.paymentMethod.type,
+                        name: template?.name || order.paymentMethod.type,
+                        imageUrl: template?.imageUrl || null,
+                        numeroCompte: order.paymentMethod.numeroCompte,
+                    },
+                    updatedAt: order.updatedAt,
+                };
+            }));
+            return response.status(200).json({
+                success: true,
+                message: `${updatedOrders.length} commande(s) mise(s) à jour avec succès`,
+                orders: enrichedOrders,
+                summary: {
+                    totalUpdated: updatedOrders.length,
+                    updates: updatedOrders,
+                },
+            });
+        }
+        catch (error) {
+            await trx.rollback();
+            logger.error('Erreur lors de la modification batch des moyens de paiement:', error);
+            return response.status(500).json({
+                success: false,
+                message: 'Erreur lors de la modification des moyens de paiement',
+                error: error.message,
+            });
+        }
+    }
+    async uploadPackagePhoto({ request, response, params, auth }) {
+        try {
+            const user = auth.user;
+            const orderId = params.id;
+            const order = await EcommerceOrder.find(orderId);
+            if (!order) {
+                return response.status(404).json({
+                    success: false,
+                    message: 'Commande non trouvée',
+                });
+            }
+            if (order.vendorId !== user.id) {
+                return response.status(403).json({
+                    success: false,
+                    message: 'Seul le vendeur de cette commande peut uploader la photo du colis',
+                });
+            }
+            if (order.status !== EcommerceOrderStatus.EN_PREPARATION) {
+                return response.status(400).json({
+                    success: false,
+                    message: 'La photo du colis ne peut être uploadée que lorsque la commande est en préparation',
+                });
+            }
+            const packagePhoto = request.file('packagePhoto', {
+                size: '10mb',
+                extnames: ['jpg', 'jpeg', 'png', 'webp'],
+            });
+            if (!packagePhoto) {
+                return response.status(400).json({
+                    success: false,
+                    message: 'Aucune photo fournie. Le champ doit être nommé "packagePhoto"',
+                });
+            }
+            if (!packagePhoto.isValid || !packagePhoto.tmpPath) {
+                return response.status(400).json({
+                    success: false,
+                    message: 'Fichier invalide',
+                    errors: packagePhoto.errors,
+                });
+            }
+            if (order.packagePhotoPublicId) {
+                try {
+                    await ecommerceCloudinaryService.deletePhoto(order.packagePhotoPublicId);
+                }
+                catch (error) {
+                    logger.warn('Erreur lors de la suppression de l\'ancienne photo du colis:', error);
+                }
+            }
+            const uploadResult = await ecommerceCloudinaryService.uploadPackagePhoto(packagePhoto.tmpPath, order.orderId);
+            let codeColis;
+            let isUnique = false;
+            let attempts = 0;
+            const maxAttempts = 100;
+            while (!isUnique && attempts < maxAttempts) {
+                codeColis = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
+                const existingOrder = await EcommerceOrder.query()
+                    .where('code_colis', codeColis)
+                    .andWhere('id', '!=', orderId)
+                    .first();
+                if (!existingOrder) {
+                    isUnique = true;
+                }
+                attempts++;
+            }
+            if (!isUnique) {
+                return response.status(500).json({
+                    success: false,
+                    message: 'Impossible de générer un code unique. Veuillez réessayer.',
+                });
+            }
+            order.packagePhoto = uploadResult.url;
+            order.packagePhotoPublicId = uploadResult.publicId;
+            order.codeColis = codeColis;
+            await order.save();
+            return response.status(200).json({
+                success: true,
+                message: 'Photo du colis uploadée et code généré avec succès',
+                data: {
+                    orderId: order.orderId,
+                    packagePhoto: order.packagePhoto,
+                    codeColis: order.codeColis,
+                },
+            });
+        }
+        catch (error) {
+            logger.error('Erreur lors de l\'upload de la photo du colis:', error);
+            return response.status(500).json({
+                success: false,
+                message: 'Erreur lors de l\'upload de la photo',
+                error: error.message,
+            });
+        }
     }
 }
 //# sourceMappingURL=ecommerce_orders_controller.js.map

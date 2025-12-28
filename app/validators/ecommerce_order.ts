@@ -25,14 +25,61 @@ export const createOrderValidator = vine.compile(
 export const updateStatusValidator = vine.compile(
   vine.object({
     status: vine.enum([
+      'pending_payment',
       'pending',
       'colis en cours de préparation',
       'prêt à expédier',
+      'accepté par livreur',
       'en route pour livraison',
       'delivered',
       'cancelled',
       'rejected',
+      'en_preparation',
+      'pret_a_expedier',
+      'accepte_livreur',
+      'en_route',
     ]),
     reason: vine.string().trim().optional(),
+  })
+)
+
+/**
+ * Validator pour l'initialisation d'une commande multi-vendeurs
+ */
+export const initializeOrderValidator = vine.compile(
+  vine.object({
+    products: vine.array(
+      vine.object({
+        productId: vine.number().positive(),
+        quantite: vine.number().positive().min(1),
+      })
+    ).minLength(1),
+    latitude: vine.number().min(-90).max(90),
+    longitude: vine.number().min(-180).max(180),
+  })
+)
+
+/**
+ * Validator pour la modification du moyen de paiement
+ */
+export const updatePaymentMethodValidator = vine.compile(
+  vine.object({
+    paymentMethodId: vine.number().positive(),
+    numeroPayment: vine.string().trim().optional(),
+  })
+)
+
+/**
+ * Validator pour la modification en batch des moyens de paiement
+ */
+export const batchUpdatePaymentMethodsValidator = vine.compile(
+  vine.object({
+    updates: vine.array(
+      vine.object({
+        commandeId: vine.number().positive(),
+        paymentMethodId: vine.number().positive(),
+        numeroPayment: vine.string().trim().optional(),
+      })
+    ).minLength(1),
   })
 )

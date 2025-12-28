@@ -298,6 +298,26 @@ router
   .post('/ecommerce/commandes/store', [EcommerceOrdersController, 'store'])
   .use(middleware.auth({ guards: ['api'] }))
 
+// Initialiser des commandes multi-vendeurs
+router
+  .post('/ecommerce/commandes/initialize', [EcommerceOrdersController, 'initialize'])
+  .use(middleware.auth({ guards: ['api'] }))
+
+// Voir toutes ses commandes (acheteur connecté)
+router
+  .get('/ecommerce/commandes/buyer/me', [EcommerceOrdersController, 'getBuyerOrders'])
+  .use(middleware.auth({ guards: ['api'] }))
+
+// Modifier le moyen de paiement d'une commande
+router
+  .patch('/ecommerce/commandes/:id/payment-method', [EcommerceOrdersController, 'updatePaymentMethod'])
+  .use(middleware.auth({ guards: ['api'] }))
+
+// Modifier les moyens de paiement de plusieurs commandes en batch
+router
+  .patch('/ecommerce/commandes/batch-update-payment-methods', [EcommerceOrdersController, 'batchUpdatePaymentMethods'])
+  .use(middleware.auth({ guards: ['api'] }))
+
 // Voir ses commandes (acheteur)
 router
   .get('/ecommerce/commandes/acheteur', [EcommerceOrdersController, 'getOrdersByBuyer'])
@@ -318,14 +338,14 @@ router
   .patch('/ecommerce/commandes/:id/status', [EcommerceOrdersController, 'updateStatus'])
   .use(middleware.auth({ guards: ['api'] }))
 
+// Upload photo du colis et générer code (vendeur)
+router
+  .post('/ecommerce/commandes/:id/upload-package-photo', [EcommerceOrdersController, 'uploadPackagePhoto'])
+  .use(middleware.auth({ guards: ['api'] }))
+
 // Prendre en charge une livraison (livreur)
 router
   .post('/ecommerce/livraison/:orderId/take', [EcommerceOrdersController, 'takeDelivery'])
-  .use(middleware.auth({ guards: ['api'] }))
-
-// Upload photo du colis (vendeur)
-router
-  .post('/ecommerce/upload/package-photo', [EcommerceOrdersController, 'uploadPackagePhoto'])
   .use(middleware.auth({ guards: ['api'] }))
 
 // ============================================================
