@@ -38,24 +38,41 @@ Ce document décrit le système de gestion de commandes e-commerce multi-vendeur
   "products": [
     {
       "productId": 151,
-      "quantity": 2
+      "quantite": 2
     },
     {
       "productId": 165,
-      "quantity": 1
+      "quantite": 1
     }
   ],
   "latitude": -4.3276,
-  "longitude": 15.3136
+  "longitude": 15.3136,
+  "address": {
+    "pays": "RDC",
+    "ville": "Kinshasa",
+    "commune": "Ngaliema",
+    "quartier": "Joli Parc",
+    "avenue": "Avenue de la Liberté",
+    "numero": "123",
+    "codePostale": "10001"
+  }
 }
 ```
 
 **Paramètres:**
 - `products` (array, required): Liste des produits à commander
   - `productId` (number, required): ID du produit
-  - `quantity` (number, required): Quantité souhaitée
+  - `quantite` (number, required): Quantité souhaitée
 - `latitude` (number, required): Latitude GPS de l'acheteur
 - `longitude` (number, required): Longitude GPS de l'acheteur
+- `address` (object, optional): Adresse de livraison
+  - `pays` (string, optional): Pays
+  - `ville` (string, optional): Ville
+  - `commune` (string, optional): Commune
+  - `quartier` (string, optional): Quartier
+  - `avenue` (string, optional): Avenue
+  - `numero` (string, optional): Numéro
+  - `codePostale` (string, optional): Code postal
 
 **Response Success (201):**
 ```json
@@ -78,7 +95,7 @@ Ce document décrit le système de gestion de commandes e-commerce multi-vendeur
           "productId": 151,
           "name": "Jhon foster",
           "price": 25000,
-          "quantity": 2,
+          "quantite": 2,
           "idVendeur": 114,
           "imageUrl": "https://res.cloudinary.com/.../product_main.jpg",
           "images": [
@@ -138,7 +155,7 @@ Ce document décrit le système de gestion de commandes e-commerce multi-vendeur
           "productId": 165,
           "name": "garde-robe",
           "price": 100000,
-          "quantity": 1,
+          "quantite": 1,
           "idVendeur": 152,
           "imageUrl": "https://res.cloudinary.com/.../wardrobe.jpg",
           "images": []
@@ -229,7 +246,7 @@ Ce document décrit le système de gestion de commandes e-commerce multi-vendeur
         {
           "name": "garde-robe",
           "price": 100000,
-          "quantity": 1,
+          "quantite": 1,
           "idVendeur": 152,
           "productId": 165
         }
@@ -797,11 +814,20 @@ const response = await fetch('http://localhost:3333/ecommerce/commandes/initiali
   },
   body: JSON.stringify({
     products: [
-      { productId: 151, quantity: 2 },
-      { productId: 165, quantity: 1 }
+      { productId: 151, quantite: 2 },
+      { productId: 165, quantite: 1 }
     ],
     latitude: -4.3276,
-    longitude: 15.3136
+    longitude: 15.3136,
+    address: {
+      pays: 'RDC',
+      ville: 'Kinshasa',
+      commune: 'Ngaliema',
+      quartier: 'Joli Parc',
+      avenue: 'Avenue de la Liberté',
+      numero: '123',
+      codePostale: '10001'
+    }
   })
 });
 
@@ -875,11 +901,20 @@ curl -X POST "http://localhost:3333/ecommerce/commandes/initialize" \
   -H "Content-Type: application/json" \
   -d '{
     "products": [
-      {"productId": 151, "quantity": 2},
-      {"productId": 165, "quantity": 1}
+      {"productId": 151, "quantite": 2},
+      {"productId": 165, "quantite": 1}
     ],
     "latitude": -4.3276,
-    "longitude": 15.3136
+    "longitude": 15.3136,
+    "address": {
+      "pays": "RDC",
+      "ville": "Kinshasa",
+      "commune": "Ngaliema",
+      "quartier": "Joli Parc",
+      "avenue": "Avenue de la Liberté",
+      "numero": "123",
+      "codePostale": "10001"
+    }
   }'
 ```
 

@@ -668,13 +668,13 @@ export default class EcommerceOrdersController {
                         idVendeur: vendorId,
                     })),
                     address: {
-                        ville: '',
-                        commune: '',
-                        quartier: '',
-                        avenue: '',
-                        numero: '',
-                        pays: '',
-                        codePostale: '',
+                        ville: payload.address?.ville || '',
+                        commune: payload.address?.commune || '',
+                        quartier: payload.address?.quartier || '',
+                        avenue: payload.address?.avenue || '',
+                        numero: payload.address?.numero || '',
+                        pays: payload.address?.pays || '',
+                        codePostale: payload.address?.codePostale || '',
                     },
                     total: totalProduits,
                     latitude: payload.latitude,
@@ -695,6 +695,7 @@ export default class EcommerceOrdersController {
                     reason: 'Initialisation de la commande',
                 });
                 await order.load('paymentMethod');
+                await order.refresh();
                 const template = await PaymentMethodTemplate.query()
                     .where('type', order.paymentMethod.type)
                     .first();
@@ -723,10 +724,13 @@ export default class EcommerceOrdersController {
                         };
                     }),
                     totalProduits: totalProduits,
-                    deliveryFee: deliveryFee,
-                    distanceKm: distance,
-                    totalAvecLivraison: totalProduits + deliveryFee,
+                    deliveryFee: order.deliveryFee,
+                    distanceKm: order.distanceKm,
+                    totalAvecLivraison: totalProduits + order.deliveryFee,
                     status: order.status,
+                    address: order.address,
+                    latitude: order.latitude,
+                    longitude: order.longitude,
                     paymentMethod: {
                         id: order.paymentMethod.id,
                         type: order.paymentMethod.type,

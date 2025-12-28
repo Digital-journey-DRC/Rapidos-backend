@@ -41,6 +41,15 @@ export const initializeOrderValidator = vine.compile(vine.object({
     })).minLength(1),
     latitude: vine.number().min(-90).max(90),
     longitude: vine.number().min(-180).max(180),
+    address: vine.object({
+        pays: vine.string().trim().optional(),
+        ville: vine.string().trim().optional(),
+        commune: vine.string().trim().optional(),
+        quartier: vine.string().trim().optional(),
+        avenue: vine.string().trim().optional(),
+        numero: vine.string().trim().optional(),
+        codePostale: vine.string().trim().optional(),
+    }).optional(),
 }));
 export const updatePaymentMethodValidator = vine.compile(vine.object({
     paymentMethodId: vine.number().positive(),
