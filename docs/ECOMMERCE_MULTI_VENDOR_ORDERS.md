@@ -214,11 +214,13 @@ Ce document décrit le système de gestion de commandes e-commerce multi-vendeur
 
 ---
 
-### 2. Voir Ses Commandes (Acheteur)
+### 2. Voir Ses Commandes Actuelles (Acheteur)
 
 **Endpoint:** `GET /ecommerce/commandes/buyer/me`
 
-**Description:** Récupère toutes les commandes de l'acheteur connecté avec statistiques par statut.
+**Description:** Récupère **uniquement les commandes de la dernière initialisation** (session de commande actuelle). Les commandes créées dans un intervalle de 30 secondes sont considérées comme faisant partie de la même session.
+
+**💡 Note:** Pour voir l'historique complet de toutes vos commandes, utilisez l'endpoint `/ecommerce/commandes/buyer/history` (à venir).
 
 **Authentification:** Bearer Token requis
 

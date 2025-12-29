@@ -1,6 +1,6 @@
 import { BaseCommand } from '@adonisjs/core/ace'
 import type { CommandOptions } from '@adonisjs/core/types/ace'
-import app from '@adonisjs/core/services/app'
+// import app from '@adonisjs/core/services/app'
 
 export default class AddCodeColisColumn extends BaseCommand {
   static commandName = 'add:code-colis-column'

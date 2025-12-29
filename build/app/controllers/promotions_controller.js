@@ -26,6 +26,7 @@ export default class PromotionsController {
           image_4 VARCHAR(255) NULL,
           libelle VARCHAR(255) NOT NULL,
           likes INTEGER DEFAULT 0,
+          date_debut_promotion TIMESTAMP NULL,
           delai_promotion TIMESTAMP NOT NULL,
           nouveau_prix DECIMAL(10, 2) NOT NULL,
           ancien_prix DECIMAL(10, 2) NOT NULL,

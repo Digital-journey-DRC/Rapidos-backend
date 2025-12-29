@@ -186,13 +186,30 @@ export default class EcommerceOrdersController {
             });
         }
     }
-    async getOrdersByBuyer({ response, auth }) {
+    async getOrdersByBuyer({ request, response, auth }) {
         try {
             const user = auth.user;
-            const orders = await EcommerceOrder.query()
-                .where('clientId', user.id)
+            const status = request.input('status');
+            const latestOrder = await EcommerceOrder.query()
+                .where('client_id', user.id)
+                .orderBy('createdAt', 'desc')
+                .first();
+            if (!latestOrder) {
+                return response.status(200).json({
+                    success: true,
+                    commandes: [],
+                });
+            }
+            const latestCreatedAt = latestOrder.createdAt.toSQL();
+            const query = EcommerceOrder.query()
+                .where('client_id', user.id)
+                .whereRaw(`created_at BETWEEN (TIMESTAMP '${latestCreatedAt}' - INTERVAL '10 seconds') AND (TIMESTAMP '${latestCreatedAt}' + INTERVAL '10 seconds')`)
                 .preload('paymentMethod')
                 .orderBy('createdAt', 'desc');
+            if (status) {
+                query.where('status', status);
+            }
+            const orders = await query;
             const templates = await PaymentMethodTemplate.query();
             const templatesMap = new Map(templates.map(t => [t.type, t]));
             const formattedOrders = orders.map((order) => {
@@ -237,7 +254,7 @@ export default class EcommerceOrdersController {
         try {
             const user = auth.user;
             const orders = await EcommerceOrder.query()
-                .where('vendorId', user.id)
+                .where('vendor_id', user.id)
                 .preload('paymentMethod')
                 .orderBy('createdAt', 'desc');
             const templates = await PaymentMethodTemplate.query();
@@ -767,18 +784,46 @@ export default class EcommerceOrdersController {
         try {
             const user = auth.user;
             const { status, vendeurId } = request.qs();
-            const query = EcommerceOrder.query()
+            const latestOrder = await EcommerceOrder.query()
+                .where('client_id', user.id)
+                .orderBy('created_at', 'desc')
+                .first();
+            if (!latestOrder) {
+                return response.status(200).json({
+                    success: true,
+                    message: 'Aucune commande trouvée',
+                    orders: [],
+                    stats: {
+                        total: 0,
+                        pending_payment: 0,
+                        pending: 0,
+                        in_preparation: 0,
+                        ready_to_ship: 0,
+                        in_delivery: 0,
+                        delivered: 0,
+                        cancelled: 0,
+                        rejected: 0,
+                    }
+                });
+            }
+            const allOrders = await EcommerceOrder.query()
                 .where('client_id', user.id)
                 .preload('paymentMethod')
                 .orderBy('created_at', 'desc');
-            if (status) {
-                query.where('status', status);
-            }
-            if (vendeurId) {
-                query.where('vendor_id', Number(vendeurId));
-            }
-            const orders = await query;
-            const enrichedOrders = await Promise.all(orders.map(async (order) => {
+            const latestMs = latestOrder.createdAt.toMillis();
+            const tenSecondsAgo = latestMs - 10000;
+            const tenSecondsAfter = latestMs + 10000;
+            let orders = allOrders.filter((order) => {
+                const orderMs = order.createdAt.toMillis();
+                return orderMs >= tenSecondsAgo && orderMs <= tenSecondsAfter;
+            });
+            const filteredOrders = status
+                ? orders.filter(o => o.status === status)
+                : orders;
+            const finalOrders = vendeurId
+                ? filteredOrders.filter(o => o.vendorId === Number(vendeurId))
+                : filteredOrders;
+            const enrichedOrders = await Promise.all(finalOrders.map(async (order) => {
                 const vendor = await User.find(order.vendorId);
                 let formattedPaymentMethod = null;
                 if (order.paymentMethod) {
@@ -822,15 +867,15 @@ export default class EcommerceOrdersController {
                 };
             }));
             const stats = {
-                total: orders.length,
-                pending_payment: orders.filter(o => o.status === EcommerceOrderStatus.PENDING_PAYMENT).length,
-                pending: orders.filter(o => o.status === EcommerceOrderStatus.PENDING).length,
-                in_preparation: orders.filter(o => o.status === EcommerceOrderStatus.EN_PREPARATION).length,
-                ready_to_ship: orders.filter(o => o.status === EcommerceOrderStatus.PRET_A_EXPEDIER).length,
-                in_delivery: orders.filter(o => o.status === EcommerceOrderStatus.EN_ROUTE).length,
-                delivered: orders.filter(o => o.status === EcommerceOrderStatus.DELIVERED).length,
-                cancelled: orders.filter(o => o.status === EcommerceOrderStatus.CANCELLED).length,
-                rejected: orders.filter(o => o.status === EcommerceOrderStatus.REJECTED).length,
+                total: finalOrders.length,
+                pending_payment: finalOrders.filter(o => o.status === EcommerceOrderStatus.PENDING_PAYMENT).length,
+                pending: finalOrders.filter(o => o.status === EcommerceOrderStatus.PENDING).length,
+                in_preparation: finalOrders.filter(o => o.status === EcommerceOrderStatus.EN_PREPARATION).length,
+                ready_to_ship: finalOrders.filter(o => o.status === EcommerceOrderStatus.PRET_A_EXPEDIER).length,
+                in_delivery: finalOrders.filter(o => o.status === EcommerceOrderStatus.EN_ROUTE).length,
+                delivered: finalOrders.filter(o => o.status === EcommerceOrderStatus.DELIVERED).length,
+                cancelled: finalOrders.filter(o => o.status === EcommerceOrderStatus.CANCELLED).length,
+                rejected: finalOrders.filter(o => o.status === EcommerceOrderStatus.REJECTED).length,
             };
             return response.status(200).json({
                 success: true,

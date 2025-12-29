@@ -230,16 +230,44 @@ export default class EcommerceOrdersController {
 
   /**
    * GET /ecommerce/commandes/acheteur
-   * Récupérer les commandes d'un acheteur
+   * Récupérer les commandes de la dernière initialisation (session actuelle uniquement)
    */
-  async getOrdersByBuyer({ response, auth }: HttpContext) {
+  async getOrdersByBuyer({ request, response, auth }: HttpContext) {
     try {
       const user = auth.user!
+      const status = request.input('status')
 
-      const orders = await EcommerceOrder.query()
-        .where('clientId', user.id)
+      // Trouver la date de création de la commande la plus récente
+      const latestOrder = await EcommerceOrder.query()
+        .where('client_id', user.id)
+        .orderBy('createdAt', 'desc')
+        .first()
+
+      if (!latestOrder) {
+        return response.status(200).json({
+          success: true,
+          commandes: [],
+        })
+      }
+
+      // Récupérer toutes les commandes créées à la même date (même session d'initialisation)
+      // On considère que les commandes créées dans un intervalle de 10 secondes font partie de la même initialisation
+      const latestCreatedAt = latestOrder.createdAt.toSQL() // Convertir en format SQL
+
+      const query = EcommerceOrder.query()
+        .where('client_id', user.id)
+        .whereRaw(
+          `created_at BETWEEN (TIMESTAMP '${latestCreatedAt}' - INTERVAL '10 seconds') AND (TIMESTAMP '${latestCreatedAt}' + INTERVAL '10 seconds')`
+        )
         .preload('paymentMethod')
         .orderBy('createdAt', 'desc')
+
+      // Filtrer par statut si fourni
+      if (status) {
+        query.where('status', status)
+      }
+
+      const orders = await query
 
       // Récupérer tous les templates pour les images
       const templates = await PaymentMethodTemplate.query()
@@ -991,25 +1019,59 @@ export default class EcommerceOrdersController {
       const user = auth.user!
       const { status, vendeurId } = request.qs()
 
-      const query = EcommerceOrder.query()
+      // Trouver la date de création de la commande la plus récente
+      const latestOrder = await EcommerceOrder.query()
+        .where('client_id', user.id)
+        .orderBy('created_at', 'desc')
+        .first()
+
+      if (!latestOrder) {
+        return response.status(200).json({
+          success: true,
+          message: 'Aucune commande trouvée',
+          orders: [],
+          stats: {
+            total: 0,
+            pending_payment: 0,
+            pending: 0,
+            in_preparation: 0,
+            ready_to_ship: 0,
+            in_delivery: 0,
+            delivered: 0,
+            cancelled: 0,
+            rejected: 0,
+          }
+        })
+      }
+
+      // Récupérer toutes les commandes de l'utilisateur
+      const allOrders = await EcommerceOrder.query()
         .where('client_id', user.id)
         .preload('paymentMethod')
         .orderBy('created_at', 'desc')
 
+      // Filtrer pour ne garder que les commandes créées dans les 10 secondes autour de la plus récente
+      const latestMs = latestOrder.createdAt.toMillis()
+      const tenSecondsAgo = latestMs - 10000
+      const tenSecondsAfter = latestMs + 10000
+
+      let orders = allOrders.filter((order) => {
+        const orderMs = order.createdAt.toMillis()
+        return orderMs >= tenSecondsAgo && orderMs <= tenSecondsAfter
+      })
+
       // Filtrer par status si fourni
-      if (status) {
-        query.where('status', status)
-      }
+      const filteredOrders = status
+        ? orders.filter(o => o.status === status)
+        : orders
 
       // Filtrer par vendeur si fourni
-      if (vendeurId) {
-        query.where('vendor_id', Number(vendeurId))
-      }
-
-      const orders = await query
+      const finalOrders = vendeurId
+        ? filteredOrders.filter(o => o.vendorId === Number(vendeurId))
+        : filteredOrders
 
       // Enrichir avec les templates et les infos vendeur
-      const enrichedOrders = await Promise.all(orders.map(async (order) => {
+      const enrichedOrders = await Promise.all(finalOrders.map(async (order) => {
         // Récupérer le vendeur
         const vendor = await User.find(order.vendorId)
 
@@ -1058,17 +1120,17 @@ export default class EcommerceOrdersController {
         }
       }))
 
-      // Calculer les statistiques
+      // Calculer les statistiques (basées sur les commandes de la dernière session)
       const stats = {
-        total: orders.length,
-        pending_payment: orders.filter(o => o.status === EcommerceOrderStatus.PENDING_PAYMENT).length,
-        pending: orders.filter(o => o.status === EcommerceOrderStatus.PENDING).length,
-        in_preparation: orders.filter(o => o.status === EcommerceOrderStatus.EN_PREPARATION).length,
-        ready_to_ship: orders.filter(o => o.status === EcommerceOrderStatus.PRET_A_EXPEDIER).length,
-        in_delivery: orders.filter(o => o.status === EcommerceOrderStatus.EN_ROUTE).length,
-        delivered: orders.filter(o => o.status === EcommerceOrderStatus.DELIVERED).length,
-        cancelled: orders.filter(o => o.status === EcommerceOrderStatus.CANCELLED).length,
-        rejected: orders.filter(o => o.status === EcommerceOrderStatus.REJECTED).length,
+        total: finalOrders.length,
+        pending_payment: finalOrders.filter(o => o.status === EcommerceOrderStatus.PENDING_PAYMENT).length,
+        pending: finalOrders.filter(o => o.status === EcommerceOrderStatus.PENDING).length,
+        in_preparation: finalOrders.filter(o => o.status === EcommerceOrderStatus.EN_PREPARATION).length,
+        ready_to_ship: finalOrders.filter(o => o.status === EcommerceOrderStatus.PRET_A_EXPEDIER).length,
+        in_delivery: finalOrders.filter(o => o.status === EcommerceOrderStatus.EN_ROUTE).length,
+        delivered: finalOrders.filter(o => o.status === EcommerceOrderStatus.DELIVERED).length,
+        cancelled: finalOrders.filter(o => o.status === EcommerceOrderStatus.CANCELLED).length,
+        rejected: finalOrders.filter(o => o.status === EcommerceOrderStatus.REJECTED).length,
       }
 
       return response.status(200).json({
