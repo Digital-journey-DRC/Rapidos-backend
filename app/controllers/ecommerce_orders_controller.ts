@@ -296,7 +296,7 @@ export default class EcommerceOrdersController {
       const user = auth.user!
 
       const orders = await EcommerceOrder.query()
-        .where('vendorId', user.id)
+        .where('vendor_id', user.id)
         .preload('paymentMethod')
         .orderBy('createdAt', 'desc')
 
@@ -1386,16 +1386,16 @@ export default class EcommerceOrdersController {
   }
 
   /**
-   * POST /ecommerce/commandes/:id/upload-package-photo
+   * POST /ecommerce/commandes/:orderId/upload-package-photo
    * Uploader la photo du colis et générer un code unique à 4 chiffres
    */
   async uploadPackagePhoto({ request, response, params, auth }: HttpContext) {
     try {
       const user = auth.user!
-      const orderId = params.id
+      const orderId = params.orderId
 
       // Vérifier que la commande existe
-      const order = await EcommerceOrder.find(orderId)
+      const order = await EcommerceOrder.findBy('order_id', orderId)
       if (!order) {
         return response.status(404).json({
           success: false,
@@ -1469,7 +1469,7 @@ export default class EcommerceOrdersController {
         // Vérifier l'unicité
         const existingOrder = await EcommerceOrder.query()
           .where('code_colis', codeColis)
-          .andWhere('id', '!=', orderId)
+          .where('id', '!=', order.id)
           .first()
 
         if (!existingOrder) {

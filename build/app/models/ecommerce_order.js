@@ -14,10 +14,10 @@ export var EcommerceOrderStatus;
 (function (EcommerceOrderStatus) {
     EcommerceOrderStatus["PENDING_PAYMENT"] = "pending_payment";
     EcommerceOrderStatus["PENDING"] = "pending";
-    EcommerceOrderStatus["EN_PREPARATION"] = "colis en cours de pr\u00E9paration";
-    EcommerceOrderStatus["PRET_A_EXPEDIER"] = "pr\u00EAt \u00E0 exp\u00E9dier";
-    EcommerceOrderStatus["ACCEPTE_LIVREUR"] = "accept\u00E9 par livreur";
-    EcommerceOrderStatus["EN_ROUTE"] = "en route pour livraison";
+    EcommerceOrderStatus["EN_PREPARATION"] = "en_preparation";
+    EcommerceOrderStatus["PRET_A_EXPEDIER"] = "pret_a_expedier";
+    EcommerceOrderStatus["ACCEPTE_LIVREUR"] = "accepte_livreur";
+    EcommerceOrderStatus["EN_ROUTE"] = "en_route";
     EcommerceOrderStatus["DELIVERED"] = "delivered";
     EcommerceOrderStatus["CANCELLED"] = "cancelled";
     EcommerceOrderStatus["REJECTED"] = "rejected";

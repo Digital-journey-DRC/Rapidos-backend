@@ -1074,8 +1074,8 @@ export default class EcommerceOrdersController {
     async uploadPackagePhoto({ request, response, params, auth }) {
         try {
             const user = auth.user;
-            const orderId = params.id;
-            const order = await EcommerceOrder.find(orderId);
+            const orderId = params.orderId;
+            const order = await EcommerceOrder.findBy('order_id', orderId);
             if (!order) {
                 return response.status(404).json({
                     success: false,
@@ -1128,7 +1128,7 @@ export default class EcommerceOrdersController {
                 codeColis = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
                 const existingOrder = await EcommerceOrder.query()
                     .where('code_colis', codeColis)
-                    .andWhere('id', '!=', orderId)
+                    .where('id', '!=', order.id)
                     .first();
                 if (!existingOrder) {
                     isUnique = true;

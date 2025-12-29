@@ -228,7 +228,7 @@ router
     .patch('/ecommerce/commandes/:id/status', [EcommerceOrdersController, 'updateStatus'])
     .use(middleware.auth({ guards: ['api'] }));
 router
-    .post('/ecommerce/commandes/:id/upload-package-photo', [EcommerceOrdersController, 'uploadPackagePhoto'])
+    .post('/ecommerce/commandes/:orderId/upload-package-photo', [EcommerceOrdersController, 'uploadPackagePhoto'])
     .use(middleware.auth({ guards: ['api'] }));
 router
     .post('/ecommerce/livraison/:orderId/take', [EcommerceOrdersController, 'takeDelivery'])

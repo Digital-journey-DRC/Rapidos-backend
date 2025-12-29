@@ -7,12 +7,12 @@ Ce document décrit le système de gestion de commandes e-commerce multi-vendeur
 ### Workflow Complet
 
 ```
-1. Acheteur initialise commande → Création de sous-commandes par vendeur
+1. Acheteur initialise commande → Création de sous-commandes par vendeur (status: pending_payment)
 2. Acheteur visualise ses commandes → Avec moyens de paiement par défaut
 3. Acheteur modifie moyens de paiement → Mise à jour individuelle ou batch
-4. Acheteur confirme paiement → Commandes passent en état "pending"
+4. Acheteur confirme paiement → Commandes passent de "pending_payment" à "pending"
 5. Vendeur voit ses commandes → GET /ecommerce/commandes/vendeur
-6. Vendeur commence préparation → PATCH status: "en_preparation"
+6. Vendeur commence préparation → PATCH status: "en_preparation" (de "pending" vers "en_preparation")
 7. Vendeur upload photo colis → POST /ecommerce/commandes/:id/upload-package-photo (génère code 1: 4 chiffres)
 8. Vendeur marque prêt → PATCH status: "pret_a_expedier" (photo + code obligatoires)
 9. Livreur accepte commande → POST /ecommerce/livraison/:orderId/take (status: "accepte_livreur")
@@ -474,11 +474,11 @@ Ce document décrit le système de gestion de commandes e-commerce multi-vendeur
 
 ---
 
-### 5. Upload Photo du Colis et Génération du Code
+### 5. Changer le Statut d'une Commande (Vendeur/Livreur)
 
-**Endpoint:** `POST /ecommerce/commandes/:id/upload-package-photo`
+**Endpoint:** `PATCH /ecommerce/commandes/:id/status`
 
-**Description:** Permet au vendeur d'uploader la photo du colis et génère automatiquement un code unique à 4 chiffres. Cette étape est **obligatoire** avant de marquer la commande comme "prêt à expédier".
+**Description:** Permet au vendeur ou au livreur de changer le statut d'une commande selon les transitions autorisées. Chaque changement est loggé automatiquement.
 
 **Authentification:** Bearer Token requis
 
@@ -700,7 +700,91 @@ Le système utilise deux codes distincts pour sécuriser la récupération ET la
 
 ---
 
-### 6. Workflow Vendeur Complet
+### 6. Upload Photo du Colis et Génération du Code
+
+**Endpoint:** `POST /ecommerce/commandes/:id/upload-package-photo`
+
+**Description:** Permet au vendeur d'uploader la photo du colis et génère automatiquement un code unique à 4 chiffres. Cette étape est **obligatoire** avant de marquer la commande comme "prêt à expédier".
+
+**Authentification:** Bearer Token requis
+
+**URL Parameters:**
+- `id` (number): ID de la commande
+
+**Request:** `multipart/form-data`
+
+**Form Data:**
+- `packagePhoto` (file, required): Image du colis (JPG, JPEG, PNG, WEBP, max 10MB)
+
+**Contraintes:**
+- ✅ Seul le vendeur de la commande peut uploader la photo
+- ✅ La commande doit être en statut `en_preparation`
+- ✅ Le code à 4 chiffres est généré automatiquement (0000-9999)
+- ✅ Le code est unique dans la base de données
+
+**Response Success (200):**
+```json
+{
+  "success": true,
+  "message": "Photo du colis uploadée et code généré avec succès",
+  "data": {
+    "orderId": "61640d1c-2d0e-416f-a6cc-bb945fc1a707",
+    "packagePhoto": "https://res.cloudinary.com/.../package_photos/xyz.jpg",
+    "codeColis": "4582"
+  }
+}
+```
+
+**Response Errors:**
+
+**404 - Commande non trouvée:**
+```json
+{
+  "success": false,
+  "message": "Commande non trouvée"
+}
+```
+
+**403 - Non autorisé:**
+```json
+{
+  "success": false,
+  "message": "Seul le vendeur de cette commande peut uploader la photo du colis"
+}
+```
+
+**400 - Mauvais statut:**
+```json
+{
+  "success": false,
+  "message": "La photo du colis ne peut être uploadée que lorsque la commande est en préparation"
+}
+```
+
+**400 - Pas de fichier:**
+```json
+{
+  "success": false,
+  "message": "Aucune photo fournie. Le champ doit être nommé \"packagePhoto\""
+}
+```
+
+**cURL Example:**
+```bash
+curl -X POST "https://api.rapidos-marketplace.com/ecommerce/commandes/1/upload-package-photo" \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -F "packagePhoto=@/path/to/package-photo.jpg"
+```
+
+**Notes importantes:**
+- 📦 **Code unique**: Le code à 4 chiffres est généré aléatoirement et vérifié pour être unique
+- 🔒 **Obligatoire**: Photo + code requis pour passer à "pret_a_expedier"
+- ☁️ **Cloudinary**: Les images sont stockées dans le dossier "package_photos"
+- ♻️ **Remplacement**: Si une photo existe déjà, elle est remplacée et l'ancienne est supprimée
+
+---
+
+### 7. Workflow Vendeur Complet
 
 **Étape 1: Voir ses commandes**
 ```bash
@@ -710,6 +794,7 @@ Authorization: Bearer VENDEUR_TOKEN
 
 **Étape 2: Commencer la préparation**
 ```bash
+# Passer de "pending" à "en_preparation"
 PATCH /ecommerce/commandes/1932a070-6bb4-4b15-a94b-03d7d4eafa8e/status
 {
   "status": "en_preparation",
@@ -997,13 +1082,15 @@ curl -X GET "http://localhost:3333/ecommerce/commandes/vendeur" \
 
 ### 4. Statuts de Commande
 ```
-pending_payment  →  Acheteur peut modifier le moyen de paiement
+pending_payment  →  Acheteur modifie le moyen de paiement
        ↓
-   pending       →  Commande confirmée, vendeur peut voir
+   pending       →  Commande confirmée, vendeur peut commencer
        ↓
 en_preparation   →  Vendeur prépare la commande
        ↓
 pret_a_expedier  →  Commande prête, livreur peut prendre
+       ↓
+accepte_livreur  →  Livreur a accepté la commande
        ↓
    en_route      →  Livreur en cours de livraison
        ↓
