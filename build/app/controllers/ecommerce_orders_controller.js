@@ -1121,7 +1121,7 @@ export default class EcommerceOrdersController {
         try {
             const user = auth.user;
             const orderId = params.orderId;
-            const order = await EcommerceOrder.findBy('order_id', orderId);
+            const order = await EcommerceOrder.findBy('orderId', orderId);
             if (!order) {
                 return response.status(404).json({
                     success: false,

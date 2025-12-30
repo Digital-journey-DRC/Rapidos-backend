@@ -1459,7 +1459,7 @@ export default class EcommerceOrdersController {
       const orderId = params.orderId
 
       // Vérifier que la commande existe
-      const order = await EcommerceOrder.findBy('order_id', orderId)
+      const order = await EcommerceOrder.findBy('orderId', orderId)
       if (!order) {
         return response.status(404).json({
           success: false,
