@@ -255,6 +255,7 @@ export default class EcommerceOrdersController {
             const user = auth.user;
             const orders = await EcommerceOrder.query()
                 .where('vendor_id', user.id)
+                .where('status', '!=', EcommerceOrderStatus.PENDING_PAYMENT)
                 .preload('paymentMethod')
                 .orderBy('createdAt', 'desc');
             const templates = await PaymentMethodTemplate.query();

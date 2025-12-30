@@ -318,6 +318,7 @@ export default class EcommerceOrdersController {
   /**
    * GET /ecommerce/commandes/vendeur
    * Récupérer les commandes d'un vendeur
+   * Exclut les commandes avec le statut "pending_payment"
    */
   async getOrdersByVendor({ response, auth }: HttpContext) {
     try {
@@ -325,6 +326,7 @@ export default class EcommerceOrdersController {
 
       const orders = await EcommerceOrder.query()
         .where('vendor_id', user.id)
+        .where('status', '!=', EcommerceOrderStatus.PENDING_PAYMENT)
         .preload('paymentMethod')
         .orderBy('createdAt', 'desc')
 
