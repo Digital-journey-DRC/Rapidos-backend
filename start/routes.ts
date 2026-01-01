@@ -332,6 +332,12 @@ router
   .get('/ecommerce/commandes/vendeur', [EcommerceOrdersController, 'getOrdersByVendor'])
   .use(middleware.auth({ guards: ['api'] }))
 
+// Voir toutes les commandes du système avec pagination (admin uniquement)
+// IMPORTANT: Cette route doit être déclarée AVANT les routes avec paramètres dynamiques
+router
+  .get('/ecommerce/commandes/admin/all', [EcommerceOrdersController, 'getAllOrders'])
+  .use(middleware.auth({ guards: ['api'] }))
+
 // Liste des livraisons disponibles (livreur)
 router
   .get('/ecommerce/livraison/ma-liste', [EcommerceOrdersController, 'getDeliveriesList'])
@@ -355,11 +361,6 @@ router
 // Prendre en charge une livraison (livreur)
 router
   .post('/ecommerce/livraison/:orderId/take', [EcommerceOrdersController, 'takeDelivery'])
-  .use(middleware.auth({ guards: ['api'] }))
-
-// Voir toutes les commandes du système avec pagination (admin uniquement)
-router
-  .get('/ecommerce/commandes/admin/all', [EcommerceOrdersController, 'getAllOrders'])
   .use(middleware.auth({ guards: ['api'] }))
 
 // ============================================================
