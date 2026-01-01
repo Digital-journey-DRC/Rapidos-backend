@@ -357,6 +357,11 @@ router
   .post('/ecommerce/livraison/:orderId/take', [EcommerceOrdersController, 'takeDelivery'])
   .use(middleware.auth({ guards: ['api'] }))
 
+// Voir toutes les commandes du système avec pagination (admin uniquement)
+router
+  .get('/ecommerce/commandes/admin/all', [EcommerceOrdersController, 'getAllOrders'])
+  .use(middleware.auth({ guards: ['api'] }))
+
 // ============================================================
 // FIN MODULE E-COMMERCE ORDERS
 // ============================================================
