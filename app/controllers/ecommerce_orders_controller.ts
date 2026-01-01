@@ -619,6 +619,76 @@ export default class EcommerceOrdersController {
   }
 
   /**
+   * GET /ecommerce/livraison/disponibles
+   * Récupérer uniquement les commandes prêtes à être expédiées (statut pret_a_expedier)
+   * Pour les livreurs
+   */
+  async getAvailableDeliveries({ response, auth }: HttpContext) {
+    try {
+      const user = auth.user!
+
+      // Vérifier que l'utilisateur est un livreur
+      if (user.role !== 'livreur') {
+        return response.status(403).json({
+          success: false,
+          message: 'Seuls les livreurs peuvent consulter les livraisons disponibles',
+        })
+      }
+
+      const deliveries = await EcommerceOrder.query()
+        .where('status', EcommerceOrderStatus.PRET_A_EXPEDIER)
+        .whereNull('deliveryPersonId') // Seulement les commandes non assignées
+        .preload('paymentMethod')
+        .orderBy('createdAt', 'desc')
+
+      // Récupérer les templates pour les images des moyens de paiement
+      const templates = await PaymentMethodTemplate.query()
+      const templatesMap = new Map(templates.map(t => [t.type, t]))
+
+      // Formater les livraisons pour inclure le type de moyen de paiement avec image
+      const formattedDeliveries = deliveries.map((order) => {
+        const serialized = order.serialize()
+        const paymentMethod = order.paymentMethod
+          ? (() => {
+              const template = templatesMap.get(order.paymentMethod.type)
+              return {
+                id: order.paymentMethod.id,
+                type: order.paymentMethod.type,
+                numeroCompte: order.paymentMethod.numeroCompte,
+                nomTitulaire: order.paymentMethod.nomTitulaire,
+                isDefault: order.paymentMethod.isDefault,
+                isActive: order.paymentMethod.isActive,
+                imageUrl: template?.imageUrl || null,
+                name: template?.name || order.paymentMethod.type,
+              }
+            })()
+          : null
+
+        return {
+          ...serialized,
+          paymentMethod,
+        }
+      })
+
+      return response.status(200).json({
+        success: true,
+        message: 'Livraisons disponibles récupérées avec succès',
+        livraisons: formattedDeliveries,
+      })
+    } catch (error) {
+      logger.error('Erreur récupération livraisons disponibles', {
+        error: error.message,
+        stack: error.stack,
+      })
+
+      return response.status(500).json({
+        success: false,
+        message: 'Erreur lors de la récupération des livraisons disponibles',
+      })
+    }
+  }
+
+  /**
    * POST /ecommerce/livraison/:orderId/take
    * Prendre en charge une livraison (livreur)
    */
@@ -1498,10 +1568,31 @@ export default class EcommerceOrdersController {
 
       // Valider le fichier
       if (!packagePhoto.isValid || !packagePhoto.tmpPath) {
+        logger.error('Fichier invalide lors de l\'upload', {
+          isValid: packagePhoto.isValid,
+          tmpPath: packagePhoto.tmpPath,
+          errors: packagePhoto.errors,
+        })
         return response.status(400).json({
           success: false,
           message: 'Fichier invalide',
           errors: packagePhoto.errors,
+        })
+      }
+
+      // Vérifier que le fichier temporaire existe
+      const fs = await import('fs/promises')
+      try {
+        await fs.access(packagePhoto.tmpPath)
+      } catch (error) {
+        logger.error('Fichier temporaire non accessible', {
+          tmpPath: packagePhoto.tmpPath,
+          error: error.message,
+        })
+        return response.status(500).json({
+          success: false,
+          message: 'Erreur: fichier temporaire non accessible',
+          error: error.message,
         })
       }
 
@@ -1515,10 +1606,25 @@ export default class EcommerceOrdersController {
       }
 
       // Uploader la nouvelle photo sur Cloudinary
-      const uploadResult = await ecommerceCloudinaryService.uploadPackagePhoto(
-        packagePhoto.tmpPath,
-        order.orderId
-      )
+      let uploadResult
+      try {
+        uploadResult = await ecommerceCloudinaryService.uploadPackagePhoto(
+          packagePhoto.tmpPath,
+          order.orderId
+        )
+      } catch (error) {
+        logger.error('Erreur lors de l\'upload Cloudinary', {
+          tmpPath: packagePhoto.tmpPath,
+          orderId: order.orderId,
+          error: error.message,
+          stack: error.stack,
+        })
+        return response.status(500).json({
+          success: false,
+          message: 'Erreur lors de l\'upload de la photo sur Cloudinary',
+          error: error.message,
+        })
+      }
 
       // Générer un code unique à 4 chiffres
       let codeColis: string

@@ -482,6 +482,61 @@ export default class EcommerceOrdersController {
             });
         }
     }
+    async getAvailableDeliveries({ response, auth }) {
+        try {
+            const user = auth.user;
+            if (user.role !== 'livreur') {
+                return response.status(403).json({
+                    success: false,
+                    message: 'Seuls les livreurs peuvent consulter les livraisons disponibles',
+                });
+            }
+            const deliveries = await EcommerceOrder.query()
+                .where('status', EcommerceOrderStatus.PRET_A_EXPEDIER)
+                .whereNull('deliveryPersonId')
+                .preload('paymentMethod')
+                .orderBy('createdAt', 'desc');
+            const templates = await PaymentMethodTemplate.query();
+            const templatesMap = new Map(templates.map(t => [t.type, t]));
+            const formattedDeliveries = deliveries.map((order) => {
+                const serialized = order.serialize();
+                const paymentMethod = order.paymentMethod
+                    ? (() => {
+                        const template = templatesMap.get(order.paymentMethod.type);
+                        return {
+                            id: order.paymentMethod.id,
+                            type: order.paymentMethod.type,
+                            numeroCompte: order.paymentMethod.numeroCompte,
+                            nomTitulaire: order.paymentMethod.nomTitulaire,
+                            isDefault: order.paymentMethod.isDefault,
+                            isActive: order.paymentMethod.isActive,
+                            imageUrl: template?.imageUrl || null,
+                            name: template?.name || order.paymentMethod.type,
+                        };
+                    })()
+                    : null;
+                return {
+                    ...serialized,
+                    paymentMethod,
+                };
+            });
+            return response.status(200).json({
+                success: true,
+                message: 'Livraisons disponibles récupérées avec succès',
+                livraisons: formattedDeliveries,
+            });
+        }
+        catch (error) {
+            logger.error('Erreur récupération livraisons disponibles', {
+                error: error.message,
+                stack: error.stack,
+            });
+            return response.status(500).json({
+                success: false,
+                message: 'Erreur lors de la récupération des livraisons disponibles',
+            });
+        }
+    }
     async takeDelivery({ response, auth, params }) {
         try {
             const user = auth.user;
@@ -1151,10 +1206,30 @@ export default class EcommerceOrdersController {
                 });
             }
             if (!packagePhoto.isValid || !packagePhoto.tmpPath) {
+                logger.error('Fichier invalide lors de l\'upload', {
+                    isValid: packagePhoto.isValid,
+                    tmpPath: packagePhoto.tmpPath,
+                    errors: packagePhoto.errors,
+                });
                 return response.status(400).json({
                     success: false,
                     message: 'Fichier invalide',
                     errors: packagePhoto.errors,
+                });
+            }
+            const fs = await import('fs/promises');
+            try {
+                await fs.access(packagePhoto.tmpPath);
+            }
+            catch (error) {
+                logger.error('Fichier temporaire non accessible', {
+                    tmpPath: packagePhoto.tmpPath,
+                    error: error.message,
+                });
+                return response.status(500).json({
+                    success: false,
+                    message: 'Erreur: fichier temporaire non accessible',
+                    error: error.message,
                 });
             }
             if (order.packagePhotoPublicId) {
@@ -1165,7 +1240,23 @@ export default class EcommerceOrdersController {
                     logger.warn('Erreur lors de la suppression de l\'ancienne photo du colis:', error);
                 }
             }
-            const uploadResult = await ecommerceCloudinaryService.uploadPackagePhoto(packagePhoto.tmpPath, order.orderId);
+            let uploadResult;
+            try {
+                uploadResult = await ecommerceCloudinaryService.uploadPackagePhoto(packagePhoto.tmpPath, order.orderId);
+            }
+            catch (error) {
+                logger.error('Erreur lors de l\'upload Cloudinary', {
+                    tmpPath: packagePhoto.tmpPath,
+                    orderId: order.orderId,
+                    error: error.message,
+                    stack: error.stack,
+                });
+                return response.status(500).json({
+                    success: false,
+                    message: 'Erreur lors de l\'upload de la photo sur Cloudinary',
+                    error: error.message,
+                });
+            }
             let codeColis;
             let isUnique = false;
             let attempts = 0;

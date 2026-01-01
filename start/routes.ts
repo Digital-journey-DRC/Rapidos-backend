@@ -136,6 +136,10 @@ router
   .use(middleware.auth({ guards: ['api'] }))
 
 router
+  .put('/category/update/:categoryId', [CategoryController, 'updateCategory'])
+  .use(middleware.auth({ guards: ['api'] }))
+
+router
   .delete('/category/delete/:categoryId', [CategoryController, 'deleteCategory'])
   .use(middleware.auth({ guards: ['api'] }))
 
@@ -331,6 +335,11 @@ router
 // Liste des livraisons disponibles (livreur)
 router
   .get('/ecommerce/livraison/ma-liste', [EcommerceOrdersController, 'getDeliveriesList'])
+  .use(middleware.auth({ guards: ['api'] }))
+
+// Liste des livraisons prêtes à être expédiées (livreur) - uniquement pret_a_expedier
+router
+  .get('/ecommerce/livraison/disponibles', [EcommerceOrdersController, 'getAvailableDeliveries'])
   .use(middleware.auth({ guards: ['api'] }))
 
 // Mettre à jour le statut d'une commande

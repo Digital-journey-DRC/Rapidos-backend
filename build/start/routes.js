@@ -225,6 +225,9 @@ router
     .get('/ecommerce/livraison/ma-liste', [EcommerceOrdersController, 'getDeliveriesList'])
     .use(middleware.auth({ guards: ['api'] }));
 router
+    .get('/ecommerce/livraison/disponibles', [EcommerceOrdersController, 'getAvailableDeliveries'])
+    .use(middleware.auth({ guards: ['api'] }));
+router
     .patch('/ecommerce/commandes/:id/status', [EcommerceOrdersController, 'updateStatus'])
     .use(middleware.auth({ guards: ['api'] }));
 router
