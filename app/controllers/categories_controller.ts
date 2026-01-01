@@ -2,8 +2,6 @@ import Category from '#models/category'
 import { categoryValidator } from '#validators/category'
 import type { HttpContext } from '@adonisjs/core/http'
 
-import { LabelParseCategoryFromFrenchInEnglish } from '#services/parsecategoryfromfrenchinenglish'
-
 export default class CategoriesController {
   async createCategory({ request, bouncer, response }: HttpContext) {
     const data = request.only(['name', 'description'])
@@ -12,7 +10,7 @@ export default class CategoriesController {
         return response.status(403).json({ message: 'Unauthorized' })
       }
 
-      const payload = await categoryValidator.validate(LabelParseCategoryFromFrenchInEnglish(data))
+      const payload = await categoryValidator.validate(data)
 
       const isCategoryExists = await Category.findBy('name', payload.name)
       if (isCategoryExists) {
@@ -22,7 +20,7 @@ export default class CategoriesController {
       }
       const category = await Category.create({
         name: payload.name,
-        description: payload.description,
+        description: payload.description || null,
       })
       return response.status(201).json({
         message: 'Category created successfully',
@@ -70,7 +68,7 @@ export default class CategoriesController {
       }
 
       const category = await Category.findOrFail(params.categoryId)
-      const payload = await categoryValidator.validate(LabelParseCategoryFromFrenchInEnglish(data))
+      const payload = await categoryValidator.validate(data)
 
       // Vérifier si le nom existe déjà pour une autre catégorie
       const isCategoryExists = await Category.query()
@@ -85,7 +83,7 @@ export default class CategoriesController {
       }
 
       category.name = payload.name
-      category.description = payload.description
+      category.description = payload.description || null
       await category.save()
 
       return response.status(200).json({
