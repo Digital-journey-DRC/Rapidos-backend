@@ -115,6 +115,10 @@ router
   .get('/products/category/:categoryId', [ProductsController, 'getProductByCategory'])
   .use(middleware.auth({ guards: ['api'] }))
 
+// Récupérer les produits par slug de catégorie (public, sans accents)
+// Ex: /products/by-category/telephones, /products/by-category/electronique
+router.get('/products/by-category/:slug', [ProductsController, 'getProductsByCategoryName'])
+
 router
   .get('/category/get-all', [CategoryController, 'getAllCategory'])
   .use(middleware.auth({ guards: ['api'] }))

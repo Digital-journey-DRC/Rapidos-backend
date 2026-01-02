@@ -1142,4 +1142,101 @@ export default class ProductsController {
       })
     }
   }
+
+  /**
+   * Récupérer les produits par slug de catégorie (sans accents)
+   * GET /products/by-category/:slug
+   * Ex: /products/by-category/telephones, /products/by-category/electronique
+   */
+  async getProductsByCategoryName({ params, response }: HttpContext) {
+    try {
+      const { slug } = params
+
+      // Mapping des slugs vers les noms de catégories
+      const slugMap: Record<string, string> = {
+        'telephones': 'Téléphones & Accessoires',
+        'electronique': 'Électronique',
+        'vetements': 'Vêtements',
+        'restaurants': 'Restaurants',
+        'beaute': 'Beauté',
+      }
+
+      const categoryName = slugMap[slug.toLowerCase()]
+
+      if (!categoryName) {
+        return response.status(404).json({ 
+          message: 'Catégorie non trouvée',
+          slug,
+          availableSlugs: Object.keys(slugMap)
+        })
+      }
+
+      // Chercher la catégorie par son nom
+      const category = await Category.query()
+        .where('name', categoryName)
+        .first()
+
+      if (!category) {
+        return response.status(404).json({ 
+          message: 'Catégorie non trouvée en base',
+          categoryName 
+        })
+      }
+
+      // Récupérer les produits de cette catégorie
+      const products = await Product.query()
+        .where('categorieId', category.id)
+        .where('stock', '>', 0)
+        .preload('category')
+        .preload('vendeur')
+
+      if (products.length === 0) {
+        return response.status(404).json({ 
+          message: 'Aucun produit trouvé dans cette catégorie',
+          category: category.serialize()
+        })
+      }
+
+      // Formater exactement comme getAllProducts
+      const productsFormatted = await Promise.all(
+        products.map(async (product) => {
+          const allMedias = await Media.query()
+            .where('productId', product.id)
+            .orderBy('created_at', 'asc')
+
+          const mainImage = allMedias.length > 0 ? allMedias[0].mediaUrl : null
+          const images = allMedias.length > 1 ? allMedias.slice(1).map((media) => media.mediaUrl) : []
+
+          const serialized = product.serialize()
+          return {
+            id: serialized.id,
+            name: serialized.name,
+            description: serialized.description,
+            price: serialized.price,
+            stock: serialized.stock,
+            category: serialized.category,
+            image: mainImage,
+            images: images,
+            vendeur: serialized.vendeur,
+          }
+        })
+      )
+
+      return response.status(200).json({ 
+        category: category.serialize(),
+        total: productsFormatted.length,
+        products: productsFormatted 
+      })
+    } catch (error) {
+      logger.error('Erreur lors de la récupération des produits par catégorie', {
+        error: error.message,
+        stack: error.stack,
+      })
+
+      return response.status(500).json({
+        message: 'Erreur serveur interne',
+        error: error.message,
+      })
+    }
+  }
 }
