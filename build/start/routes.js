@@ -91,13 +91,11 @@ router
     .delete('/products/:productId', [ProductsController, 'deleteProduct'])
     .use(middleware.auth({ guards: ['api'] }));
 router
-    .post('/category/store', [CategoryController, 'createCategory'])
-    .use(middleware.auth({ guards: ['api'] }));
-router
-    .put('/category/update/:categoryId', [CategoryController, 'updateCategory'])
-    .use(middleware.auth({ guards: ['api'] }));
-router
-    .delete('/category/delete/:categoryId', [CategoryController, 'deleteCategory'])
+    .group(() => {
+    router.post('/category/store', [CategoryController, 'createCategory']);
+    router.put('/category/update/:categoryId', [CategoryController, 'updateCategory']);
+    router.delete('/category/delete/:categoryId', [CategoryController, 'deleteCategory']);
+})
     .use(middleware.auth({ guards: ['api'] }));
 router
     .post('/commandes/store', [CommandesController, 'createCommande'])

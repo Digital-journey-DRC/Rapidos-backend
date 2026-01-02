@@ -12,7 +12,7 @@ import { DistanceCalculator } from '#services/distance_calculator'
 import Product from '#models/product'
 import User from '#models/user'
 import Media from '#models/media'
-import { UserRole } from '#Enum/user_role'
+import { UserRole } from '../Enum/user_role.js'
 
 export default class EcommerceOrdersController {
   /**
