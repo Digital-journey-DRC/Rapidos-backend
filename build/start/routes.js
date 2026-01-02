@@ -94,6 +94,9 @@ router
     .post('/category/store', [CategoryController, 'createCategory'])
     .use(middleware.auth({ guards: ['api'] }));
 router
+    .put('/category/update/:categoryId', [CategoryController, 'updateCategory'])
+    .use(middleware.auth({ guards: ['api'] }));
+router
     .delete('/category/delete/:categoryId', [CategoryController, 'deleteCategory'])
     .use(middleware.auth({ guards: ['api'] }));
 router
@@ -220,6 +223,9 @@ router
     .use(middleware.auth({ guards: ['api'] }));
 router
     .get('/ecommerce/commandes/vendeur', [EcommerceOrdersController, 'getOrdersByVendor'])
+    .use(middleware.auth({ guards: ['api'] }));
+router
+    .get('/ecommerce/commandes/admin/all', [EcommerceOrdersController, 'getAllOrders'])
     .use(middleware.auth({ guards: ['api'] }));
 router
     .get('/ecommerce/livraison/ma-liste', [EcommerceOrdersController, 'getDeliveriesList'])

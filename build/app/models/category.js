@@ -22,7 +22,7 @@ __decorate([
 ], Category.prototype, "name", void 0);
 __decorate([
     column(),
-    __metadata("design:type", String)
+    __metadata("design:type", Object)
 ], Category.prototype, "description", void 0);
 __decorate([
     column.dateTime({ autoCreate: true }),

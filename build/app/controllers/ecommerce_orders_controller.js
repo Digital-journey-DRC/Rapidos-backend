@@ -11,6 +11,7 @@ import { DistanceCalculator } from '#services/distance_calculator';
 import Product from '#models/product';
 import User from '#models/user';
 import Media from '#models/media';
+import { UserRole } from '#Enum/user_role';
 export default class EcommerceOrdersController {
     async createTables({ response }) {
         try {
@@ -1297,6 +1298,83 @@ export default class EcommerceOrdersController {
             return response.status(500).json({
                 success: false,
                 message: 'Erreur lors de l\'upload de la photo',
+                error: error.message,
+            });
+        }
+    }
+    async getAllOrders({ request, response, auth }) {
+        try {
+            const user = auth.user;
+            if (user.role !== UserRole.ADMIN && user.role !== UserRole.SuperAdmin) {
+                return response.forbidden({
+                    success: false,
+                    message: 'Seuls les administrateurs peuvent consulter toutes les commandes',
+                });
+            }
+            const page = request.input('page', 1);
+            const limit = request.input('limit', 20);
+            const status = request.input('status');
+            const vendorId = request.input('vendor_id');
+            const clientId = request.input('client_id');
+            let query = EcommerceOrder.query()
+                .preload('paymentMethod')
+                .orderBy('createdAt', 'desc');
+            if (status) {
+                query = query.where('status', status);
+            }
+            if (vendorId) {
+                query = query.where('vendor_id', vendorId);
+            }
+            if (clientId) {
+                query = query.where('client_id', clientId);
+            }
+            const orders = await query.paginate(page, limit);
+            const templates = await PaymentMethodTemplate.query();
+            const templatesMap = new Map(templates.map(t => [t.type, t]));
+            const formattedOrders = orders.all().map((order) => {
+                const serialized = order.serialize();
+                const paymentMethod = order.paymentMethod
+                    ? (() => {
+                        const template = templatesMap.get(order.paymentMethod.type);
+                        return {
+                            id: order.paymentMethod.id,
+                            type: order.paymentMethod.type,
+                            numeroCompte: order.paymentMethod.numeroCompte,
+                            nomTitulaire: order.paymentMethod.nomTitulaire,
+                            isDefault: order.paymentMethod.isDefault,
+                            isActive: order.paymentMethod.isActive,
+                            imageUrl: template?.imageUrl || null,
+                            name: template?.name || order.paymentMethod.type,
+                        };
+                    })()
+                    : null;
+                return {
+                    ...serialized,
+                    paymentMethod,
+                };
+            });
+            return response.status(200).json({
+                success: true,
+                message: 'Commandes récupérées avec succès',
+                data: formattedOrders,
+                meta: {
+                    total: orders.total,
+                    perPage: orders.perPage,
+                    currentPage: orders.currentPage,
+                    lastPage: orders.lastPage,
+                    firstPage: orders.firstPage,
+                    hasMorePages: orders.hasMorePages,
+                },
+            });
+        }
+        catch (error) {
+            logger.error('Erreur récupération toutes les commandes (admin)', {
+                error: error.message,
+                stack: error.stack,
+            });
+            return response.status(500).json({
+                success: false,
+                message: 'Erreur lors de la récupération des commandes',
                 error: error.message,
             });
         }
