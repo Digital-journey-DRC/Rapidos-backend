@@ -123,6 +123,11 @@ router
   .get('/category/get-all', [CategoryController, 'getAllCategory'])
   .use(middleware.auth({ guards: ['api'] }))
 
+// Récupérer une catégorie par mode (ex: mode, electronique, beaute)
+router
+  .get('/category/mode/:mode', [CategoryController, 'getCategoryByMode'])
+  .use(middleware.auth({ guards: ['api'] }))
+
 router
   .get('/products/all-products', [ProductsController, 'showAllProducts'])
   .use(middleware.auth({ guards: ['api'] }))

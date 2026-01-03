@@ -749,6 +749,7 @@ export default class EcommerceOrdersController {
                         numero: payload.address?.numero || '',
                         pays: payload.address?.pays || '',
                         codePostale: payload.address?.codePostale || '',
+                        refAdresse: payload.address?.refAdresse || '',
                     },
                     total: totalProduits,
                     latitude: payload.latitude,

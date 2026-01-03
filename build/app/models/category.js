@@ -33,7 +33,9 @@ __decorate([
     __metadata("design:type", DateTime)
 ], Category.prototype, "updatedAt", void 0);
 __decorate([
-    hasMany(() => Product),
+    hasMany(() => Product, {
+        foreignKey: 'categorieId',
+    }),
     __metadata("design:type", Object)
 ], Category.prototype, "products", void 0);
 //# sourceMappingURL=category.js.map

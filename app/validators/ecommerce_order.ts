@@ -64,6 +64,7 @@ export const initializeOrderValidator = vine.compile(
       avenue: vine.string().trim().optional(),
       numero: vine.string().trim().optional(),
       codePostale: vine.string().trim().optional(),
+      refAdresse: vine.string().trim().optional(),
     }).optional(),
   })
 )

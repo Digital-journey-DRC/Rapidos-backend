@@ -90,6 +90,7 @@ export default class EcommerceOrder extends BaseModel {
     numero: string
     pays: string
     codePostale: string
+    refAdresse?: string
   }
 
   @column()
