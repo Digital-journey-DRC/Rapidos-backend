@@ -837,7 +837,7 @@ export default class ProductsController {
                 .where('stock', '>', 0)
                 .whereNotNull('categorieId')
                 .orderByRaw('RANDOM()')
-                .limit(10);
+                .limit(11);
             const categoryIds = randomProducts
                 .map((p) => p.categorieId)
                 .filter((id) => id !== null && id !== undefined);
