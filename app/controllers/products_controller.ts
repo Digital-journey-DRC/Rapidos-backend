@@ -1052,7 +1052,7 @@ export default class ProductsController {
         .where('stock', '>', 0)
         .whereNotNull('categorieId')
         .orderByRaw('RANDOM()')
-        .limit(10)
+        .limit(11)
 
       // Charger les catégories séparément pour éviter les erreurs de preload
       const categoryIds = randomProducts
