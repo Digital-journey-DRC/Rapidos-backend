@@ -947,21 +947,7 @@ export default class EcommerceOrdersController {
           0
         )
 
-        // Récupérer le moyen de paiement par défaut du vendeur
-        const defaultPaymentMethod = await PaymentMethod.query()
-          .where('vendeur_id', vendorId)
-          .where('is_default', true)
-          .where('is_active', true)
-          .first()
-
-        if (!defaultPaymentMethod) {
-          return response.status(400).json({
-            success: false,
-            message: `Le vendeur ${vendor.firstName} ${vendor.lastName} n'a pas de moyen de paiement par défaut actif`,
-          })
-        }
-
-        // Créer la sous-commande
+        // Créer la sous-commande (paymentMethodId à null, l'acheteur choisira après)
         const order = await EcommerceOrder.create({
           orderId: randomUUID(),
           status: EcommerceOrderStatus.PENDING_PAYMENT,
@@ -994,7 +980,7 @@ export default class EcommerceOrdersController {
           deliveryFee: deliveryFee,
           packagePhoto: null,
           packagePhotoPublicId: null,
-          paymentMethodId: defaultPaymentMethod.id,
+          paymentMethodId: null,
         })
 
         // Logger la création
@@ -1008,12 +994,22 @@ export default class EcommerceOrdersController {
           reason: 'Initialisation de la commande',
         })
 
-        // Charger le moyen de paiement avec son template
-        await order.load('paymentMethod')
-        await order.refresh() // Rafraîchir pour avoir toutes les données
-        const template = await PaymentMethodTemplate.query()
-          .where('type', order.paymentMethod!.type)
-          .first()
+        // Charger le moyen de paiement avec son template (si existe)
+        let paymentMethodData = null
+        if (order.paymentMethodId) {
+          await order.load('paymentMethod')
+          await order.refresh()
+          const template = await PaymentMethodTemplate.query()
+            .where('type', order.paymentMethod!.type)
+            .first()
+          paymentMethodData = {
+            id: order.paymentMethod!.id,
+            type: order.paymentMethod!.type,
+            name: template?.name || order.paymentMethod!.type,
+            imageUrl: template?.imageUrl || null,
+            numeroCompte: order.paymentMethod!.numeroCompte,
+          }
+        }
 
         createdOrders.push({
           id: order.id,
@@ -1048,13 +1044,7 @@ export default class EcommerceOrdersController {
           address: order.address,
           latitude: order.latitude,
           longitude: order.longitude,
-          paymentMethod: {
-            id: order.paymentMethod!.id,
-            type: order.paymentMethod!.type,
-            name: template?.name || order.paymentMethod!.type,
-            imageUrl: template?.imageUrl || null,
-            numeroCompte: order.paymentMethod!.numeroCompte,
-          },
+          paymentMethod: paymentMethodData,
           createdAt: order.createdAt,
         })
       }

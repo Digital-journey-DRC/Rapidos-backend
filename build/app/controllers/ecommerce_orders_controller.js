@@ -715,17 +715,6 @@ export default class EcommerceOrdersController {
                 const distance = DistanceCalculator.calculateDistance({ latitude: payload.latitude, longitude: payload.longitude }, { latitude: vendor.latitude, longitude: vendor.longitude });
                 const deliveryFee = DistanceCalculator.calculateDeliveryFee(distance);
                 const totalProduits = vendorProducts.reduce((sum, { product, quantite }) => sum + product.price * quantite, 0);
-                const defaultPaymentMethod = await PaymentMethod.query()
-                    .where('vendeur_id', vendorId)
-                    .where('is_default', true)
-                    .where('is_active', true)
-                    .first();
-                if (!defaultPaymentMethod) {
-                    return response.status(400).json({
-                        success: false,
-                        message: `Le vendeur ${vendor.firstName} ${vendor.lastName} n'a pas de moyen de paiement par défaut actif`,
-                    });
-                }
                 const order = await EcommerceOrder.create({
                     orderId: randomUUID(),
                     status: EcommerceOrderStatus.PENDING_PAYMENT,
@@ -758,7 +747,7 @@ export default class EcommerceOrdersController {
                     deliveryFee: deliveryFee,
                     packagePhoto: null,
                     packagePhotoPublicId: null,
-                    paymentMethodId: defaultPaymentMethod.id,
+                    paymentMethodId: null,
                 });
                 await EcommerceOrderLog.create({
                     logId: randomUUID(),
@@ -769,11 +758,21 @@ export default class EcommerceOrdersController {
                     changedByRole: user.role,
                     reason: 'Initialisation de la commande',
                 });
-                await order.load('paymentMethod');
-                await order.refresh();
-                const template = await PaymentMethodTemplate.query()
-                    .where('type', order.paymentMethod.type)
-                    .first();
+                let paymentMethodData = null;
+                if (order.paymentMethodId) {
+                    await order.load('paymentMethod');
+                    await order.refresh();
+                    const template = await PaymentMethodTemplate.query()
+                        .where('type', order.paymentMethod.type)
+                        .first();
+                    paymentMethodData = {
+                        id: order.paymentMethod.id,
+                        type: order.paymentMethod.type,
+                        name: template?.name || order.paymentMethod.type,
+                        imageUrl: template?.imageUrl || null,
+                        numeroCompte: order.paymentMethod.numeroCompte,
+                    };
+                }
                 createdOrders.push({
                     id: order.id,
                     orderId: order.orderId,
@@ -806,13 +805,7 @@ export default class EcommerceOrdersController {
                     address: order.address,
                     latitude: order.latitude,
                     longitude: order.longitude,
-                    paymentMethod: {
-                        id: order.paymentMethod.id,
-                        type: order.paymentMethod.type,
-                        name: template?.name || order.paymentMethod.type,
-                        imageUrl: template?.imageUrl || null,
-                        numeroCompte: order.paymentMethod.numeroCompte,
-                    },
+                    paymentMethod: paymentMethodData,
                     createdAt: order.createdAt,
                 });
             }
