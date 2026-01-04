@@ -10,6 +10,7 @@ const HorairesOuvertureController = () => import('#controllers/horaires_ouvertur
 const EventsController = () => import('#controllers/events_controller')
 const EcommerceOrdersController = () => import('#controllers/ecommerce_orders_controller')
 const PaymentMethodsController = () => import('#controllers/payment_methods_controller')
+const AppSecretsController = () => import('#controllers/app_secrets_controller')
 
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
@@ -449,3 +450,13 @@ router
 // Route temporaire pour créer la table promotions (GET pour faciliter avec curl)
 const MigrationController = () => import('#controllers/migration_controller')
 router.get('/migration/create-promotions-table', [MigrationController, 'createPromotionsTable'])
+
+// ============================================================
+// MODULE APP SECRETS (Firebase credentials, etc.)
+// ============================================================
+
+// Créer la table app_secrets
+router.get('/app-secrets/create-table', [AppSecretsController, 'createTable'])
+
+// Initialiser les credentials Firebase dans la BD
+router.post('/app-secrets/init-firebase', [AppSecretsController, 'initFirebaseCredentials'])

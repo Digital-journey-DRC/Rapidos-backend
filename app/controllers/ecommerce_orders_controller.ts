@@ -13,6 +13,7 @@ import Product from '#models/product'
 import User from '#models/user'
 import Media from '#models/media'
 import { UserRole } from '../Enum/user_role.js'
+import { saveOrderToFirestore, notifyVendors, admin } from '#services/firebase_service'
 
 export default class EcommerceOrdersController {
   /**
@@ -1299,6 +1300,7 @@ export default class EcommerceOrdersController {
       }
       
       // Si la commande est en pending_payment, passer automatiquement à pending (paiement confirmé)
+      let firebaseOrderId: string | null = null
       if (order.status === EcommerceOrderStatus.PENDING_PAYMENT) {
         order.status = EcommerceOrderStatus.PENDING
         
@@ -1312,9 +1314,66 @@ export default class EcommerceOrdersController {
           changedByRole: user.role,
           reason: 'Moyen de paiement confirmé',
         })
+        
+        await order.save()
+        
+        // Charger les relations nécessaires
+        await order.load('clientUser')
+        
+        // Récupérer les infos des produits pour les items
+        const enrichedItems = await Promise.all(
+          order.items.map(async (item: any) => {
+            const product = await Product.query()
+              .where('id', item.productId)
+              .preload('media')
+              .preload('category')
+              .first()
+            
+            return {
+              id: item.productId,
+              name: item.name,
+              category: product?.category?.name || 'Non catégorisé',
+              price: Number(item.price),
+              imagePath: product?.media?.mediaUrl || '',
+              quantity: item.quantity,
+              stock: product?.stock || 0,
+              idVendeur: String(item.idVendeur),
+              description: product?.description || null,
+            }
+          })
+        )
+        
+        // Formater l'adresse complète
+        const addr = order.address
+        const adresseComplete = `${addr.avenue}, ${addr.numero}, ${addr.quartier}, ${addr.ville}, ${addr.pays}`
+        
+        // Enregistrer dans Firestore (backup + notifications)
+        const cartOrder = {
+          timestamp: admin.firestore.FieldValue.serverTimestamp(),
+          status: 'pending' as const,
+          phone: order.phone,
+          client: order.client,
+          idClient: String(order.clientId),
+          adresse: adresseComplete,
+          ville: addr.ville || '',
+          commune: addr.commune || '',
+          quartier: addr.quartier || '',
+          avenue: addr.avenue || '',
+          numero: addr.numero || '',
+          pays: addr.pays || '',
+          longitude: order.longitude || 0,
+          latitude: order.latitude || 0,
+          total: Number(order.total),
+          items: enrichedItems,
+        }
+        
+        firebaseOrderId = await saveOrderToFirestore(cartOrder)
+        
+        // Envoyer les notifications push aux vendeurs
+        await notifyVendors(enrichedItems, order.client, firebaseOrderId)
+      } else {
+        await order.save()
       }
-      
-      await order.save()
 
       // Charger le moyen de paiement avec son template
       await order.load('paymentMethod')
@@ -1324,7 +1383,8 @@ export default class EcommerceOrdersController {
 
       return response.status(200).json({
         success: true,
-        message: 'Moyen de paiement mis à jour avec succès',
+        message: firebaseOrderId ? 'Commande créée et notification envoyée' : 'Moyen de paiement mis à jour avec succès',
+        orderId: firebaseOrderId,
         order: {
           id: order.id,
           orderId: order.orderId,
@@ -1474,6 +1534,69 @@ export default class EcommerceOrdersController {
 
       await trx.commit()
 
+      // Enregistrer dans Firestore et envoyer les notifications pour les commandes passées en pending
+      const firebaseOrderIds: { commandeId: number; firebaseOrderId: string }[] = []
+      
+      for (const order of orders) {
+        if (order.status === EcommerceOrderStatus.PENDING) {
+          // Charger les relations nécessaires
+          await order.load('clientUser')
+          
+          // Récupérer les infos des produits pour les items
+          const enrichedItems = await Promise.all(
+            order.items.map(async (item: any) => {
+              const product = await Product.query()
+                .where('id', item.productId)
+                .preload('media')
+                .preload('category')
+                .first()
+              
+              return {
+                id: item.productId,
+                name: item.name,
+                category: product?.category?.name || 'Non catégorisé',
+                price: Number(item.price),
+                imagePath: product?.media?.mediaUrl || '',
+                quantity: item.quantity,
+                stock: product?.stock || 0,
+                idVendeur: String(item.idVendeur),
+                description: product?.description || null,
+              }
+            })
+          )
+          
+          // Formater l'adresse complète
+          const addr = order.address
+          const adresseComplete = `${addr.avenue}, ${addr.numero}, ${addr.quartier}, ${addr.ville}, ${addr.pays}`
+          
+          // Enregistrer dans Firestore (backup + notifications)
+          const cartOrder = {
+            timestamp: admin.firestore.FieldValue.serverTimestamp(),
+            status: 'pending' as const,
+            phone: order.phone,
+            client: order.client,
+            idClient: String(order.clientId),
+            adresse: adresseComplete,
+            ville: addr.ville || '',
+            commune: addr.commune || '',
+            quartier: addr.quartier || '',
+            avenue: addr.avenue || '',
+            numero: addr.numero || '',
+            pays: addr.pays || '',
+            longitude: order.longitude || 0,
+            latitude: order.latitude || 0,
+            total: Number(order.total),
+            items: enrichedItems,
+          }
+          
+          const firebaseOrderId = await saveOrderToFirestore(cartOrder)
+          firebaseOrderIds.push({ commandeId: order.id, firebaseOrderId })
+          
+          // Envoyer les notifications push aux vendeurs
+          await notifyVendors(enrichedItems, order.client, firebaseOrderId)
+        }
+      }
+
       // Charger les commandes mises à jour avec leurs relations
       const finalOrders = await EcommerceOrder.query()
         .whereIn('id', commandeIds)
@@ -1485,6 +1608,8 @@ export default class EcommerceOrdersController {
           .where('type', order.paymentMethod!.type)
           .first()
 
+        const firebaseInfo = firebaseOrderIds.find(f => f.commandeId === order.id)
+
         return {
           id: order.id,
           orderId: order.orderId,
@@ -1493,6 +1618,7 @@ export default class EcommerceOrdersController {
           total: order.total,
           deliveryFee: order.deliveryFee,
           totalAvecLivraison: order.deliveryFee ? Number(order.total) + order.deliveryFee : Number(order.total),
+          firebaseOrderId: firebaseInfo?.firebaseOrderId || null,
           paymentMethod: {
             id: order.paymentMethod!.id,
             type: order.paymentMethod!.type,
@@ -1506,10 +1632,13 @@ export default class EcommerceOrdersController {
 
       return response.status(200).json({
         success: true,
-        message: `${updatedOrders.length} commande(s) mise(s) à jour avec succès`,
+        message: firebaseOrderIds.length > 0 
+          ? `${updatedOrders.length} commande(s) mise(s) à jour et ${firebaseOrderIds.length} notification(s) envoyée(s)`
+          : `${updatedOrders.length} commande(s) mise(s) à jour avec succès`,
         orders: enrichedOrders,
         summary: {
           totalUpdated: updatedOrders.length,
+          firebaseOrders: firebaseOrderIds,
           updates: updatedOrders,
         },
       })

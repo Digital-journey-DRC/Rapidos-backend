@@ -10,6 +10,7 @@ const HorairesOuvertureController = () => import('#controllers/horaires_ouvertur
 const EventsController = () => import('#controllers/events_controller');
 const EcommerceOrdersController = () => import('#controllers/ecommerce_orders_controller');
 const PaymentMethodsController = () => import('#controllers/payment_methods_controller');
+const AppSecretsController = () => import('#controllers/app_secrets_controller');
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import YAML from 'yamljs';
@@ -292,4 +293,6 @@ router
     .use(middleware.auth({ guards: ['api'] }));
 const MigrationController = () => import('#controllers/migration_controller');
 router.get('/migration/create-promotions-table', [MigrationController, 'createPromotionsTable']);
+router.get('/app-secrets/create-table', [AppSecretsController, 'createTable']);
+router.post('/app-secrets/init-firebase', [AppSecretsController, 'initFirebaseCredentials']);
 //# sourceMappingURL=routes.js.map

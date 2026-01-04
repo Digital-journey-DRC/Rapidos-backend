@@ -12,6 +12,7 @@ import Product from '#models/product';
 import User from '#models/user';
 import Media from '#models/media';
 import { UserRole } from '../Enum/user_role.js';
+import { saveOrderToFirestore, notifyVendors, admin } from '#services/firebase_service';
 export default class EcommerceOrdersController {
     async createTables({ response }) {
         try {
@@ -1005,6 +1006,7 @@ export default class EcommerceOrdersController {
             if (payload.numeroPayment) {
                 order.numeroPayment = payload.numeroPayment;
             }
+            let firebaseOrderId = null;
             if (order.status === EcommerceOrderStatus.PENDING_PAYMENT) {
                 order.status = EcommerceOrderStatus.PENDING;
                 await EcommerceOrderLog.create({
@@ -1016,15 +1018,60 @@ export default class EcommerceOrdersController {
                     changedByRole: user.role,
                     reason: 'Moyen de paiement confirmé',
                 });
+                await order.save();
+                await order.load('clientUser');
+                const enrichedItems = await Promise.all(order.items.map(async (item) => {
+                    const product = await Product.query()
+                        .where('id', item.productId)
+                        .preload('media')
+                        .preload('category')
+                        .first();
+                    return {
+                        id: item.productId,
+                        name: item.name,
+                        category: product?.category?.name || 'Non catégorisé',
+                        price: Number(item.price),
+                        imagePath: product?.media?.mediaUrl || '',
+                        quantity: item.quantity,
+                        stock: product?.stock || 0,
+                        idVendeur: String(item.idVendeur),
+                        description: product?.description || null,
+                    };
+                }));
+                const addr = order.address;
+                const adresseComplete = `${addr.avenue}, ${addr.numero}, ${addr.quartier}, ${addr.ville}, ${addr.pays}`;
+                const cartOrder = {
+                    timestamp: admin.firestore.FieldValue.serverTimestamp(),
+                    status: 'pending',
+                    phone: order.phone,
+                    client: order.client,
+                    idClient: String(order.clientId),
+                    adresse: adresseComplete,
+                    ville: addr.ville || '',
+                    commune: addr.commune || '',
+                    quartier: addr.quartier || '',
+                    avenue: addr.avenue || '',
+                    numero: addr.numero || '',
+                    pays: addr.pays || '',
+                    longitude: order.longitude || 0,
+                    latitude: order.latitude || 0,
+                    total: Number(order.total),
+                    items: enrichedItems,
+                };
+                firebaseOrderId = await saveOrderToFirestore(cartOrder);
+                await notifyVendors(enrichedItems, order.client, firebaseOrderId);
             }
-            await order.save();
+            else {
+                await order.save();
+            }
             await order.load('paymentMethod');
             const template = await PaymentMethodTemplate.query()
                 .where('type', order.paymentMethod.type)
                 .first();
             return response.status(200).json({
                 success: true,
-                message: 'Moyen de paiement mis à jour avec succès',
+                message: firebaseOrderId ? 'Commande créée et notification envoyée' : 'Moyen de paiement mis à jour avec succès',
+                orderId: firebaseOrderId,
                 order: {
                     id: order.id,
                     orderId: order.orderId,
@@ -1136,6 +1183,53 @@ export default class EcommerceOrdersController {
                 });
             }
             await trx.commit();
+            const firebaseOrderIds = [];
+            for (const order of orders) {
+                if (order.status === EcommerceOrderStatus.PENDING) {
+                    await order.load('clientUser');
+                    const enrichedItems = await Promise.all(order.items.map(async (item) => {
+                        const product = await Product.query()
+                            .where('id', item.productId)
+                            .preload('media')
+                            .preload('category')
+                            .first();
+                        return {
+                            id: item.productId,
+                            name: item.name,
+                            category: product?.category?.name || 'Non catégorisé',
+                            price: Number(item.price),
+                            imagePath: product?.media?.mediaUrl || '',
+                            quantity: item.quantity,
+                            stock: product?.stock || 0,
+                            idVendeur: String(item.idVendeur),
+                            description: product?.description || null,
+                        };
+                    }));
+                    const addr = order.address;
+                    const adresseComplete = `${addr.avenue}, ${addr.numero}, ${addr.quartier}, ${addr.ville}, ${addr.pays}`;
+                    const cartOrder = {
+                        timestamp: admin.firestore.FieldValue.serverTimestamp(),
+                        status: 'pending',
+                        phone: order.phone,
+                        client: order.client,
+                        idClient: String(order.clientId),
+                        adresse: adresseComplete,
+                        ville: addr.ville || '',
+                        commune: addr.commune || '',
+                        quartier: addr.quartier || '',
+                        avenue: addr.avenue || '',
+                        numero: addr.numero || '',
+                        pays: addr.pays || '',
+                        longitude: order.longitude || 0,
+                        latitude: order.latitude || 0,
+                        total: Number(order.total),
+                        items: enrichedItems,
+                    };
+                    const firebaseOrderId = await saveOrderToFirestore(cartOrder);
+                    firebaseOrderIds.push({ commandeId: order.id, firebaseOrderId });
+                    await notifyVendors(enrichedItems, order.client, firebaseOrderId);
+                }
+            }
             const finalOrders = await EcommerceOrder.query()
                 .whereIn('id', commandeIds)
                 .preload('paymentMethod');
@@ -1143,6 +1237,7 @@ export default class EcommerceOrdersController {
                 const template = await PaymentMethodTemplate.query()
                     .where('type', order.paymentMethod.type)
                     .first();
+                const firebaseInfo = firebaseOrderIds.find(f => f.commandeId === order.id);
                 return {
                     id: order.id,
                     orderId: order.orderId,
@@ -1151,6 +1246,7 @@ export default class EcommerceOrdersController {
                     total: order.total,
                     deliveryFee: order.deliveryFee,
                     totalAvecLivraison: order.deliveryFee ? Number(order.total) + order.deliveryFee : Number(order.total),
+                    firebaseOrderId: firebaseInfo?.firebaseOrderId || null,
                     paymentMethod: {
                         id: order.paymentMethod.id,
                         type: order.paymentMethod.type,
@@ -1163,10 +1259,13 @@ export default class EcommerceOrdersController {
             }));
             return response.status(200).json({
                 success: true,
-                message: `${updatedOrders.length} commande(s) mise(s) à jour avec succès`,
+                message: firebaseOrderIds.length > 0
+                    ? `${updatedOrders.length} commande(s) mise(s) à jour et ${firebaseOrderIds.length} notification(s) envoyée(s)`
+                    : `${updatedOrders.length} commande(s) mise(s) à jour avec succès`,
                 orders: enrichedOrders,
                 summary: {
                     totalUpdated: updatedOrders.length,
+                    firebaseOrders: firebaseOrderIds,
                     updates: updatedOrders,
                 },
             });
