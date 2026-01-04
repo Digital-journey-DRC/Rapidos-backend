@@ -272,7 +272,16 @@ export default class EcommerceOrdersController {
                 name: template?.name || order.paymentMethod.type,
               }
             })()
-          : null
+          : {
+              id: null,
+              type: null,
+              numeroCompte: null,
+              nomTitulaire: null,
+              isDefault: false,
+              isActive: false,
+              imageUrl: null,
+              name: null,
+            }
 
         return {
           ...serialized,
@@ -1110,13 +1119,16 @@ export default class EcommerceOrdersController {
         .orderBy('created_at', 'desc')
 
       // Filtrer pour ne garder que les commandes créées dans les 10 secondes autour de la plus récente
+      // OU les commandes dont le statut a changé (updatedAt != createdAt)
       const latestMs = latestOrder.createdAt.toMillis()
       const tenSecondsAgo = latestMs - 10000
       const tenSecondsAfter = latestMs + 10000
 
       let orders = allOrders.filter((order) => {
         const orderMs = order.createdAt.toMillis()
-        return orderMs >= tenSecondsAgo && orderMs <= tenSecondsAfter
+        const isInLastSession = orderMs >= tenSecondsAgo && orderMs <= tenSecondsAfter
+        const hasStatusChanged = order.updatedAt.toMillis() !== order.createdAt.toMillis()
+        return isInLastSession || hasStatusChanged
       })
 
       // Filtrer par status si fourni

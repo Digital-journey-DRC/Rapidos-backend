@@ -218,7 +218,16 @@ export default class EcommerceOrdersController {
                             name: template?.name || order.paymentMethod.type,
                         };
                     })()
-                    : null;
+                    : {
+                        id: null,
+                        type: null,
+                        numeroCompte: null,
+                        nomTitulaire: null,
+                        isDefault: false,
+                        isActive: false,
+                        imageUrl: null,
+                        name: null,
+                    };
                 return {
                     ...serialized,
                     paymentMethod,
@@ -869,7 +878,9 @@ export default class EcommerceOrdersController {
             const tenSecondsAfter = latestMs + 10000;
             let orders = allOrders.filter((order) => {
                 const orderMs = order.createdAt.toMillis();
-                return orderMs >= tenSecondsAgo && orderMs <= tenSecondsAfter;
+                const isInLastSession = orderMs >= tenSecondsAgo && orderMs <= tenSecondsAfter;
+                const hasStatusChanged = order.updatedAt.toMillis() !== order.createdAt.toMillis();
+                return isInLastSession || hasStatusChanged;
             });
             const filteredOrders = status
                 ? orders.filter(o => o.status === status)
