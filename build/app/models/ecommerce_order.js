@@ -10,6 +10,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 import { DateTime } from 'luxon';
 import { BaseModel, belongsTo, column } from '@adonisjs/lucid/orm';
 import PaymentMethod from './payment_method.js';
+import User from './user.js';
 export var EcommerceOrderStatus;
 (function (EcommerceOrderStatus) {
     EcommerceOrderStatus["PENDING_PAYMENT"] = "pending_payment";
@@ -153,4 +154,16 @@ __decorate([
     }),
     __metadata("design:type", Object)
 ], EcommerceOrder.prototype, "paymentMethod", void 0);
+__decorate([
+    belongsTo(() => User, {
+        foreignKey: 'vendorId',
+    }),
+    __metadata("design:type", Object)
+], EcommerceOrder.prototype, "vendor", void 0);
+__decorate([
+    belongsTo(() => User, {
+        foreignKey: 'clientId',
+    }),
+    __metadata("design:type", Object)
+], EcommerceOrder.prototype, "clientUser", void 0);
 //# sourceMappingURL=ecommerce_order.js.map

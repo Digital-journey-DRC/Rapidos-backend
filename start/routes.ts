@@ -253,6 +253,26 @@ router
 // Endpoint temporaire pour créer la table promotions (sans authentification)
 router.get('/create-promotions-table', [PromotionsController, 'createTable'])
 
+// Endpoint temporaire pour activer le livreur (ID 5)
+router.post('/activate-livreur', async ({ response }) => {
+  try {
+    const { default: User } = await import('#models/user')
+    const livreur = await User.find(5)
+    if (livreur) {
+      livreur.userStatus = 'active' as any
+      await livreur.save()
+      return response.json({
+        message: 'Compte livreur activé avec succès !',
+        user: { id: livreur.id, firstName: livreur.firstName, lastName: livreur.lastName, role: livreur.role, userStatus: livreur.userStatus }
+      })
+    } else {
+      return response.status(404).json({ message: 'Livreur non trouvé' })
+    }
+  } catch (error: any) {
+    return response.status(500).json({ message: 'Erreur', error: error.message })
+  }
+})
+
 // Endpoint temporaire pour activer l'admin
 router.post('/activate-admin', async ({ response }) => {
   try {

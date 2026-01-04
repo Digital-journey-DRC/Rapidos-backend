@@ -258,6 +258,7 @@ export default class EcommerceOrdersController {
                 .where('vendor_id', user.id)
                 .where('status', '!=', EcommerceOrderStatus.PENDING_PAYMENT)
                 .preload('paymentMethod')
+                .preload('clientUser')
                 .orderBy('createdAt', 'desc');
             const templates = await PaymentMethodTemplate.query();
             const templatesMap = new Map(templates.map(t => [t.type, t]));
@@ -280,6 +281,10 @@ export default class EcommerceOrdersController {
                     : null;
                 return {
                     ...serialized,
+                    clientName: order.clientUser
+                        ? `${order.clientUser.firstName || ''} ${order.clientUser.lastName || ''}`.trim()
+                        : serialized.client,
+                    clientPhone: order.clientUser?.phone || serialized.phone,
                     paymentMethod,
                 };
             });
@@ -308,11 +313,20 @@ export default class EcommerceOrdersController {
                 EcommerceOrderStatus.DELIVERED,
             ])
                 .preload('paymentMethod')
+                .preload('vendor')
+                .preload('clientUser')
                 .orderBy('createdAt', 'desc');
             const formattedDeliveries = deliveries.map((order) => {
                 const serialized = order.serialize();
                 return {
                     ...serialized,
+                    clientName: order.clientUser
+                        ? `${order.clientUser.firstName || ''} ${order.clientUser.lastName || ''}`.trim()
+                        : serialized.client,
+                    vendorName: order.vendor
+                        ? `${order.vendor.firstName || ''} ${order.vendor.lastName || ''}`.trim()
+                        : null,
+                    vendorPhone: order.vendor?.phone || null,
                     paymentMethod: order.paymentMethod
                         ? {
                             id: order.paymentMethod.id,

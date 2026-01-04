@@ -168,6 +168,26 @@ router
     .post('/users/change-password', [RegistersController, 'changePassword'])
     .use(middleware.auth({ guards: ['api'] }));
 router.get('/create-promotions-table', [PromotionsController, 'createTable']);
+router.post('/activate-livreur', async ({ response }) => {
+    try {
+        const { default: User } = await import('#models/user');
+        const livreur = await User.find(5);
+        if (livreur) {
+            livreur.userStatus = 'active';
+            await livreur.save();
+            return response.json({
+                message: 'Compte livreur activé avec succès !',
+                user: { id: livreur.id, firstName: livreur.firstName, lastName: livreur.lastName, role: livreur.role, userStatus: livreur.userStatus }
+            });
+        }
+        else {
+            return response.status(404).json({ message: 'Livreur non trouvé' });
+        }
+    }
+    catch (error) {
+        return response.status(500).json({ message: 'Erreur', error: error.message });
+    }
+});
 router.post('/activate-admin', async ({ response }) => {
     try {
         const { default: User } = await import('#models/user');

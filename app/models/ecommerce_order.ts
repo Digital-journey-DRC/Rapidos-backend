@@ -1,6 +1,7 @@
 import { DateTime } from 'luxon'
 import { BaseModel, belongsTo, column } from '@adonisjs/lucid/orm'
 import PaymentMethod from './payment_method.js'
+import User from './user.js'
 import type { BelongsTo } from '@adonisjs/lucid/types/relations'
 
 export enum EcommerceOrderStatus {
@@ -133,4 +134,14 @@ export default class EcommerceOrder extends BaseModel {
     foreignKey: 'paymentMethodId',
   })
   declare paymentMethod: BelongsTo<typeof PaymentMethod>
+
+  @belongsTo(() => User, {
+    foreignKey: 'vendorId',
+  })
+  declare vendor: BelongsTo<typeof User>
+
+  @belongsTo(() => User, {
+    foreignKey: 'clientId',
+  })
+  declare clientUser: BelongsTo<typeof User>
 }

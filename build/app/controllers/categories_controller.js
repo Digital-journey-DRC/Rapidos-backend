@@ -133,7 +133,7 @@ export default class CategoriesController {
                 'electronique': ['Électronique'],
                 'beaute': ['Beauté'],
                 'restaurants': ['Restaurants'],
-                'telephones': ['Téléphones & Accessoires'],
+                'telephones': ['Téléphones & Accessoires', 'Électronique'],
             };
             const categoryNames = modeMapping[mode] || [mode];
             const categories = await Category.query().whereIn('name', categoryNames);

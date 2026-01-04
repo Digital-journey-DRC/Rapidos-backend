@@ -329,13 +329,14 @@ export default class EcommerceOrdersController {
         .where('vendor_id', user.id)
         .where('status', '!=', EcommerceOrderStatus.PENDING_PAYMENT)
         .preload('paymentMethod')
+        .preload('clientUser')
         .orderBy('createdAt', 'desc')
 
       // Récupérer tous les templates pour les images
       const templates = await PaymentMethodTemplate.query()
       const templatesMap = new Map(templates.map(t => [t.type, t]))
 
-      // Formater les commandes pour inclure le type de moyen de paiement avec image
+      // Formater les commandes pour inclure le type de moyen de paiement avec image et infos client
       const formattedOrders = orders.map((order) => {
         const serialized = order.serialize()
         const paymentMethod = order.paymentMethod
@@ -356,6 +357,10 @@ export default class EcommerceOrdersController {
 
         return {
           ...serialized,
+          clientName: order.clientUser 
+            ? `${order.clientUser.firstName || ''} ${order.clientUser.lastName || ''}`.trim() 
+            : serialized.client,
+          clientPhone: order.clientUser?.phone || serialized.phone,
           paymentMethod,
         }
       })
@@ -390,13 +395,22 @@ export default class EcommerceOrdersController {
           EcommerceOrderStatus.DELIVERED,
         ])
         .preload('paymentMethod')
+        .preload('vendor')
+        .preload('clientUser')
         .orderBy('createdAt', 'desc')
 
-      // Formater les livraisons pour inclure le type de moyen de paiement
+      // Formater les livraisons pour inclure le type de moyen de paiement et les infos vendeur/client
       const formattedDeliveries = deliveries.map((order) => {
         const serialized = order.serialize()
         return {
           ...serialized,
+          clientName: order.clientUser 
+            ? `${order.clientUser.firstName || ''} ${order.clientUser.lastName || ''}`.trim() 
+            : serialized.client,
+          vendorName: order.vendor 
+            ? `${order.vendor.firstName || ''} ${order.vendor.lastName || ''}`.trim() 
+            : null,
+          vendorPhone: order.vendor?.phone || null,
           paymentMethod: order.paymentMethod
             ? {
                 id: order.paymentMethod.id,
