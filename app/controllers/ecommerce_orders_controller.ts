@@ -232,35 +232,15 @@ export default class EcommerceOrdersController {
 
   /**
    * GET /ecommerce/commandes/acheteur
-   * Récupérer les commandes de la dernière initialisation (session actuelle uniquement)
+   * Récupérer toutes les commandes du client
    */
   async getOrdersByBuyer({ request, response, auth }: HttpContext) {
     try {
       const user = auth.user!
       const status = request.input('status')
 
-      // Trouver la date de création de la commande la plus récente
-      const latestOrder = await EcommerceOrder.query()
-        .where('client_id', user.id)
-        .orderBy('createdAt', 'desc')
-        .first()
-
-      if (!latestOrder) {
-        return response.status(200).json({
-          success: true,
-          commandes: [],
-        })
-      }
-
-      // Récupérer toutes les commandes créées à la même date (même session d'initialisation)
-      // On considère que les commandes créées dans un intervalle de 10 secondes font partie de la même initialisation
-      const latestCreatedAt = latestOrder.createdAt.toSQL() // Convertir en format SQL
-
       const query = EcommerceOrder.query()
         .where('client_id', user.id)
-        .whereRaw(
-          `created_at BETWEEN (TIMESTAMP '${latestCreatedAt}' - INTERVAL '10 seconds') AND (TIMESTAMP '${latestCreatedAt}' + INTERVAL '10 seconds')`
-        )
         .preload('paymentMethod')
         .orderBy('createdAt', 'desc')
 

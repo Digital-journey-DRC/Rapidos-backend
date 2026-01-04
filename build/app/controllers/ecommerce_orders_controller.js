@@ -192,20 +192,8 @@ export default class EcommerceOrdersController {
         try {
             const user = auth.user;
             const status = request.input('status');
-            const latestOrder = await EcommerceOrder.query()
-                .where('client_id', user.id)
-                .orderBy('createdAt', 'desc')
-                .first();
-            if (!latestOrder) {
-                return response.status(200).json({
-                    success: true,
-                    commandes: [],
-                });
-            }
-            const latestCreatedAt = latestOrder.createdAt.toSQL();
             const query = EcommerceOrder.query()
                 .where('client_id', user.id)
-                .whereRaw(`created_at BETWEEN (TIMESTAMP '${latestCreatedAt}' - INTERVAL '10 seconds') AND (TIMESTAMP '${latestCreatedAt}' + INTERVAL '10 seconds')`)
                 .preload('paymentMethod')
                 .orderBy('createdAt', 'desc');
             if (status) {
