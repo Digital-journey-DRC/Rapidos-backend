@@ -475,6 +475,11 @@ export default class EcommerceOrdersController {
         }
       }
 
+      // Assigner le livreur quand il accepte la commande
+      if (payload.status === EcommerceOrderStatus.ACCEPTE_LIVREUR) {
+        order.deliveryPersonId = user.id
+      }
+
       // Vérification code colis pour passer à "en route"
       if (payload.status === EcommerceOrderStatus.EN_ROUTE) {
         // Vérifier que le livreur est assigné à cette commande
