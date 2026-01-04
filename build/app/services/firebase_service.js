@@ -59,6 +59,20 @@ export async function updateOrderInFirestore(docId, updateData) {
         return false;
     }
 }
+export async function saveLocationToFirestore(data) {
+    try {
+        const db = await getFirestore();
+        const docRef = await db.collection('locations').add({
+            ...data,
+            timestamp: admin.firestore.FieldValue.serverTimestamp(),
+        });
+        return docRef.id;
+    }
+    catch (error) {
+        console.error('Erreur enregistrement location Firestore:', error);
+        return null;
+    }
+}
 export async function getVendorFcmToken(vendorId) {
     const db = await getFirestore();
     const doc = await db.collection('users').doc(vendorId).get();

@@ -333,6 +333,11 @@ router
   .post('/ecommerce/commandes/initialize', [EcommerceOrdersController, 'initialize'])
   .use(middleware.auth({ guards: ['api'] }))
 
+// Enregistrer la localisation du livreur
+router
+  .post('/ecommerce/location/livreur', [EcommerceOrdersController, 'saveDeliveryLocation'])
+  .use(middleware.auth({ guards: ['api'] }))
+
 // Voir toutes ses commandes (acheteur connecté)
 router
   .get('/ecommerce/commandes/buyer/me', [EcommerceOrdersController, 'getBuyerOrders'])

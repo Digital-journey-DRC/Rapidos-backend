@@ -115,6 +115,30 @@ export async function updateOrderInFirestore(
 }
 
 /**
+ * Enregistre la localisation de l'acheteur dans la collection "locations"
+ */
+export async function saveLocationToFirestore(data: {
+  orderId: string
+  userId: string
+  role: string
+  latitude: number
+  longitude: number
+  phone: string
+}): Promise<string | null> {
+  try {
+    const db = await getFirestore()
+    const docRef = await db.collection('locations').add({
+      ...data,
+      timestamp: admin.firestore.FieldValue.serverTimestamp(),
+    })
+    return docRef.id
+  } catch (error) {
+    console.error('Erreur enregistrement location Firestore:', error)
+    return null
+  }
+}
+
+/**
  * Récupère le FCM token d'un vendeur depuis Firestore
  */
 export async function getVendorFcmToken(vendorId: string): Promise<string | null> {

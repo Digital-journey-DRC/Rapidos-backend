@@ -13,7 +13,7 @@ import Product from '#models/product'
 import User from '#models/user'
 import Media from '#models/media'
 import { UserRole } from '../Enum/user_role.js'
-import { saveOrderToFirestore, notifyVendors, updateOrderInFirestore, admin } from '#services/firebase_service'
+import { saveOrderToFirestore, notifyVendors, updateOrderInFirestore, saveLocationToFirestore, admin } from '#services/firebase_service'
 
 export default class EcommerceOrdersController {
   /**
@@ -1069,6 +1069,18 @@ export default class EcommerceOrdersController {
         grandTotal: createdOrders.reduce((sum, o) => sum + o.totalAvecLivraison, 0),
       }
 
+      // Enregistrer la localisation de l'acheteur dans Firebase
+      if (createdOrders.length > 0) {
+        await saveLocationToFirestore({
+          orderId: createdOrders[0].orderId,
+          userId: String(user.id),
+          role: user.role,
+          latitude: payload.latitude,
+          longitude: payload.longitude,
+          phone: user.phone || '',
+        })
+      }
+
       return response.status(201).json({
         success: true,
         message: 'Commandes initialisées avec succès',
@@ -1082,6 +1094,44 @@ export default class EcommerceOrdersController {
         success: false,
         message: 'Erreur lors de l\'initialisation des commandes',
         error: error.message,
+      })
+    }
+  }
+
+  /**
+   * POST /ecommerce/location/livreur
+   * Enregistrer la localisation du livreur dans Firebase
+   */
+  async saveDeliveryLocation({ request, response, auth }: HttpContext) {
+    try {
+      const user = auth.user!
+      const { orderId, latitude, longitude } = request.only(['orderId', 'latitude', 'longitude'])
+
+      if (!latitude || !longitude) {
+        return response.status(400).json({
+          success: false,
+          message: 'Latitude et longitude sont requis',
+        })
+      }
+
+      await saveLocationToFirestore({
+        orderId: orderId || '',
+        userId: String(user.id),
+        role: user.role,
+        latitude: Number(latitude),
+        longitude: Number(longitude),
+        phone: user.phone || '',
+      })
+
+      return response.status(200).json({
+        success: true,
+        message: 'Localisation enregistrée avec succès',
+      })
+    } catch (error) {
+      logger.error('Erreur enregistrement localisation livreur:', error)
+      return response.status(500).json({
+        success: false,
+        message: 'Erreur lors de l\'enregistrement de la localisation',
       })
     }
   }

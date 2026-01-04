@@ -233,6 +233,9 @@ router
     .post('/ecommerce/commandes/initialize', [EcommerceOrdersController, 'initialize'])
     .use(middleware.auth({ guards: ['api'] }));
 router
+    .post('/ecommerce/location/livreur', [EcommerceOrdersController, 'saveDeliveryLocation'])
+    .use(middleware.auth({ guards: ['api'] }));
+router
     .get('/ecommerce/commandes/buyer/me', [EcommerceOrdersController, 'getBuyerOrders'])
     .use(middleware.auth({ guards: ['api'] }));
 router
