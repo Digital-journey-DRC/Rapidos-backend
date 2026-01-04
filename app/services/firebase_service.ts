@@ -95,6 +95,26 @@ export async function saveOrderToFirestore(orderData: CartOrder): Promise<string
 }
 
 /**
+ * Met à jour un document dans la collection "carts" de Firestore
+ */
+export async function updateOrderInFirestore(
+  docId: string,
+  updateData: Record<string, any>
+): Promise<boolean> {
+  try {
+    const db = await getFirestore()
+    await db.collection('carts').doc(docId).update({
+      ...updateData,
+      timestamp: admin.firestore.FieldValue.serverTimestamp(),
+    })
+    return true
+  } catch (error) {
+    console.error('Erreur mise à jour Firestore:', error)
+    return false
+  }
+}
+
+/**
  * Récupère le FCM token d'un vendeur depuis Firestore
  */
 export async function getVendorFcmToken(vendorId: string): Promise<string | null> {

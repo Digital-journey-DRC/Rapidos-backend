@@ -13,7 +13,7 @@ import Product from '#models/product'
 import User from '#models/user'
 import Media from '#models/media'
 import { UserRole } from '../Enum/user_role.js'
-import { saveOrderToFirestore, notifyVendors, admin } from '#services/firebase_service'
+import { saveOrderToFirestore, notifyVendors, updateOrderInFirestore, admin } from '#services/firebase_service'
 
 export default class EcommerceOrdersController {
   /**
@@ -567,6 +567,14 @@ export default class EcommerceOrdersController {
       order.status = payload.status as EcommerceOrderStatus
       await order.save()
 
+      // Mise à jour Firestore si statut "prêt à expédier" et firebaseOrderId existe
+      if (payload.status === EcommerceOrderStatus.PRET_A_EXPEDIER && order.firebaseOrderId) {
+        await updateOrderInFirestore(order.firebaseOrderId, {
+          status: 'pret_a_expedier',
+          packagePhoto: order.packagePhoto,
+        })
+      }
+
       // Recharger le moyen de paiement
       await order.load('paymentMethod')
 
@@ -1119,16 +1127,13 @@ export default class EcommerceOrdersController {
         .orderBy('created_at', 'desc')
 
       // Filtrer pour ne garder que les commandes créées dans les 10 secondes autour de la plus récente
-      // OU les commandes dont le statut a changé (updatedAt != createdAt)
       const latestMs = latestOrder.createdAt.toMillis()
       const tenSecondsAgo = latestMs - 10000
       const tenSecondsAfter = latestMs + 10000
 
       let orders = allOrders.filter((order) => {
         const orderMs = order.createdAt.toMillis()
-        const isInLastSession = orderMs >= tenSecondsAgo && orderMs <= tenSecondsAfter
-        const hasStatusChanged = order.updatedAt.toMillis() !== order.createdAt.toMillis()
-        return isInLastSession || hasStatusChanged
+        return orderMs >= tenSecondsAgo && orderMs <= tenSecondsAfter
       })
 
       // Filtrer par status si fourni

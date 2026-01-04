@@ -45,6 +45,20 @@ export async function saveOrderToFirestore(orderData) {
     const docRef = await db.collection('carts').add(orderData);
     return docRef.id;
 }
+export async function updateOrderInFirestore(docId, updateData) {
+    try {
+        const db = await getFirestore();
+        await db.collection('carts').doc(docId).update({
+            ...updateData,
+            timestamp: admin.firestore.FieldValue.serverTimestamp(),
+        });
+        return true;
+    }
+    catch (error) {
+        console.error('Erreur mise à jour Firestore:', error);
+        return false;
+    }
+}
 export async function getVendorFcmToken(vendorId) {
     const db = await getFirestore();
     const doc = await db.collection('users').doc(vendorId).get();

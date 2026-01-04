@@ -12,7 +12,7 @@ import Product from '#models/product';
 import User from '#models/user';
 import Media from '#models/media';
 import { UserRole } from '../Enum/user_role.js';
-import { saveOrderToFirestore, notifyVendors, admin } from '#services/firebase_service';
+import { saveOrderToFirestore, notifyVendors, updateOrderInFirestore, admin } from '#services/firebase_service';
 export default class EcommerceOrdersController {
     async createTables({ response }) {
         try {
@@ -450,6 +450,12 @@ export default class EcommerceOrdersController {
             const oldStatus = order.status;
             order.status = payload.status;
             await order.save();
+            if (payload.status === EcommerceOrderStatus.PRET_A_EXPEDIER && order.firebaseOrderId) {
+                await updateOrderInFirestore(order.firebaseOrderId, {
+                    status: 'pret_a_expedier',
+                    packagePhoto: order.packagePhoto,
+                });
+            }
             await order.load('paymentMethod');
             const formattedPaymentMethod = order.paymentMethod
                 ? {
@@ -878,9 +884,7 @@ export default class EcommerceOrdersController {
             const tenSecondsAfter = latestMs + 10000;
             let orders = allOrders.filter((order) => {
                 const orderMs = order.createdAt.toMillis();
-                const isInLastSession = orderMs >= tenSecondsAgo && orderMs <= tenSecondsAfter;
-                const hasStatusChanged = order.updatedAt.toMillis() !== order.createdAt.toMillis();
-                return isInLastSession || hasStatusChanged;
+                return orderMs >= tenSecondsAgo && orderMs <= tenSecondsAfter;
             });
             const filteredOrders = status
                 ? orders.filter(o => o.status === status)
