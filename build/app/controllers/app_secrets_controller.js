@@ -96,5 +96,24 @@ export default class AppSecretsController {
             });
         }
     }
+    async addFirebaseOrderIdColumn({ response }) {
+        try {
+            await db.rawQuery(`
+        ALTER TABLE ecommerce_orders 
+        ADD COLUMN IF NOT EXISTS firebase_order_id VARCHAR(255) NULL;
+      `);
+            return response.status(200).json({
+                success: true,
+                message: 'Colonne firebase_order_id ajoutée avec succès',
+            });
+        }
+        catch (error) {
+            return response.status(500).json({
+                success: false,
+                message: 'Erreur lors de l\'ajout de la colonne',
+                error: error.message,
+            });
+        }
+    }
 }
 //# sourceMappingURL=app_secrets_controller.js.map

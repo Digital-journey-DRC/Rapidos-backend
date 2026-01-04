@@ -117,4 +117,28 @@ export default class AppSecretsController {
       })
     }
   }
+
+  /**
+   * GET /app-secrets/add-firebase-order-id-column
+   * Ajouter la colonne firebase_order_id à la table ecommerce_orders
+   */
+  async addFirebaseOrderIdColumn({ response }: HttpContext) {
+    try {
+      await db.rawQuery(`
+        ALTER TABLE ecommerce_orders 
+        ADD COLUMN IF NOT EXISTS firebase_order_id VARCHAR(255) NULL;
+      `)
+
+      return response.status(200).json({
+        success: true,
+        message: 'Colonne firebase_order_id ajoutée avec succès',
+      })
+    } catch (error) {
+      return response.status(500).json({
+        success: false,
+        message: 'Erreur lors de l\'ajout de la colonne',
+        error: error.message,
+      })
+    }
+  }
 }

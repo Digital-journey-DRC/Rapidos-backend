@@ -452,7 +452,7 @@ export default class EcommerceOrdersController {
       const { id } = params
       const payload = await request.validateUsing(updateStatusValidator)
 
-      const order = await EcommerceOrder.findBy('orderId', id)
+      const order = await EcommerceOrder.find(id)
       if (!order) {
         return response.status(404).json({
           success: false,
@@ -1371,6 +1371,10 @@ export default class EcommerceOrdersController {
         
         firebaseOrderId = await saveOrderToFirestore(cartOrder)
         
+        // Stocker la référence Firebase dans PostgreSQL
+        order.firebaseOrderId = firebaseOrderId
+        await order.save()
+        
         // Envoyer les notifications push aux vendeurs
         await notifyVendors(enrichedItems, order.client, firebaseOrderId)
       } else {
@@ -1593,6 +1597,10 @@ export default class EcommerceOrdersController {
           
           const firebaseOrderId = await saveOrderToFirestore(cartOrder)
           firebaseOrderIds.push({ commandeId: order.id, firebaseOrderId })
+          
+          // Stocker la référence Firebase dans PostgreSQL
+          order.firebaseOrderId = firebaseOrderId
+          await order.save()
           
           // Envoyer les notifications push aux vendeurs
           await notifyVendors(enrichedItems, order.client, firebaseOrderId)

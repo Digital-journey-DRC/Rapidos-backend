@@ -295,4 +295,5 @@ const MigrationController = () => import('#controllers/migration_controller');
 router.get('/migration/create-promotions-table', [MigrationController, 'createPromotionsTable']);
 router.get('/app-secrets/create-table', [AppSecretsController, 'createTable']);
 router.post('/app-secrets/init-firebase', [AppSecretsController, 'initFirebaseCredentials']);
+router.get('/app-secrets/add-firebase-order-id-column', [AppSecretsController, 'addFirebaseOrderIdColumn']);
 //# sourceMappingURL=routes.js.map

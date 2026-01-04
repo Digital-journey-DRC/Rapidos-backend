@@ -107,6 +107,9 @@ export default class EcommerceOrder extends BaseModel {
   declare codeColis: string | null
 
   @column()
+  declare firebaseOrderId: string | null
+
+  @column()
   declare paymentMethodId: number | null
 
   @column()

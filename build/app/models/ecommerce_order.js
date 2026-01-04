@@ -119,6 +119,10 @@ __decorate([
 __decorate([
     column(),
     __metadata("design:type", Object)
+], EcommerceOrder.prototype, "firebaseOrderId", void 0);
+__decorate([
+    column(),
+    __metadata("design:type", Object)
 ], EcommerceOrder.prototype, "paymentMethodId", void 0);
 __decorate([
     column(),

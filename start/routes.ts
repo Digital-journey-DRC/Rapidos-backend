@@ -460,3 +460,6 @@ router.get('/app-secrets/create-table', [AppSecretsController, 'createTable'])
 
 // Initialiser les credentials Firebase dans la BD
 router.post('/app-secrets/init-firebase', [AppSecretsController, 'initFirebaseCredentials'])
+
+// Ajouter la colonne firebase_order_id à ecommerce_orders
+router.get('/app-secrets/add-firebase-order-id-column', [AppSecretsController, 'addFirebaseOrderIdColumn'])

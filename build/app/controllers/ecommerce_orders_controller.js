@@ -361,7 +361,7 @@ export default class EcommerceOrdersController {
             const user = auth.user;
             const { id } = params;
             const payload = await request.validateUsing(updateStatusValidator);
-            const order = await EcommerceOrder.findBy('orderId', id);
+            const order = await EcommerceOrder.find(id);
             if (!order) {
                 return response.status(404).json({
                     success: false,
@@ -1061,6 +1061,8 @@ export default class EcommerceOrdersController {
                     items: enrichedItems,
                 };
                 firebaseOrderId = await saveOrderToFirestore(cartOrder);
+                order.firebaseOrderId = firebaseOrderId;
+                await order.save();
                 await notifyVendors(enrichedItems, order.client, firebaseOrderId);
             }
             else {
@@ -1229,6 +1231,8 @@ export default class EcommerceOrdersController {
                     };
                     const firebaseOrderId = await saveOrderToFirestore(cartOrder);
                     firebaseOrderIds.push({ commandeId: order.id, firebaseOrderId });
+                    order.firebaseOrderId = firebaseOrderId;
+                    await order.save();
                     await notifyVendors(enrichedItems, order.client, firebaseOrderId);
                 }
             }
