@@ -641,20 +641,20 @@ export default class EcommerceOrdersController {
             },
             [EcommerceOrderStatus.PENDING]: {
                 [EcommerceOrderStatus.EN_PREPARATION]: ['vendeur'],
-                [EcommerceOrderStatus.CANCELLED]: ['client', 'vendeur'],
+                [EcommerceOrderStatus.CANCELLED]: ['acheteur', 'vendeur'],
                 [EcommerceOrderStatus.REJECTED]: ['vendeur'],
             },
             [EcommerceOrderStatus.EN_PREPARATION]: {
                 [EcommerceOrderStatus.PRET_A_EXPEDIER]: ['vendeur'],
-                [EcommerceOrderStatus.CANCELLED]: ['client', 'vendeur'],
+                [EcommerceOrderStatus.CANCELLED]: ['acheteur', 'vendeur'],
             },
             [EcommerceOrderStatus.PRET_A_EXPEDIER]: {
                 [EcommerceOrderStatus.ACCEPTE_LIVREUR]: ['livreur'],
-                [EcommerceOrderStatus.CANCELLED]: ['client', 'vendeur', 'livreur'],
+                [EcommerceOrderStatus.CANCELLED]: ['acheteur', 'vendeur', 'livreur'],
             },
             [EcommerceOrderStatus.ACCEPTE_LIVREUR]: {
                 [EcommerceOrderStatus.EN_ROUTE]: ['livreur'],
-                [EcommerceOrderStatus.CANCELLED]: ['client', 'vendeur', 'livreur'],
+                [EcommerceOrderStatus.CANCELLED]: ['acheteur', 'vendeur', 'livreur'],
             },
             [EcommerceOrderStatus.EN_ROUTE]: {
                 [EcommerceOrderStatus.DELIVERED]: ['livreur'],
@@ -677,7 +677,7 @@ export default class EcommerceOrdersController {
         if (userRole === 'vendeur' && order.vendorId !== userId) {
             return { allowed: false, reason: 'Vous n\'êtes pas le vendeur de cette commande' };
         }
-        if (userRole === 'client' && order.clientId !== userId) {
+        if (userRole === 'acheteur' && order.clientId !== userId) {
             return { allowed: false, reason: 'Vous n\'êtes pas le client de cette commande' };
         }
         return { allowed: true };
