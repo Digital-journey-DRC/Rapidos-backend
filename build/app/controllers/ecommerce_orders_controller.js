@@ -928,6 +928,8 @@ export default class EcommerceOrdersController {
                     longitude: order.longitude,
                     paymentMethod: formattedPaymentMethod,
                     deliveryPersonId: order.deliveryPersonId,
+                    codeColis: order.codeColis,
+                    packagePhoto: order.packagePhoto,
                     createdAt: order.createdAt,
                     updatedAt: order.updatedAt,
                 };
