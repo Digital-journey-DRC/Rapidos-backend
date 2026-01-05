@@ -10,7 +10,6 @@ const HorairesOuvertureController = () => import('#controllers/horaires_ouvertur
 const EventsController = () => import('#controllers/events_controller');
 const EcommerceOrdersController = () => import('#controllers/ecommerce_orders_controller');
 const PaymentMethodsController = () => import('#controllers/payment_methods_controller');
-const AppSecretsController = () => import('#controllers/app_secrets_controller');
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import YAML from 'yamljs';
@@ -82,9 +81,6 @@ router
 router.get('/products/by-category/:slug', [ProductsController, 'getProductsByCategoryName']);
 router
     .get('/category/get-all', [CategoryController, 'getAllCategory'])
-    .use(middleware.auth({ guards: ['api'] }));
-router
-    .get('/category/mode/:mode', [CategoryController, 'getCategoryByMode'])
     .use(middleware.auth({ guards: ['api'] }));
 router
     .get('/products/all-products', [ProductsController, 'showAllProducts'])
@@ -169,26 +165,6 @@ router
     .post('/users/change-password', [RegistersController, 'changePassword'])
     .use(middleware.auth({ guards: ['api'] }));
 router.get('/create-promotions-table', [PromotionsController, 'createTable']);
-router.post('/activate-livreur', async ({ response }) => {
-    try {
-        const { default: User } = await import('#models/user');
-        const livreur = await User.find(5);
-        if (livreur) {
-            livreur.userStatus = 'active';
-            await livreur.save();
-            return response.json({
-                message: 'Compte livreur activé avec succès !',
-                user: { id: livreur.id, firstName: livreur.firstName, lastName: livreur.lastName, role: livreur.role, userStatus: livreur.userStatus }
-            });
-        }
-        else {
-            return response.status(404).json({ message: 'Livreur non trouvé' });
-        }
-    }
-    catch (error) {
-        return response.status(500).json({ message: 'Erreur', error: error.message });
-    }
-});
 router.post('/activate-admin', async ({ response }) => {
     try {
         const { default: User } = await import('#models/user');
@@ -231,9 +207,6 @@ router
     .use(middleware.auth({ guards: ['api'] }));
 router
     .post('/ecommerce/commandes/initialize', [EcommerceOrdersController, 'initialize'])
-    .use(middleware.auth({ guards: ['api'] }));
-router
-    .post('/ecommerce/location/livreur', [EcommerceOrdersController, 'saveDeliveryLocation'])
     .use(middleware.auth({ guards: ['api'] }));
 router
     .get('/ecommerce/commandes/buyer/me', [EcommerceOrdersController, 'getBuyerOrders'])
@@ -296,7 +269,4 @@ router
     .use(middleware.auth({ guards: ['api'] }));
 const MigrationController = () => import('#controllers/migration_controller');
 router.get('/migration/create-promotions-table', [MigrationController, 'createPromotionsTable']);
-router.get('/app-secrets/create-table', [AppSecretsController, 'createTable']);
-router.post('/app-secrets/init-firebase', [AppSecretsController, 'initFirebaseCredentials']);
-router.get('/app-secrets/add-firebase-order-id-column', [AppSecretsController, 'addFirebaseOrderIdColumn']);
 //# sourceMappingURL=routes.js.map

@@ -1313,14 +1313,6 @@ export default class EcommerceOrdersController {
         })
       }
 
-      // Vérifier que la commande est en attente de paiement
-      if (order.status !== EcommerceOrderStatus.PENDING_PAYMENT) {
-        return response.status(400).json({
-          success: false,
-          message: 'Impossible de modifier le moyen de paiement. La commande n\'est plus en attente de paiement.',
-        })
-      }
-
       // Récupérer le nouveau moyen de paiement
       const newPaymentMethod = await PaymentMethod.find(payload.paymentMethodId)
 
@@ -1347,6 +1339,10 @@ export default class EcommerceOrdersController {
         })
       }
 
+      // Sauvegarder l'ancien statut et payment method ID pour détecter le premier ajout
+      const oldStatus = order.status
+      const oldPaymentMethodId = order.paymentMethodId
+
       // Mettre à jour le moyen de paiement
       order.paymentMethodId = newPaymentMethod.id
       
@@ -1355,9 +1351,9 @@ export default class EcommerceOrdersController {
         order.numeroPayment = payload.numeroPayment
       }
       
-      // Si la commande est en pending_payment, passer automatiquement à pending (paiement confirmé)
+      // LOGIQUE SPÉCIALE : Si c'est le premier ajout de payment method, passer automatiquement à pending
       let firebaseOrderId: string | null = null
-      if (order.status === EcommerceOrderStatus.PENDING_PAYMENT) {
+      if (oldStatus === EcommerceOrderStatus.PENDING_PAYMENT && oldPaymentMethodId === null) {
         order.status = EcommerceOrderStatus.PENDING
         
         // Logger le changement de statut

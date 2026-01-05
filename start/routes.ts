@@ -10,7 +10,6 @@ const HorairesOuvertureController = () => import('#controllers/horaires_ouvertur
 const EventsController = () => import('#controllers/events_controller')
 const EcommerceOrdersController = () => import('#controllers/ecommerce_orders_controller')
 const PaymentMethodsController = () => import('#controllers/payment_methods_controller')
-const AppSecretsController = () => import('#controllers/app_secrets_controller')
 
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
@@ -122,11 +121,6 @@ router.get('/products/by-category/:slug', [ProductsController, 'getProductsByCat
 
 router
   .get('/category/get-all', [CategoryController, 'getAllCategory'])
-  .use(middleware.auth({ guards: ['api'] }))
-
-// Récupérer une catégorie par mode (ex: mode, electronique, beaute)
-router
-  .get('/category/mode/:mode', [CategoryController, 'getCategoryByMode'])
   .use(middleware.auth({ guards: ['api'] }))
 
 router
@@ -254,26 +248,6 @@ router
 // Endpoint temporaire pour créer la table promotions (sans authentification)
 router.get('/create-promotions-table', [PromotionsController, 'createTable'])
 
-// Endpoint temporaire pour activer le livreur (ID 5)
-router.post('/activate-livreur', async ({ response }) => {
-  try {
-    const { default: User } = await import('#models/user')
-    const livreur = await User.find(5)
-    if (livreur) {
-      livreur.userStatus = 'active' as any
-      await livreur.save()
-      return response.json({
-        message: 'Compte livreur activé avec succès !',
-        user: { id: livreur.id, firstName: livreur.firstName, lastName: livreur.lastName, role: livreur.role, userStatus: livreur.userStatus }
-      })
-    } else {
-      return response.status(404).json({ message: 'Livreur non trouvé' })
-    }
-  } catch (error: any) {
-    return response.status(500).json({ message: 'Erreur', error: error.message })
-  }
-})
-
 // Endpoint temporaire pour activer l'admin
 router.post('/activate-admin', async ({ response }) => {
   try {
@@ -331,11 +305,6 @@ router
 // Initialiser des commandes multi-vendeurs
 router
   .post('/ecommerce/commandes/initialize', [EcommerceOrdersController, 'initialize'])
-  .use(middleware.auth({ guards: ['api'] }))
-
-// Enregistrer la localisation du livreur
-router
-  .post('/ecommerce/location/livreur', [EcommerceOrdersController, 'saveDeliveryLocation'])
   .use(middleware.auth({ guards: ['api'] }))
 
 // Voir toutes ses commandes (acheteur connecté)
@@ -455,16 +424,3 @@ router
 // Route temporaire pour créer la table promotions (GET pour faciliter avec curl)
 const MigrationController = () => import('#controllers/migration_controller')
 router.get('/migration/create-promotions-table', [MigrationController, 'createPromotionsTable'])
-
-// ============================================================
-// MODULE APP SECRETS (Firebase credentials, etc.)
-// ============================================================
-
-// Créer la table app_secrets
-router.get('/app-secrets/create-table', [AppSecretsController, 'createTable'])
-
-// Initialiser les credentials Firebase dans la BD
-router.post('/app-secrets/init-firebase', [AppSecretsController, 'initFirebaseCredentials'])
-
-// Ajouter la colonne firebase_order_id à ecommerce_orders
-router.get('/app-secrets/add-firebase-order-id-column', [AppSecretsController, 'addFirebaseOrderIdColumn'])

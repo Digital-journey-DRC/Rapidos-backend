@@ -1028,12 +1028,6 @@ export default class EcommerceOrdersController {
                     message: 'Vous n\'êtes pas autorisé à modifier cette commande',
                 });
             }
-            if (order.status !== EcommerceOrderStatus.PENDING_PAYMENT) {
-                return response.status(400).json({
-                    success: false,
-                    message: 'Impossible de modifier le moyen de paiement. La commande n\'est plus en attente de paiement.',
-                });
-            }
             const newPaymentMethod = await PaymentMethod.find(payload.paymentMethodId);
             if (!newPaymentMethod) {
                 return response.status(404).json({
@@ -1053,12 +1047,14 @@ export default class EcommerceOrdersController {
                     message: 'Le moyen de paiement sélectionné n\'est pas actif',
                 });
             }
+            const oldStatus = order.status;
+            const oldPaymentMethodId = order.paymentMethodId;
             order.paymentMethodId = newPaymentMethod.id;
             if (payload.numeroPayment) {
                 order.numeroPayment = payload.numeroPayment;
             }
             let firebaseOrderId = null;
-            if (order.status === EcommerceOrderStatus.PENDING_PAYMENT) {
+            if (oldStatus === EcommerceOrderStatus.PENDING_PAYMENT && oldPaymentMethodId === null) {
                 order.status = EcommerceOrderStatus.PENDING;
                 await EcommerceOrderLog.create({
                     logId: randomUUID(),
