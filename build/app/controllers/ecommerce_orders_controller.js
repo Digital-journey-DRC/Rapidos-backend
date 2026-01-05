@@ -380,6 +380,9 @@ export default class EcommerceOrdersController {
                     });
                 }
             }
+            if (payload.status === EcommerceOrderStatus.ACCEPTE_LIVREUR) {
+                order.deliveryPersonId = user.id;
+            }
             if (payload.status === EcommerceOrderStatus.EN_ROUTE) {
                 if (!order.deliveryPersonId || order.deliveryPersonId !== user.id) {
                     return response.status(403).json({
@@ -896,6 +899,7 @@ export default class EcommerceOrdersController {
             const { status, vendeurId } = request.qs();
             const latestOrder = await EcommerceOrder.query()
                 .where('client_id', user.id)
+                .where('status', EcommerceOrderStatus.PENDING_PAYMENT)
                 .orderBy('created_at', 'desc')
                 .first();
             if (!latestOrder) {
@@ -918,6 +922,7 @@ export default class EcommerceOrdersController {
             }
             const allOrders = await EcommerceOrder.query()
                 .where('client_id', user.id)
+                .where('status', EcommerceOrderStatus.PENDING_PAYMENT)
                 .preload('paymentMethod')
                 .orderBy('created_at', 'desc');
             const latestMs = latestOrder.createdAt.toMillis();
