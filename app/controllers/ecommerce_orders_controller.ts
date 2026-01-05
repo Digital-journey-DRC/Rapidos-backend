@@ -1150,9 +1150,10 @@ export default class EcommerceOrdersController {
       const user = auth.user!
       const { status, vendeurId } = request.qs()
 
-      // Trouver la date de création de la commande la plus récente
+      // Trouver la date de création de la commande pending_payment la plus récente
       const latestOrder = await EcommerceOrder.query()
         .where('client_id', user.id)
+        .where('status', EcommerceOrderStatus.PENDING_PAYMENT)
         .orderBy('created_at', 'desc')
         .first()
 
@@ -1175,9 +1176,10 @@ export default class EcommerceOrdersController {
         })
       }
 
-      // Récupérer toutes les commandes de l'utilisateur
+      // Récupérer uniquement les commandes pending_payment de l'utilisateur
       const allOrders = await EcommerceOrder.query()
         .where('client_id', user.id)
+        .where('status', EcommerceOrderStatus.PENDING_PAYMENT)
         .preload('paymentMethod')
         .orderBy('created_at', 'desc')
 
