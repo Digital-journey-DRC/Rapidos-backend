@@ -1,8 +1,9 @@
-import cloudinary from './cloudinary.js';
+import cloudinary, { initCloudinaryFromDB } from './cloudinary.js';
 import logger from '@adonisjs/core/services/logger';
 export class EcommerceCloudinaryService {
     async uploadPackagePhoto(filePath, orderId) {
         try {
+            await initCloudinaryFromDB();
             const result = await cloudinary.uploader.upload(filePath, {
                 folder: 'rapidos/ecommerce-packages',
                 public_id: `order_${orderId}_${Date.now()}`,

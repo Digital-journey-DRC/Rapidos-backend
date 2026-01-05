@@ -1,4 +1,4 @@
-import cloudinary from '#services/cloudinary'
+import cloudinary, { initCloudinaryFromDB } from '#services/cloudinary'
 import type { MultipartFile } from '@adonisjs/core/bodyparser'
 import { createReadStream } from 'node:fs'
 import axios from 'axios'
@@ -18,6 +18,9 @@ export const uploadProductImageFromUrl = async (imageUrl: string): Promise<Uploa
   }
 
   try {
+    // Charger la config Cloudinary depuis la BD
+    await initCloudinaryFromDB()
+    
     // Télécharger l'image depuis l'URL
     const response = await axios.get(imageUrl, {
       responseType: 'arraybuffer',
@@ -53,6 +56,9 @@ export const uploadProductImage = async (file: MultipartFile): Promise<UploadedP
   }
 
   try {
+    // Charger la config Cloudinary depuis la BD
+    await initCloudinaryFromDB()
+    
     const stream = createReadStream(file.tmpPath)
 
     const result = await new Promise<any>((resolve, reject) => {

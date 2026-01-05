@@ -280,6 +280,53 @@ router.post('/activate-admin', async ({ response }) => {
   }
 })
 
+// Endpoint pour créer la table cloudinary_configs et insérer les données
+router.get('/cloudinary/create-table', async ({ response }) => {
+  try {
+    const { default: db } = await import('@adonisjs/lucid/services/db')
+    
+    // Créer la table si elle n'existe pas
+    await db.rawQuery(`
+      CREATE TABLE IF NOT EXISTS cloudinary_configs (
+        id SERIAL PRIMARY KEY,
+        name VARCHAR(255) NOT NULL DEFAULT 'default',
+        cloud_name VARCHAR(255) NOT NULL,
+        api_key VARCHAR(255) NOT NULL,
+        api_secret VARCHAR(255) NOT NULL,
+        is_active BOOLEAN DEFAULT true,
+        created_at TIMESTAMP DEFAULT NOW(),
+        updated_at TIMESTAMP DEFAULT NOW()
+      )
+    `)
+    
+    // Vérifier si des données existent déjà
+    const existing = await db.rawQuery(`SELECT COUNT(*) as count FROM cloudinary_configs`)
+    
+    if (Number(existing.rows[0].count) === 0) {
+      // Insérer la config par défaut
+      await db.rawQuery(`
+        INSERT INTO cloudinary_configs (name, cloud_name, api_key, api_secret, is_active)
+        VALUES ('default', 'deb9kfhnx', '361696961216527', 'lFU4XdFGVAanX1Cg7tgY0F4wmUw', true)
+      `)
+    }
+    
+    // Récupérer la config
+    const config = await db.rawQuery(`SELECT * FROM cloudinary_configs WHERE is_active = true LIMIT 1`)
+    
+    return response.json({
+      success: true,
+      message: 'Table cloudinary_configs créée et configurée',
+      config: config.rows[0]
+    })
+  } catch (error) {
+    return response.status(500).json({
+      success: false,
+      message: 'Erreur lors de la création de la table',
+      error: error.message
+    })
+  }
+})
+
 router
   .get('/users/:userId/active-account', [RegistersController, 'activeUserAcount'])
   .use(middleware.auth({ guards: ['api'] }))

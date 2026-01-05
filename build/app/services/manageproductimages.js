@@ -1,4 +1,4 @@
-import cloudinary from '#services/cloudinary';
+import cloudinary, { initCloudinaryFromDB } from '#services/cloudinary';
 import { createReadStream } from 'node:fs';
 import axios from 'axios';
 export const uploadProductImageFromUrl = async (imageUrl) => {
@@ -6,6 +6,7 @@ export const uploadProductImageFromUrl = async (imageUrl) => {
         return null;
     }
     try {
+        await initCloudinaryFromDB();
         const response = await axios.get(imageUrl, {
             responseType: 'arraybuffer',
             timeout: 30000,
@@ -31,6 +32,7 @@ export const uploadProductImage = async (file) => {
         return null;
     }
     try {
+        await initCloudinaryFromDB();
         const stream = createReadStream(file.tmpPath);
         const result = await new Promise((resolve, reject) => {
             const uploadStream = cloudinary.uploader.upload_stream({
