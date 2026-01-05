@@ -1,16 +1,10 @@
-import env from '#start/env'
 import { v2 as cloudinary } from 'cloudinary'
 import CloudinaryConfig from '#models/cloudinary_config'
 
-let isConfigured = false
+// Supprimer CLOUDINARY_URL de l'environnement pour éviter l'auto-config
+delete process.env.CLOUDINARY_URL
 
-// Configuration initiale avec les variables d'environnement (fallback)
-cloudinary.config({
-  cloud_name: env.get('CLOUDINARY_CLOUD_NAME'),
-  api_key: env.get('CLOUDINARY_API_KEY'),
-  api_secret: env.get('CLOUDINARY_API_SECRET'),
-  secure: true,
-})
+let isConfigured = false
 
 /**
  * Charge la configuration Cloudinary depuis la base de données
