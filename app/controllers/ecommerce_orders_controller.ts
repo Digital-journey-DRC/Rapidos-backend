@@ -14,6 +14,7 @@ import User from '#models/user'
 import Media from '#models/media'
 import { UserRole } from '../Enum/user_role.js'
 import { saveOrderToFirestore, notifyVendors, updateOrderInFirestore, saveLocationToFirestore, admin } from '#services/firebase_service'
+import { DateTime } from 'luxon'
 
 export default class EcommerceOrdersController {
   /**
@@ -1175,6 +1176,32 @@ export default class EcommerceOrdersController {
         })
       }
 
+      // Vérifier que la commande la plus récente a été créée il y a moins de 10 secondes
+      // Si elle est plus ancienne, retourner une liste vide (session expirée)
+      const now = DateTime.now().toMillis()
+      const latestMs = latestOrder.createdAt.toMillis()
+      const timeSinceLatest = now - latestMs
+
+      // Si la commande la plus récente a été créée il y a plus de 10 secondes, session expirée
+      if (timeSinceLatest > 10000) {
+        return response.status(200).json({
+          success: true,
+          message: 'Aucune commande trouvée',
+          orders: [],
+          stats: {
+            total: 0,
+            pending_payment: 0,
+            pending: 0,
+            in_preparation: 0,
+            ready_to_ship: 0,
+            in_delivery: 0,
+            delivered: 0,
+            cancelled: 0,
+            rejected: 0,
+          }
+        })
+      }
+
       // Récupérer uniquement les commandes pending_payment de l'utilisateur
       const allOrders = await EcommerceOrder.query()
         .where('client_id', user.id)
@@ -1183,7 +1210,6 @@ export default class EcommerceOrdersController {
         .orderBy('created_at', 'desc')
 
       // Filtrer pour ne garder que les commandes créées dans les 10 secondes autour de la plus récente
-      const latestMs = latestOrder.createdAt.toMillis()
       const tenSecondsAgo = latestMs - 10000
       const tenSecondsAfter = latestMs + 10000
 
