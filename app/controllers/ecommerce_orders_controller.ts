@@ -1145,10 +1145,9 @@ export default class EcommerceOrdersController {
    * GET /ecommerce/commandes/buyer/me
    * Récupérer toutes les commandes de l'acheteur connecté
    */
-  async getBuyerOrders({ request, response, auth }: HttpContext) {
+  async getBuyerOrders({ response, auth }: HttpContext) {
     try {
       const user = auth.user!
-      const { status, vendeurId } = request.qs()
 
       // Trouver la date de création de la commande pending_payment la plus récente
       const latestOrder = await EcommerceOrder.query()
@@ -1188,20 +1187,11 @@ export default class EcommerceOrdersController {
       const tenSecondsAgo = latestMs - 10000
       const tenSecondsAfter = latestMs + 10000
 
-      let orders = allOrders.filter((order) => {
+      // Ne garder QUE les commandes pending_payment dans la fenêtre de 10 secondes
+      const finalOrders = allOrders.filter((order) => {
         const orderMs = order.createdAt.toMillis()
         return orderMs >= tenSecondsAgo && orderMs <= tenSecondsAfter
       })
-
-      // Filtrer par status si fourni
-      const filteredOrders = status
-        ? orders.filter(o => o.status === status)
-        : orders
-
-      // Filtrer par vendeur si fourni
-      const finalOrders = vendeurId
-        ? filteredOrders.filter(o => o.vendorId === Number(vendeurId))
-        : filteredOrders
 
       // Enrichir avec les templates et les infos vendeur
       const enrichedOrders = await Promise.all(finalOrders.map(async (order) => {
@@ -1255,17 +1245,17 @@ export default class EcommerceOrdersController {
         }
       }))
 
-      // Calculer les statistiques (basées sur les commandes de la dernière session)
+      // Calculer les statistiques (toutes les commandes retournées sont pending_payment)
       const stats = {
         total: finalOrders.length,
-        pending_payment: finalOrders.filter(o => o.status === EcommerceOrderStatus.PENDING_PAYMENT).length,
-        pending: finalOrders.filter(o => o.status === EcommerceOrderStatus.PENDING).length,
-        in_preparation: finalOrders.filter(o => o.status === EcommerceOrderStatus.EN_PREPARATION).length,
-        ready_to_ship: finalOrders.filter(o => o.status === EcommerceOrderStatus.PRET_A_EXPEDIER).length,
-        in_delivery: finalOrders.filter(o => o.status === EcommerceOrderStatus.EN_ROUTE).length,
-        delivered: finalOrders.filter(o => o.status === EcommerceOrderStatus.DELIVERED).length,
-        cancelled: finalOrders.filter(o => o.status === EcommerceOrderStatus.CANCELLED).length,
-        rejected: finalOrders.filter(o => o.status === EcommerceOrderStatus.REJECTED).length,
+        pending_payment: finalOrders.length,
+        pending: 0,
+        in_preparation: 0,
+        ready_to_ship: 0,
+        in_delivery: 0,
+        delivered: 0,
+        cancelled: 0,
+        rejected: 0,
       }
 
       return response.status(200).json({
