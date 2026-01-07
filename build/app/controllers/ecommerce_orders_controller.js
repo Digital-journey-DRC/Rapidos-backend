@@ -893,16 +893,15 @@ export default class EcommerceOrdersController {
             });
         }
     }
-    async getBuyerOrders({ request, response, auth }) {
+    async getBuyerOrders({ response, auth }) {
         try {
             const user = auth.user;
-            const { status, vendeurId } = request.qs();
-            const latestOrder = await EcommerceOrder.query()
+            const allOrders = await EcommerceOrder.query()
                 .where('client_id', user.id)
                 .where('status', EcommerceOrderStatus.PENDING_PAYMENT)
-                .orderBy('created_at', 'desc')
-                .first();
-            if (!latestOrder) {
+                .preload('paymentMethod')
+                .orderBy('created_at', 'desc');
+            if (allOrders.length === 0) {
                 return response.status(200).json({
                     success: true,
                     message: 'Aucune commande trouvée',
@@ -920,24 +919,14 @@ export default class EcommerceOrdersController {
                     }
                 });
             }
-            const allOrders = await EcommerceOrder.query()
-                .where('client_id', user.id)
-                .where('status', EcommerceOrderStatus.PENDING_PAYMENT)
-                .preload('paymentMethod')
-                .orderBy('created_at', 'desc');
+            const latestOrder = allOrders[0];
             const latestMs = latestOrder.createdAt.toMillis();
             const tenSecondsAgo = latestMs - 10000;
             const tenSecondsAfter = latestMs + 10000;
-            let orders = allOrders.filter((order) => {
+            const finalOrders = allOrders.filter((order) => {
                 const orderMs = order.createdAt.toMillis();
                 return orderMs >= tenSecondsAgo && orderMs <= tenSecondsAfter;
             });
-            const filteredOrders = status
-                ? orders.filter(o => o.status === status)
-                : orders;
-            const finalOrders = vendeurId
-                ? filteredOrders.filter(o => o.vendorId === Number(vendeurId))
-                : filteredOrders;
             const enrichedOrders = await Promise.all(finalOrders.map(async (order) => {
                 const vendor = await User.find(order.vendorId);
                 let formattedPaymentMethod = null;
@@ -985,14 +974,14 @@ export default class EcommerceOrdersController {
             }));
             const stats = {
                 total: finalOrders.length,
-                pending_payment: finalOrders.filter(o => o.status === EcommerceOrderStatus.PENDING_PAYMENT).length,
-                pending: finalOrders.filter(o => o.status === EcommerceOrderStatus.PENDING).length,
-                in_preparation: finalOrders.filter(o => o.status === EcommerceOrderStatus.EN_PREPARATION).length,
-                ready_to_ship: finalOrders.filter(o => o.status === EcommerceOrderStatus.PRET_A_EXPEDIER).length,
-                in_delivery: finalOrders.filter(o => o.status === EcommerceOrderStatus.EN_ROUTE).length,
-                delivered: finalOrders.filter(o => o.status === EcommerceOrderStatus.DELIVERED).length,
-                cancelled: finalOrders.filter(o => o.status === EcommerceOrderStatus.CANCELLED).length,
-                rejected: finalOrders.filter(o => o.status === EcommerceOrderStatus.REJECTED).length,
+                pending_payment: finalOrders.length,
+                pending: 0,
+                in_preparation: 0,
+                ready_to_ship: 0,
+                in_delivery: 0,
+                delivered: 0,
+                cancelled: 0,
+                rejected: 0,
             };
             return response.status(200).json({
                 success: true,

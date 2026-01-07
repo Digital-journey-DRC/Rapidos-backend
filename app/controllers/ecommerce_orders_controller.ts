@@ -14,7 +14,6 @@ import User from '#models/user'
 import Media from '#models/media'
 import { UserRole } from '../Enum/user_role.js'
 import { saveOrderToFirestore, notifyVendors, updateOrderInFirestore, saveLocationToFirestore, admin } from '#services/firebase_service'
-import { DateTime } from 'luxon'
 
 export default class EcommerceOrdersController {
   /**
@@ -1150,70 +1149,42 @@ export default class EcommerceOrdersController {
     try {
       const user = auth.user!
 
-      // Trouver la date de création de la commande pending_payment la plus récente
-      const latestOrder = await EcommerceOrder.query()
-        .where('client_id', user.id)
-        .where('status', EcommerceOrderStatus.PENDING_PAYMENT)
-        .orderBy('created_at', 'desc')
-        .first()
-
-      if (!latestOrder) {
-        return response.status(200).json({
-          success: true,
-          message: 'Aucune commande trouvée',
-          orders: [],
-          stats: {
-            total: 0,
-            pending_payment: 0,
-            pending: 0,
-            in_preparation: 0,
-            ready_to_ship: 0,
-            in_delivery: 0,
-            delivered: 0,
-            cancelled: 0,
-            rejected: 0,
-          }
-        })
-      }
-
-      // Vérifier que la commande la plus récente a été créée il y a moins de 10 secondes
-      // Si elle est plus ancienne, retourner une liste vide (session expirée)
-      const now = DateTime.now().toMillis()
-      const latestMs = latestOrder.createdAt.toMillis()
-      const timeSinceLatest = now - latestMs
-
-      // Si la commande la plus récente a été créée il y a plus de 10 secondes, session expirée
-      if (timeSinceLatest > 10000) {
-        return response.status(200).json({
-          success: true,
-          message: 'Aucune commande trouvée',
-          orders: [],
-          stats: {
-            total: 0,
-            pending_payment: 0,
-            pending: 0,
-            in_preparation: 0,
-            ready_to_ship: 0,
-            in_delivery: 0,
-            delivered: 0,
-            cancelled: 0,
-            rejected: 0,
-          }
-        })
-      }
-
-      // Récupérer uniquement les commandes pending_payment de l'utilisateur
+      // Récupérer toutes les commandes pending_payment de l'utilisateur
       const allOrders = await EcommerceOrder.query()
         .where('client_id', user.id)
         .where('status', EcommerceOrderStatus.PENDING_PAYMENT)
         .preload('paymentMethod')
         .orderBy('created_at', 'desc')
 
+      if (allOrders.length === 0) {
+        return response.status(200).json({
+          success: true,
+          message: 'Aucune commande trouvée',
+          orders: [],
+          stats: {
+            total: 0,
+            pending_payment: 0,
+            pending: 0,
+            in_preparation: 0,
+            ready_to_ship: 0,
+            in_delivery: 0,
+            delivered: 0,
+            cancelled: 0,
+            rejected: 0,
+          }
+        })
+      }
+
+      // Trouver la commande pending_payment la plus récente
+      const latestOrder = allOrders[0]
+      const latestMs = latestOrder.createdAt.toMillis()
+
       // Filtrer pour ne garder que les commandes créées dans les 10 secondes autour de la plus récente
+      // Cela forme une session : toutes les commandes créées ensemble dans cette fenêtre
       const tenSecondsAgo = latestMs - 10000
       const tenSecondsAfter = latestMs + 10000
 
-      // Ne garder QUE les commandes pending_payment dans la fenêtre de 10 secondes
+      // Ne garder QUE les commandes pending_payment dans la fenêtre de 10 secondes de la session
       const finalOrders = allOrders.filter((order) => {
         const orderMs = order.createdAt.toMillis()
         return orderMs >= tenSecondsAgo && orderMs <= tenSecondsAfter
