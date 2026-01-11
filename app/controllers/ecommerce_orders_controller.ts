@@ -381,6 +381,7 @@ export default class EcommerceOrdersController {
       const deliveries = await EcommerceOrder.query()
         .whereIn('status', [
           EcommerceOrderStatus.PRET_A_EXPEDIER,
+          EcommerceOrderStatus.ACCEPTE_LIVREUR,
           EcommerceOrderStatus.EN_ROUTE,
           EcommerceOrderStatus.DELIVERED,
         ])
