@@ -1,0 +1,14 @@
+Acheteur: 
+uid: +243828191010
+password: 0826016607Makengo?
+
+
+Vendeur: 
+uid: +243826016607
+password: 0826016607Makengo@
+
+
+Livreur: 
+uid: +243888777666
+password: Livreur@123456789
+
