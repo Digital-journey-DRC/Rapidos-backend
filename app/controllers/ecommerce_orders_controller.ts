@@ -1751,7 +1751,7 @@ export default class EcommerceOrdersController {
 
       // Récupérer le fichier uploadé
       const packagePhoto = request.file('packagePhoto', {
-        size: '10mb',
+        size: '20mb',
         extnames: ['jpg', 'jpeg', 'png', 'webp'],
       })
 
