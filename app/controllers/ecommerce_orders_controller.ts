@@ -14,7 +14,6 @@ import User from '#models/user'
 import Media from '#models/media'
 import { UserRole } from '../Enum/user_role.js'
 import { saveOrderToFirestore, notifyVendors, updateOrderInFirestore, saveLocationToFirestore, admin } from '#services/firebase_service'
-import { DateTime } from 'luxon'
 
 export default class EcommerceOrdersController {
   /**
@@ -708,13 +707,13 @@ export default class EcommerceOrdersController {
   }
 
   /**
-   * POST /ecommerce/livraison/:orderId/take
+   * POST /ecommerce/livraison/:id/take
    * Prendre en charge une livraison (livreur)
    */
   async takeDelivery({ response, auth, params }: HttpContext) {
     try {
       const user = auth.user!
-      const { orderId } = params
+      const { id } = params
 
       if (user.role !== 'livreur') {
         return response.status(403).json({
@@ -723,7 +722,7 @@ export default class EcommerceOrdersController {
         })
       }
 
-      const order = await EcommerceOrder.findBy('orderId', orderId)
+      const order = await EcommerceOrder.find(id)
       if (!order) {
         return response.status(404).json({
           success: false,
@@ -1146,134 +1145,63 @@ export default class EcommerceOrdersController {
    * GET /ecommerce/commandes/buyer/me
    * Récupérer toutes les commandes de l'acheteur connecté
    */
-  async getBuyerOrders({ response, auth }: HttpContext) {
+  async getBuyerOrders({ request, response, auth }: HttpContext) {
     try {
       const user = auth.user!
+      const { status, vendeurId } = request.qs()
 
-      // STRATÉGIE MODIFIÉE : Retourner TOUTES les commandes de la session active
-      // La session inclut toutes les commandes créées ensemble (pending_payment ET pending)
-      // La session reste active tant qu'il y a au moins une commande récente dans les 60 dernières secondes
-
-      // Récupérer toutes les commandes pending_payment ET pending pour trouver la session la plus récente
-      const allSessionOrders = await EcommerceOrder.query()
+      // Trouver la date de création de la commande pending_payment la plus récente
+      const latestOrder = await EcommerceOrder.query()
         .where('client_id', user.id)
-        .whereIn('status', [EcommerceOrderStatus.PENDING_PAYMENT, EcommerceOrderStatus.PENDING])
+        .where('status', EcommerceOrderStatus.PENDING_PAYMENT)
+        .orderBy('created_at', 'desc')
+        .first()
+
+      if (!latestOrder) {
+        return response.status(200).json({
+          success: true,
+          message: 'Aucune commande trouvée',
+          orders: [],
+          stats: {
+            total: 0,
+            pending_payment: 0,
+            pending: 0,
+            in_preparation: 0,
+            ready_to_ship: 0,
+            in_delivery: 0,
+            delivered: 0,
+            cancelled: 0,
+            rejected: 0,
+          }
+        })
+      }
+
+      // Récupérer uniquement les commandes pending_payment de l'utilisateur
+      const allOrders = await EcommerceOrder.query()
+        .where('client_id', user.id)
+        .where('status', EcommerceOrderStatus.PENDING_PAYMENT)
         .preload('paymentMethod')
         .orderBy('created_at', 'desc')
-        .limit(50)
 
-      // Si aucune commande, retourner vide
-      if (allSessionOrders.length === 0) {
-        return response.status(200).json({
-          success: true,
-          message: 'Aucune commande trouvée',
-          orders: [],
-          stats: {
-            total: 0,
-            pending_payment: 0,
-            pending: 0,
-            in_preparation: 0,
-            ready_to_ship: 0,
-            in_delivery: 0,
-            delivered: 0,
-            cancelled: 0,
-            rejected: 0,
-          }
-        })
-      }
+      // Filtrer pour ne garder que les commandes créées dans les 10 secondes autour de la plus récente
+      const latestMs = latestOrder.createdAt.toMillis()
+      const tenSecondsAgo = latestMs - 10000
+      const tenSecondsAfter = latestMs + 10000
 
-      // Recalculer now juste avant la vérification pour éviter les problèmes de timing
-      const currentNow = DateTime.now().toMillis()
-      const sixtySecondsAgoCurrent = currentNow - 60000
-      
-      // Filtrer pour trouver les commandes récentes (créées dans les 60 dernières secondes)
-      const recentSessionOrders = allSessionOrders.filter((order) => {
+      let orders = allOrders.filter((order) => {
         const orderMs = order.createdAt.toMillis()
-        return orderMs >= sixtySecondsAgoCurrent
+        return orderMs >= tenSecondsAgo && orderMs <= tenSecondsAfter
       })
 
-      // Si aucune commande récente, la session est expirée
-      if (recentSessionOrders.length === 0) {
-        return response.status(200).json({
-          success: true,
-          message: 'Aucune commande trouvée',
-          orders: [],
-          stats: {
-            total: 0,
-            pending_payment: 0,
-            pending: 0,
-            in_preparation: 0,
-            ready_to_ship: 0,
-            in_delivery: 0,
-            delivered: 0,
-            cancelled: 0,
-            rejected: 0,
-          }
-        })
-      }
+      // Filtrer par status si fourni
+      const filteredOrders = status
+        ? orders.filter(o => o.status === status)
+        : orders
 
-      // Trouver la commande la plus récente pour définir la fenêtre de session
-      const latestSessionOrder = recentSessionOrders[0]
-      const latestSessionMs = latestSessionOrder.createdAt.toMillis()
-
-      // Définir la fenêtre de session : 60 secondes avant et après la commande la plus récente
-      // Cela permet de regrouper toutes les commandes créées ensemble dans la même session
-      const sessionStart = latestSessionMs - 60000
-      const sessionEnd = latestSessionMs + 60000
-
-      // Filtrer pour garder TOUTES les commandes (pending_payment ET pending) dans la fenêtre de la session active
-      // pour déterminer la session, mais on ne retournera que les pending_payment
-      const allSessionOrdersInWindow = allSessionOrders.filter((order) => {
-        const orderMs = order.createdAt.toMillis()
-        // Doit être dans la fenêtre de la session active
-        return orderMs >= sessionStart && orderMs <= sessionEnd
-      })
-
-      // Si aucune commande dans la session active, retourner liste vide
-      if (allSessionOrdersInWindow.length === 0) {
-        return response.status(200).json({
-          success: true,
-          message: 'Aucune commande trouvée',
-          orders: [],
-          stats: {
-            total: 0,
-            pending_payment: 0,
-            pending: 0,
-            in_preparation: 0,
-            ready_to_ship: 0,
-            in_delivery: 0,
-            delivered: 0,
-            cancelled: 0,
-            rejected: 0,
-          }
-        })
-      }
-
-      // Retourner SEULEMENT les commandes en pending_payment de cette session
-      const finalOrders = allSessionOrdersInWindow.filter((order) => {
-        return order.status === EcommerceOrderStatus.PENDING_PAYMENT
-      })
-
-      // Si aucune commande pending_payment dans la session, retourner liste vide
-      // (mais la session reste active tant qu'il y a des commandes récentes)
-      if (finalOrders.length === 0) {
-        return response.status(200).json({
-          success: true,
-          message: 'Aucune commande trouvée',
-          orders: [],
-          stats: {
-            total: 0,
-            pending_payment: 0,
-            pending: 0,
-            in_preparation: 0,
-            ready_to_ship: 0,
-            in_delivery: 0,
-            delivered: 0,
-            cancelled: 0,
-            rejected: 0,
-          }
-        })
-      }
+      // Filtrer par vendeur si fourni
+      const finalOrders = vendeurId
+        ? filteredOrders.filter(o => o.vendorId === Number(vendeurId))
+        : filteredOrders
 
       // Enrichir avec les templates et les infos vendeur
       const enrichedOrders = await Promise.all(finalOrders.map(async (order) => {
@@ -1327,17 +1255,17 @@ export default class EcommerceOrdersController {
         }
       }))
 
-      // Calculer les statistiques basées sur les statuts réels des commandes
+      // Calculer les statistiques (basées sur les commandes de la dernière session)
       const stats = {
         total: finalOrders.length,
         pending_payment: finalOrders.filter(o => o.status === EcommerceOrderStatus.PENDING_PAYMENT).length,
         pending: finalOrders.filter(o => o.status === EcommerceOrderStatus.PENDING).length,
-        in_preparation: 0,
-        ready_to_ship: 0,
-        in_delivery: 0,
-        delivered: 0,
-        cancelled: 0,
-        rejected: 0,
+        in_preparation: finalOrders.filter(o => o.status === EcommerceOrderStatus.EN_PREPARATION).length,
+        ready_to_ship: finalOrders.filter(o => o.status === EcommerceOrderStatus.PRET_A_EXPEDIER).length,
+        in_delivery: finalOrders.filter(o => o.status === EcommerceOrderStatus.EN_ROUTE).length,
+        delivered: finalOrders.filter(o => o.status === EcommerceOrderStatus.DELIVERED).length,
+        cancelled: finalOrders.filter(o => o.status === EcommerceOrderStatus.CANCELLED).length,
+        rejected: finalOrders.filter(o => o.status === EcommerceOrderStatus.REJECTED).length,
       }
 
       return response.status(200).json({
