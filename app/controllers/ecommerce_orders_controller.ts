@@ -1787,16 +1787,16 @@ export default class EcommerceOrdersController {
   }
 
   /**
-   * POST /ecommerce/commandes/:orderId/upload-package-photo
+   * POST /ecommerce/commandes/:id/upload-package-photo
    * Uploader la photo du colis et générer un code unique à 4 chiffres
    */
   async uploadPackagePhoto({ request, response, params, auth }: HttpContext) {
     try {
       const user = auth.user!
-      const orderId = params.orderId
+      const { id } = params
 
       // Vérifier que la commande existe
-      const order = await EcommerceOrder.findBy('orderId', orderId)
+      const order = await EcommerceOrder.find(id)
       if (!order) {
         return response.status(404).json({
           success: false,

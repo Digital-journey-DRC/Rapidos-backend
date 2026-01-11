@@ -402,7 +402,7 @@ router
 
 // Upload photo du colis et générer code (vendeur)
 router
-  .post('/ecommerce/commandes/:orderId/upload-package-photo', [EcommerceOrdersController, 'uploadPackagePhoto'])
+  .post('/ecommerce/commandes/:id/upload-package-photo', [EcommerceOrdersController, 'uploadPackagePhoto'])
   .use(middleware.auth({ guards: ['api'] }))
 
 // Prendre en charge une livraison (livreur)
