@@ -1111,12 +1111,26 @@ export default class EcommerceOrdersController {
   async saveDeliveryLocation({ request, response, auth }: HttpContext) {
     try {
       const user = auth.user!
-      const { orderId, latitude, longitude } = request.only(['orderId', 'latitude', 'longitude'])
+      const body = request.body()
+      const orderId = body.orderId
+      const latitude = body.latitude
+      const longitude = body.longitude
 
-      if (!latitude || !longitude) {
+      if (latitude === undefined || latitude === null || longitude === undefined || longitude === null) {
         return response.status(400).json({
           success: false,
           message: 'Latitude et longitude sont requis',
+        })
+      }
+
+      // Convertir en double (accepte les strings numériques et les nombres)
+      const latDouble = typeof latitude === 'number' ? latitude : parseFloat(String(latitude))
+      const lngDouble = typeof longitude === 'number' ? longitude : parseFloat(String(longitude))
+
+      if (isNaN(latDouble) || isNaN(lngDouble)) {
+        return response.status(400).json({
+          success: false,
+          message: 'Latitude et longitude doivent être des nombres valides (double)',
         })
       }
 
@@ -1124,8 +1138,8 @@ export default class EcommerceOrdersController {
         orderId: orderId || '',
         userId: String(user.id),
         role: user.role,
-        latitude: Number(latitude),
-        longitude: Number(longitude),
+        latitude: latDouble,
+        longitude: lngDouble,
         phone: user.phone || '',
       })
 
