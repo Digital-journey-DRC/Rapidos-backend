@@ -21,6 +21,7 @@ export class EcommerceCloudinaryService {
           { quality: 'auto:good' },
         ],
         allowed_formats: ['jpg', 'jpeg', 'png', 'webp'],
+        timeout: 60000, // 60 seconds timeout for Cloudinary upload (for slow connections)
       })
 
       return {

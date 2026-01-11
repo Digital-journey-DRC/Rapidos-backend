@@ -26,6 +26,12 @@ export const http = defineConfig({
   useAsyncLocalStorage: false,
 
   /**
+   * Timeout configuration for HTTP requests
+   * Increased for file uploads (especially photos from mobile devices)
+   */
+  timeout: 120000, // 2 minutes (120 seconds) for slow connections
+
+  /**
    * Manage cookies configuration. The settings for the session id cookie are
    * defined inside the "config/session.ts" file.
    */
