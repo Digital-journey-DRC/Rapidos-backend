@@ -363,6 +363,11 @@ router
   .post('/ecommerce/livraison/:id/take', [EcommerceOrdersController, 'takeDelivery'])
   .use(middleware.auth({ guards: ['api'] }))
 
+// Enregistrer la localisation du livreur dans Firebase
+router
+  .post('/ecommerce/location/livreur', [EcommerceOrdersController, 'saveDeliveryLocation'])
+  .use(middleware.auth({ guards: ['api'] }))
+
 // ============================================================
 // FIN MODULE E-COMMERCE ORDERS
 // ============================================================
