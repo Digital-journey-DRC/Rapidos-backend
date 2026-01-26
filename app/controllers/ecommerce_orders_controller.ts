@@ -578,6 +578,7 @@ export default class EcommerceOrdersController {
         await updateOrderInFirestore(order.firebaseOrderId, {
           status: 'pret_a_expedier',
           packagePhoto: order.packagePhoto,
+          livreur: order.deliveryPersonId,
         })
       }
 
