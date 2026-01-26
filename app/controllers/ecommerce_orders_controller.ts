@@ -880,6 +880,12 @@ export default class EcommerceOrdersController {
       const user = auth.user!
       const payload = await request.validateUsing(initializeOrderValidator)
 
+      // Supprimer toutes les commandes pending_payment de l'acheteur avant d'initialiser
+      await EcommerceOrder.query()
+        .where('client_id', user.id)
+        .where('status', EcommerceOrderStatus.PENDING_PAYMENT)
+        .delete()
+
       // Récupérer tous les produits demandés avec leurs images
       const productIds = payload.products.map(p => p.productId)
       const products = await Product.query().whereIn('id', productIds)
