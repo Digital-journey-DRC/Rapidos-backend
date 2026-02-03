@@ -576,7 +576,7 @@ export default class EcommerceOrdersController {
       // Mise à jour Firestore si statut "prêt à expédier" et firebaseOrderId existe
       if (payload.status === EcommerceOrderStatus.PRET_A_EXPEDIER && order.firebaseOrderId) {
         await updateOrderInFirestore(order.firebaseOrderId, {
-          status: 'pret_a_expedier',
+          status: 'prêt à expédier',
           packagePhoto: order.packagePhoto,
           livreur: order.deliveryPersonId,
         })
