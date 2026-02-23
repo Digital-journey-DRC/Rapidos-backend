@@ -16,6 +16,11 @@ export default class ClientExpressController {
           phone VARCHAR(50) NOT NULL,
           email VARCHAR(255),
           default_address TEXT,
+          pays VARCHAR(255),
+          province VARCHAR(255),
+          ville VARCHAR(255),
+          commune VARCHAR(255),
+          avenue VARCHAR(255),
           default_reference VARCHAR(255),
           vendor_id INTEGER NOT NULL,
           notes TEXT,
@@ -29,13 +34,42 @@ export default class ClientExpressController {
 
       return response.status(201).json({
         success: true,
-        message: 'Table client_express créée avec succès',
+        message: 'Table client_express créée avec succès (avec champs adresse)',
       })
     } catch (error) {
       console.error('Erreur lors de la création de la table client_express:', error)
       return response.status(500).json({
         success: false,
         message: 'Erreur lors de la création de la table',
+        error: error.message,
+      })
+    }
+  }
+
+  /**
+   * Ajouter les colonnes d'adresse structurée
+   * GET /client-express/add-address-columns
+   */
+  async addAddressColumns({ response }: HttpContext) {
+    try {
+      await db.rawQuery(`
+        ALTER TABLE client_express 
+        ADD COLUMN IF NOT EXISTS pays VARCHAR(255),
+        ADD COLUMN IF NOT EXISTS province VARCHAR(255),
+        ADD COLUMN IF NOT EXISTS ville VARCHAR(255),
+        ADD COLUMN IF NOT EXISTS commune VARCHAR(255),
+        ADD COLUMN IF NOT EXISTS avenue VARCHAR(255);
+      `)
+
+      return response.status(200).json({
+        success: true,
+        message: 'Colonnes d\'adresse ajoutées avec succès',
+      })
+    } catch (error) {
+      console.error('Erreur lors de l\'ajout des colonnes:', error)
+      return response.status(500).json({
+        success: false,
+        message: 'Erreur lors de l\'ajout des colonnes',
         error: error.message,
       })
     }
@@ -63,6 +97,11 @@ export default class ClientExpressController {
         phone: payload.phone,
         email: payload.email || null,
         defaultAddress: payload.defaultAddress || null,
+        pays: payload.pays || null,
+        province: payload.province || null,
+        ville: payload.ville || null,
+        commune: payload.commune || null,
+        avenue: payload.avenue || null,
         defaultReference: payload.defaultReference || null,
         vendorId: payload.vendorId,
         notes: payload.notes || null,
@@ -203,6 +242,11 @@ export default class ClientExpressController {
       if (payload.phone !== undefined) client.phone = payload.phone
       if (payload.email !== undefined) client.email = payload.email
       if (payload.defaultAddress !== undefined) client.defaultAddress = payload.defaultAddress
+      if (payload.pays !== undefined) client.pays = payload.pays
+      if (payload.province !== undefined) client.province = payload.province
+      if (payload.ville !== undefined) client.ville = payload.ville
+      if (payload.commune !== undefined) client.commune = payload.commune
+      if (payload.avenue !== undefined) client.avenue = payload.avenue
       if (payload.defaultReference !== undefined) client.defaultReference = payload.defaultReference
       if (payload.notes !== undefined) client.notes = payload.notes
 

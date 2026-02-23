@@ -500,6 +500,9 @@ const ClientExpressController = () => import('#controllers/client_express_contro
 // Endpoint temporaire pour créer la table client_express
 router.get('/client-express/create-table', [ClientExpressController, 'createTable'])
 
+// Endpoint pour ajouter les colonnes d'adresse structurée
+router.get('/client-express/add-address-columns', [ClientExpressController, 'addAddressColumns'])
+
 // POST /client-express/create - Créer un nouveau client express
 router
   .post('/client-express/create', [ClientExpressController, 'create'])

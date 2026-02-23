@@ -20,6 +20,21 @@ export default class ClientExpress extends BaseModel {
   declare defaultAddress: string | null
 
   @column()
+  declare pays: string | null
+
+  @column()
+  declare province: string | null
+
+  @column()
+  declare ville: string | null
+
+  @column()
+  declare commune: string | null
+
+  @column()
+  declare avenue: string | null
+
+  @column()
   declare defaultReference: string | null
 
   @column()
