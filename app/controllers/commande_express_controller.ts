@@ -571,7 +571,7 @@ export default class CommandeExpressController {
 
   /**
    * GET /commande-express/livreur/mes-livraisons
-   * Récupérer les livraisons du livreur connecté (exclut les commandes pending)
+   * Récupérer les livraisons du livreur connecté
    */
   async mesLivraisons({ request, response, auth }: HttpContext) {
     try {
@@ -582,7 +582,6 @@ export default class CommandeExpressController {
 
       const query = CommandeExpress.query()
         .where('delivery_person_id', user.id)
-        .whereNot('statut', CommandeExpressStatus.PENDING)
         .orderBy('created_at', 'desc')
 
       if (status) {
