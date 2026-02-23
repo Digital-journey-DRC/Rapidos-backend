@@ -536,3 +536,25 @@ router
 // ============================================================
 // FIN MODULE CLIENT EXPRESS
 // ============================================================
+
+// ============================================================
+// MODULE LOCATIONS (PAYS, PROVINCES, VILLES, COMMUNES)
+// ============================================================
+
+const LocationsController = () => import('#controllers/locations_controller')
+
+// GET /locations/pays - Liste de tous les pays
+router.get('/locations/pays', [LocationsController, 'getPays'])
+
+// GET /locations/provinces?paysId=1 - Liste des provinces (filtrable par paysId)
+router.get('/locations/provinces', [LocationsController, 'getProvinces'])
+
+// GET /locations/villes?provinceId=1 - Liste des villes (filtrable par provinceId)
+router.get('/locations/villes', [LocationsController, 'getVilles'])
+
+// GET /locations/communes?villeId=1 - Liste des communes (filtrable par villeId)
+router.get('/locations/communes', [LocationsController, 'getCommunes'])
+
+// ============================================================
+// FIN MODULE LOCATIONS
+// ============================================================
