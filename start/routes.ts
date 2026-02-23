@@ -424,3 +424,112 @@ router
 // Route temporaire pour créer la table promotions (GET pour faciliter avec curl)
 const MigrationController = () => import('#controllers/migration_controller')
 router.get('/migration/create-promotions-table', [MigrationController, 'createPromotionsTable'])
+
+// ============================================================
+// MODULE COMMANDE EXPRESS (INDÉPENDANT)
+// ============================================================
+
+const CommandeExpressController = () => import('#controllers/commande_express_controller')
+
+// Endpoint temporaire pour créer la table commande_express
+router.get('/commande-express/create-table', [CommandeExpressController, 'createTable'])
+
+// Endpoint temporaire pour ajouter la colonne vendor_id
+router.get('/commande-express/add-vendor-column', [CommandeExpressController, 'addVendorColumn'])
+
+// POST /commande-express/create - Créer une commande express avec déduction de stock
+router
+  .post('/commande-express/create', [CommandeExpressController, 'create'])
+  .use(middleware.auth({ guards: ['api'] }))
+
+// GET /commande-express/list - Lister toutes les commandes express (avec pagination)
+router
+  .get('/commande-express/list', [CommandeExpressController, 'list'])
+  .use(middleware.auth({ guards: ['api'] }))
+
+// GET /commande-express/mes-commandes - Mes commandes express (client connecté)
+router
+  .get('/commande-express/mes-commandes', [CommandeExpressController, 'mesCommandes'])
+  .use(middleware.auth({ guards: ['api'] }))
+
+// GET /commande-express/livreur/disponibles - Commandes disponibles pour les livreurs
+router
+  .get('/commande-express/livreur/disponibles', [CommandeExpressController, 'disponiblesPourLivreur'])
+  .use(middleware.auth({ guards: ['api'] }))
+
+// GET /commande-express/livreur/mes-livraisons - Mes livraisons (livreur connecté)
+router
+  .get('/commande-express/livreur/mes-livraisons', [CommandeExpressController, 'mesLivraisons'])
+  .use(middleware.auth({ guards: ['api'] }))
+
+// GET /commande-express/vendeur/mes-commandes - Mes commandes express (vendeur connecté)
+router
+  .get('/commande-express/vendeur/mes-commandes', [CommandeExpressController, 'mesCommandesVendeur'])
+  .use(middleware.auth({ guards: ['api'] }))
+
+// GET /commande-express/:id - Détails d'une commande express
+router
+  .get('/commande-express/:id', [CommandeExpressController, 'show'])
+  .use(middleware.auth({ guards: ['api'] }))
+
+// PATCH /commande-express/:id/status - Modifier le statut d'une commande
+router
+  .patch('/commande-express/:id/status', [CommandeExpressController, 'updateStatus'])
+  .use(middleware.auth({ guards: ['api'] }))
+
+// PATCH /commande-express/:id/assign-livreur - Assigner un livreur
+router
+  .patch('/commande-express/:id/assign-livreur', [CommandeExpressController, 'assignLivreur'])
+  .use(middleware.auth({ guards: ['api'] }))
+
+// DELETE /commande-express/:id - Supprimer une commande et restaurer le stock
+router
+  .delete('/commande-express/:id', [CommandeExpressController, 'delete'])
+  .use(middleware.auth({ guards: ['api'] }))
+
+// ============================================================
+// FIN MODULE COMMANDE EXPRESS
+// ============================================================
+
+// ============================================================
+// MODULE CLIENT EXPRESS (GESTION DES CLIENTS)
+// ============================================================
+
+const ClientExpressController = () => import('#controllers/client_express_controller')
+
+// Endpoint temporaire pour créer la table client_express
+router.get('/client-express/create-table', [ClientExpressController, 'createTable'])
+
+// POST /client-express/create - Créer un nouveau client express
+router
+  .post('/client-express/create', [ClientExpressController, 'create'])
+  .use(middleware.auth({ guards: ['api'] }))
+
+// GET /client-express/list - Lister tous les clients du vendeur (avec pagination et recherche)
+router
+  .get('/client-express/list', [ClientExpressController, 'list'])
+  .use(middleware.auth({ guards: ['api'] }))
+
+// GET /client-express/search-by-phone - Rechercher un client par téléphone
+router
+  .get('/client-express/search-by-phone', [ClientExpressController, 'searchByPhone'])
+  .use(middleware.auth({ guards: ['api'] }))
+
+// GET /client-express/:id - Détails d'un client express
+router
+  .get('/client-express/:id', [ClientExpressController, 'show'])
+  .use(middleware.auth({ guards: ['api'] }))
+
+// PUT /client-express/:id - Modifier un client express
+router
+  .put('/client-express/:id', [ClientExpressController, 'update'])
+  .use(middleware.auth({ guards: ['api'] }))
+
+// DELETE /client-express/:id - Supprimer un client express
+router
+  .delete('/client-express/:id', [ClientExpressController, 'delete'])
+  .use(middleware.auth({ guards: ['api'] }))
+
+// ============================================================
+// FIN MODULE CLIENT EXPRESS
+// ============================================================
