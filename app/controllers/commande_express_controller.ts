@@ -581,8 +581,8 @@ export default class CommandeExpressController {
       const status = request.input('status')
 
       const query = CommandeExpress.query()
-        .where('delivery_person_id', user.id)
-        .orderBy('created_at', 'desc')
+        .where('deliveryPersonId', user.id)
+        .orderBy('createdAt', 'desc')
 
       if (status) {
         query.where('statut', status)
@@ -592,7 +592,7 @@ export default class CommandeExpressController {
 
       return response.status(200).json({
         success: true,
-        data: commandes,
+        data: commandes.serialize(),
       })
     } catch (error) {
       logger.error('Erreur récupération mes livraisons', {
