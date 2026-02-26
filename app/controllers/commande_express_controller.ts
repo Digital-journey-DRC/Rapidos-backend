@@ -578,20 +578,26 @@ export default class CommandeExpressController {
       const user = auth.user!
       const status = request.input('status')
 
-      let query = db.from('commande_express')
-        .where('delivery_person_id', user.id)
-        .orderBy('created_at', 'desc')
-
+      // Utiliser la requête SQL brute pour éviter la pagination automatique
+      let sql = `
+        SELECT * FROM commande_express
+        WHERE delivery_person_id = ?
+      `
+      const bindings: any[] = [user.id]
+      
       if (status) {
-        query = query.where('statut', status)
+        sql += ` AND statut = ?`
+        bindings.push(status)
       }
+      
+      sql += ` ORDER BY created_at DESC`
 
-      // Récupérer toutes les commandes directement via SQL (sans pagination)
-      const commandes = await query
+      // Exécuter la requête brute
+      const result = await db.rawQuery(sql, bindings)
 
       return response.status(200).json({
         success: true,
-        data: commandes,
+        data: result.rows,
       })
     } catch (error) {
       logger.error('Erreur récupération mes livraisons', {
