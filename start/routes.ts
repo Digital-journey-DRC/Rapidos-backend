@@ -363,6 +363,16 @@ router
   .post('/ecommerce/livraison/:id/take', [EcommerceOrdersController, 'takeDelivery'])
   .use(middleware.auth({ guards: ['api'] }))
 
+// Mettre à jour la localisation du vendeur
+router
+  .post('/ecommerce/location/vendeur', [RegistersController, 'updateVendorLocation'])
+  .use(middleware.auth({ guards: ['api'] }))
+
+// Récupérer la localisation du vendeur
+router
+  .get('/ecommerce/location/vendeur', [RegistersController, 'getVendorLocation'])
+  .use(middleware.auth({ guards: ['api'] }))
+
 // ============================================================
 // FIN MODULE E-COMMERCE ORDERS
 // ============================================================
