@@ -571,24 +571,23 @@ export default class CommandeExpressController {
 
   /**
    * GET /commande-express/livreur/mes-livraisons
-   * Récupérer les livraisons du livreur connecté
+   * Récupérer les livraisons du livreur connecté (TOUS sans pagination)
    */
   async mesLivraisons({ request, response, auth }: HttpContext) {
     try {
       const user = auth.user!
-      const page = request.input('page', 1)
-      const limit = request.input('limit', 20)
       const status = request.input('status')
 
-      const query = CommandeExpress.query()
+      let query = db.from('commande_express')
         .where('delivery_person_id', user.id)
         .orderBy('created_at', 'desc')
 
       if (status) {
-        query.where('statut', status)
+        query = query.where('statut', status)
       }
 
-      const commandes = await query.paginate(page, limit)
+      // Récupérer toutes les commandes directement via SQL (sans pagination)
+      const commandes = await query
 
       return response.status(200).json({
         success: true,
