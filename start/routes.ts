@@ -447,6 +447,11 @@ router.get('/commande-express/create-table', [CommandeExpressController, 'create
 // Endpoint temporaire pour ajouter la colonne vendor_id
 router.get('/commande-express/add-vendor-column', [CommandeExpressController, 'addVendorColumn'])
 
+// DEBUG ENDPOINT - Test raw SQL update
+router.get('/commande-express/debug-update/:id', [CommandeExpressController, 'debugUpdate'])
+
+
+
 // POST /commande-express/create - Créer une commande express avec déduction de stock
 router
   .post('/commande-express/create', [CommandeExpressController, 'create'])

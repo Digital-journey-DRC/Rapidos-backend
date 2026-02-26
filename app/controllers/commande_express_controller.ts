@@ -495,11 +495,19 @@ export default class CommandeExpressController {
    * Assigner un livreur à une commande express
    */
   async assignLivreur({ params, request, response, auth }: HttpContext) {
+    logger.info('🚀 ENTREE function assignLivreur', { commandeId: params.id })
     try {
       const user = auth.user!
+      logger.info('👤 User authentifié', { userId: user.id })
       const payload = await request.validateUsing(assignDeliveryPersonValidator)
+      logger.info('✅ Validation payload OK', { deliveryPersonId: payload.deliveryPersonId })
 
       const commande = await CommandeExpress.find(params.id)
+      logger.info('📦 Commande trouvée', {
+        commandeId: commande?.id,
+        statut: commande?.statut,
+        livreurActuel: commande?.deliveryPersonId,
+      })
 
       if (!commande) {
         return response.status(404).json({
@@ -508,13 +516,58 @@ export default class CommandeExpressController {
         })
       }
 
-      commande.deliveryPersonId = payload.deliveryPersonId
-      await commande.save()
+      const oldStatus = commande.statut
+      const statutValue = String(oldStatus) // Convert to string for comparison
+
+      logger.info('🔍 Checking statut before assignment', { 
+        commandeId: commande.id,
+        oldStatus, 
+        statutValue,
+        type: typeof oldStatus,
+        isPending: statutValue === 'pending',
+      })
+
+      // Si la commande est pending, changer automatiquement à en_cours lors de l'assignation
+      if (statutValue === 'pending') {
+        logger.info('✅ Statut est pending, changement automatique à en_cours')
+        
+        try {
+          // Utiliser rawQuery pour garantir le changement de statut en BD
+          // AdonisJS utilise ? comme placeholder pour les bindings
+          const result = await db.rawQuery(
+            'UPDATE commande_express SET delivery_person_id = ?, statut = ?, updated_at = NOW() WHERE id = ? RETURNING id, statut, delivery_person_id',
+            [payload.deliveryPersonId, 'en_cours', commande.id]
+          )
+          
+          logger.info('✅ UPDATE query executed', { 
+            rowsAffected: result.rowCount,
+            returning: result.rows
+          })
+          
+          // Recharger la commande pour avoir les données à jour
+          await commande.refresh()
+          
+          logger.info('✅ Commande refreshed', { 
+            newStatut: commande.statut,
+            newLivreur: commande.deliveryPersonId
+          })
+        } catch (error) {
+          logger.error('❌ ERROR in UPDATE query', { error: error.message, stack: error.stack })
+          throw error
+        }
+      } else {
+        logger.info('ℹ️ Statut non-pending, assignation livreur sans changement de statut')
+        // Sinon, juste assigner le livreur sans changer le statut
+        commande.deliveryPersonId = payload.deliveryPersonId
+        await commande.save()
+      }
 
       logger.info('Livreur assigné à la commande express', {
         commandeId: commande.id,
         orderId: commande.orderId,
         deliveryPersonId: payload.deliveryPersonId,
+        oldStatus,
+        newStatus: commande.statut,
         assignedBy: user.id,
       })
 
@@ -536,6 +589,53 @@ export default class CommandeExpressController {
       })
     }
   }
+
+  /**
+   * GET /commande-express/debug-update/:id
+   * DEBUG: Test raw SQL update
+   */
+  async debugUpdate({ params, response }: HttpContext) {
+    try {
+      const commande = await CommandeExpress.find(params.id)
+      if (!commande) {
+        return response.status(404).json({ error: 'Commande not found' })
+      }
+      
+      const beforeStatut = commande.statut
+      const beforeStatutStr = String(beforeStatut)
+      const isPendingTest = beforeStatutStr === 'pending'
+      
+      let sqlResult = null
+      
+      if (isPendingTest) {
+        sqlResult = await db.rawQuery(
+          'UPDATE commande_express SET statut = $1, updated_at = NOW() WHERE id = $2 RETURNING id, statut',
+          ['en_cours', params.id]
+        )
+        
+        await commande.refresh()
+      }
+      
+      return response.json({
+        debug: {
+          beforeStatut,
+          beforeStatutStr,
+          beforeType: typeof beforeStatut,
+          isPendingTest,
+          sqlExecuted: isPendingTest,
+          sqlResult: sqlResult ? sqlResult.rows : null,
+          afterRefresh: {
+            statut: commande.statut,
+            statutStr: String(commande.statut),
+            type: typeof commande.statut
+          }
+        }
+      })
+    } catch (error) {
+      return response.status(500).json({ error: error.message })
+    }
+  }
+
 
   /**
    * GET /commande-express/livreur/disponibles
