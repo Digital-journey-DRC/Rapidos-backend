@@ -539,7 +539,7 @@ export default class CommandeExpressController {
 
   /**
    * GET /commande-express/livreur/disponibles
-   * Récupérer les commandes disponibles pour les livreurs (statut pending ou en_cours)
+   * Récupérer les commandes disponibles pour les livreurs (statut pending uniquement)
    */
   async disponiblesPourLivreur({ request, response }: HttpContext) {
     try {
@@ -547,7 +547,7 @@ export default class CommandeExpressController {
       const limit = request.input('limit', 20)
 
       const commandes = await CommandeExpress.query()
-        .whereIn('statut', [CommandeExpressStatus.PENDING, CommandeExpressStatus.EN_COURS])
+        .where('statut', CommandeExpressStatus.PENDING)
         .whereNull('delivery_person_id')
         .orderBy('created_at', 'desc')
         .paginate(page, limit)
