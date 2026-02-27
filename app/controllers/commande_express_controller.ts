@@ -325,10 +325,11 @@ export default class CommandeExpressController {
   async show({ params, response }: HttpContext) {
     try {
       // Chercher par ID numérique OU par orderId (UUID)
-      let commande = await CommandeExpress.find(params.id)
+      let commande: CommandeExpress | null = null
       
-      // Si pas trouvé par ID numérique, essayer avec orderId
-      if (!commande) {
+      if (!isNaN(Number(params.id))) {
+        commande = await CommandeExpress.find(params.id)
+      } else {
         commande = await CommandeExpress.findBy('orderId', params.id)
       }
 
@@ -367,10 +368,11 @@ export default class CommandeExpressController {
       const payload = await request.validateUsing(updateCommandeExpressStatusValidator)
 
       // Chercher par ID numérique OU par orderId (UUID)
-      let commande = await CommandeExpress.find(params.id)
+      let commande: CommandeExpress | null = null
       
-      // Si pas trouvé par ID numérique, essayer avec orderId
-      if (!commande) {
+      if (!isNaN(Number(params.id))) {
+        commande = await CommandeExpress.find(params.id)
+      } else {
         commande = await CommandeExpress.findBy('orderId', params.id)
       }
 
@@ -524,10 +526,12 @@ export default class CommandeExpressController {
       logger.info('✅ Validation payload OK', { deliveryPersonId: payload.deliveryPersonId })
 
       // Chercher par ID numérique OU par orderId (UUID)
-      let commande = await CommandeExpress.find(params.id)
+      let commande: CommandeExpress | null = null
       
-      // Si pas trouvé par ID numérique, essayer avec orderId
-      if (!commande) {
+      // Vérifier si c'est un nombre (ID) ou un UUID
+      if (!isNaN(Number(params.id))) {
+        commande = await CommandeExpress.find(params.id)
+      } else {
         commande = await CommandeExpress.findBy('orderId', params.id)
       }
       
@@ -560,9 +564,9 @@ export default class CommandeExpressController {
         logger.info('✅ Statut est pending, changement automatique à en_cours')
         
         try {
-          // Utiliser rawQuery avec placeholders PostgreSQL ($1, $2, $3)
+          // Utiliser rawQuery avec la bonne syntaxe AdonisJS
           const result = await db.rawQuery(
-            'UPDATE commande_express SET delivery_person_id = $1, statut = $2, updated_at = NOW() WHERE id = $3 RETURNING id, statut, delivery_person_id',
+            'UPDATE commande_express SET delivery_person_id = ?, statut = ?, updated_at = NOW() WHERE id = ? RETURNING id, statut, delivery_person_id',
             [payload.deliveryPersonId, 'en_cours', commande.id]
           )
           
@@ -579,7 +583,12 @@ export default class CommandeExpressController {
             newLivreur: commande.deliveryPersonId
           })
         } catch (error) {
-          logger.error('❌ ERROR in UPDATE query', { error: error.message, stack: error.stack })
+          logger.error('❌ ERROR in UPDATE query', { 
+            errorMessage: error.message, 
+            errorCode: error.code,
+            errorDetail: error.detail,
+            stack: error.stack 
+          })
           throw error
         }
       } else {
