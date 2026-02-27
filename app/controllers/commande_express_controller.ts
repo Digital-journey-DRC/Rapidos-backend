@@ -324,7 +324,13 @@ export default class CommandeExpressController {
    */
   async show({ params, response }: HttpContext) {
     try {
-      const commande = await CommandeExpress.find(params.id)
+      // Chercher par ID numérique OU par orderId (UUID)
+      let commande = await CommandeExpress.find(params.id)
+      
+      // Si pas trouvé par ID numérique, essayer avec orderId
+      if (!commande) {
+        commande = await CommandeExpress.findBy('orderId', params.id)
+      }
 
       if (!commande) {
         return response.status(404).json({
@@ -360,7 +366,13 @@ export default class CommandeExpressController {
       const user = auth.user!
       const payload = await request.validateUsing(updateCommandeExpressStatusValidator)
 
-      const commande = await CommandeExpress.find(params.id)
+      // Chercher par ID numérique OU par orderId (UUID)
+      let commande = await CommandeExpress.find(params.id)
+      
+      // Si pas trouvé par ID numérique, essayer avec orderId
+      if (!commande) {
+        commande = await CommandeExpress.findBy('orderId', params.id)
+      }
 
       if (!commande) {
         return response.status(404).json({
@@ -411,7 +423,13 @@ export default class CommandeExpressController {
     try {
       const user = auth.user!
 
-      const commande = await CommandeExpress.query({ client: trx })
+      // Chercher par ID numérique OU par orderId (UUID)
+      let commande = await CommandeExpress.find(params.id)
+      
+      // Si pas trouvé par ID numérique, essayer avec orderId
+      if (!commande) {
+        commande = await CommandeExpress.findBy('orderId', params.id)
+      }
         .where('id', params.id)
         .forUpdate()
         .first()
@@ -502,7 +520,14 @@ export default class CommandeExpressController {
       const payload = await request.validateUsing(assignDeliveryPersonValidator)
       logger.info('✅ Validation payload OK', { deliveryPersonId: payload.deliveryPersonId })
 
-      const commande = await CommandeExpress.find(params.id)
+      // Chercher par ID numérique OU par orderId (UUID)
+      let commande = await CommandeExpress.find(params.id)
+      
+      // Si pas trouvé par ID numérique, essayer avec orderId
+      if (!commande) {
+        commande = await CommandeExpress.findBy('orderId', params.id)
+      }
+      
       logger.info('📦 Commande trouvée', {
         commandeId: commande?.id,
         statut: commande?.statut,
@@ -532,10 +557,9 @@ export default class CommandeExpressController {
         logger.info('✅ Statut est pending, changement automatique à en_cours')
         
         try {
-          // Utiliser rawQuery pour garantir le changement de statut en BD
-          // AdonisJS utilise ? comme placeholder pour les bindings
+          // Utiliser rawQuery avec placeholders PostgreSQL ($1, $2, $3)
           const result = await db.rawQuery(
-            'UPDATE commande_express SET delivery_person_id = ?, statut = ?, updated_at = NOW() WHERE id = ? RETURNING id, statut, delivery_person_id',
+            'UPDATE commande_express SET delivery_person_id = $1, statut = $2, updated_at = NOW() WHERE id = $3 RETURNING id, statut, delivery_person_id',
             [payload.deliveryPersonId, 'en_cours', commande.id]
           )
           
