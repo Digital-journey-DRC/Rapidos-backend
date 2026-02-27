@@ -424,15 +424,18 @@ export default class CommandeExpressController {
       const user = auth.user!
 
       // Chercher par ID numérique OU par orderId (UUID)
-      let commande = await CommandeExpress.find(params.id)
-      
-      // Si pas trouvé par ID numérique, essayer avec orderId
-      if (!commande) {
-        commande = await CommandeExpress.findBy('orderId', params.id)
-      }
+      let commande = await CommandeExpress.query({ client: trx })
         .where('id', params.id)
         .forUpdate()
         .first()
+      
+      // Si pas trouvé par ID numérique, essayer avec orderId
+      if (!commande) {
+        commande = await CommandeExpress.query({ client: trx })
+          .where('orderId', params.id)
+          .forUpdate()
+          .first()
+      }
 
       if (!commande) {
         await trx.rollback()
