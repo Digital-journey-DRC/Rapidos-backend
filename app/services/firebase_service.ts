@@ -203,4 +203,63 @@ export async function notifyVendors(
   }
 }
 
+// ============================================================
+// Collection "commandesexpress" - Commandes Express
+// ============================================================
+
+interface CommandeExpressFirestore {
+  timestamp: admin.firestore.FieldValue
+  orderId: string
+  clientId: number
+  clientName: string
+  clientPhone: string
+  vendorId: number
+  packageValue: number
+  packageDescription: string
+  pickupAddress: string
+  deliveryAddress: string
+  pickupReference: string | null
+  deliveryReference: string | null
+  statut: string
+  items: Array<{
+    productId?: number
+    name: string
+    description?: string
+    price?: number
+    quantity: number
+    weight?: string
+  }>
+  deliveryPersonId: number | null
+  createdBy: number
+}
+
+/**
+ * Enregistre une commande express dans la collection "commandesexpress" de Firestore
+ */
+export async function saveCommandeExpressToFirestore(orderData: CommandeExpressFirestore): Promise<string> {
+  const db = await getFirestore()
+  const docRef = await db.collection('commandesexpress').add(orderData)
+  return docRef.id
+}
+
+/**
+ * Met à jour un document dans la collection "commandesexpress" de Firestore
+ */
+export async function updateCommandeExpressInFirestore(
+  docId: string,
+  updateData: Record<string, any>
+): Promise<boolean> {
+  try {
+    const db = await getFirestore()
+    await db.collection('commandesexpress').doc(docId).update({
+      ...updateData,
+      timestamp: admin.firestore.FieldValue.serverTimestamp(),
+    })
+    return true
+  } catch (error) {
+    console.error('Erreur mise à jour commandesexpress Firestore:', error)
+    return false
+  }
+}
+
 export { admin, getFirestore, initializeFirebase }

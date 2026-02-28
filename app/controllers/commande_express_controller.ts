@@ -9,6 +9,8 @@ import {
 import { randomUUID } from 'node:crypto'
 import logger from '@adonisjs/core/services/logger'
 import db from '@adonisjs/lucid/services/db'
+import { saveCommandeExpressToFirestore } from '#services/firebase_service'
+import admin from 'firebase-admin'
 
 export default class CommandeExpressController {
   /**
@@ -206,6 +208,39 @@ export default class CommandeExpressController {
       // Commit de la transaction
       await trx.commit()
 
+      // Enregistrer dans Firebase collection "commandesexpress" pour les notifications
+      let firebaseDocId: string | null = null
+      try {
+        firebaseDocId = await saveCommandeExpressToFirestore({
+          timestamp: admin.firestore.FieldValue.serverTimestamp(),
+          orderId: commandeExpress.orderId,
+          clientId: commandeExpress.clientId,
+          clientName: commandeExpress.clientName,
+          clientPhone: commandeExpress.clientPhone,
+          vendorId: commandeExpress.vendorId,
+          packageValue: commandeExpress.packageValue,
+          packageDescription: commandeExpress.packageDescription,
+          pickupAddress: commandeExpress.pickupAddress,
+          deliveryAddress: commandeExpress.deliveryAddress,
+          pickupReference: commandeExpress.pickupReference,
+          deliveryReference: commandeExpress.deliveryReference,
+          statut: commandeExpress.statut,
+          items: commandeExpress.items,
+          deliveryPersonId: commandeExpress.deliveryPersonId,
+          createdBy: commandeExpress.createdBy,
+        })
+        logger.info('Commande express enregistrée dans Firebase', {
+          firebaseDocId,
+          orderId: commandeExpress.orderId,
+        })
+      } catch (firebaseError) {
+        // Ne pas bloquer la création si Firebase échoue
+        logger.error('Erreur enregistrement commande express dans Firebase (non bloquant)', {
+          error: firebaseError.message,
+          orderId: commandeExpress.orderId,
+        })
+      }
+
       logger.info('Commande express créée avec succès', {
         orderId: commandeExpress.orderId,
         clientId: commandeExpress.clientId,
@@ -213,6 +248,7 @@ export default class CommandeExpressController {
         itemsCount: payload.items.length,
         itemsWithStock: itemsWithProduct.length,
         itemsWithoutStock: itemsWithoutProduct.length,
+        firebaseDocId,
       })
 
       return response.status(201).json({
@@ -220,6 +256,7 @@ export default class CommandeExpressController {
         message: 'Commande express créée avec succès',
         data: {
           commande: commandeExpress,
+          firebaseDocId,
           stockUpdates: stockUpdates.length > 0 ? stockUpdates : null,
           itemsInfo: {
             total: payload.items.length,
