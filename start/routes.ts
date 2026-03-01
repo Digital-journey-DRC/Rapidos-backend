@@ -573,3 +573,28 @@ router.get('/locations/communes', [LocationsController, 'getCommunes'])
 // ============================================================
 // FIN MODULE LOCATIONS
 // ============================================================
+
+// ============================================================
+// MODULE STATISTIQUES VENDEUR
+// ============================================================
+
+const StatistiquesVendeurController = () => import('#controllers/statistiques_vendeur_controller')
+
+// GET /statistiques/vendeur/express - Stats ventes commandes express du vendeur connecté
+router
+  .get('/statistiques/vendeur/express', [StatistiquesVendeurController, 'statsCommandeExpress'])
+  .use(middleware.auth({ guards: ['api'] }))
+
+// GET /statistiques/vendeur/ecommerce - Stats ventes commandes normales du vendeur connecté
+router
+  .get('/statistiques/vendeur/ecommerce', [StatistiquesVendeurController, 'statsCommandeEcommerce'])
+  .use(middleware.auth({ guards: ['api'] }))
+
+// GET /statistiques/vendeur/global - Résumé combiné express + ecommerce du vendeur connecté
+router
+  .get('/statistiques/vendeur/global', [StatistiquesVendeurController, 'statsGlobal'])
+  .use(middleware.auth({ guards: ['api'] }))
+
+// ============================================================
+// FIN MODULE STATISTIQUES VENDEUR
+// ============================================================
