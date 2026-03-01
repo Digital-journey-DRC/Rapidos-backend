@@ -156,6 +156,61 @@ curl -X GET "http://localhost:3333/statistiques/vendeur/ecommerce" \
         "quantite_vendue": 5,
         "montant_total": "9250000.00"
       }
+    ],
+    "parMoyenPaiement": [
+      {
+        "moyen_paiement": "cash",
+        "nombre": 29,
+        "montant_total": "8193000.00",
+        "livrees": 0
+      },
+      {
+        "moyen_paiement": "non_defini",
+        "nombre": 2,
+        "montant_total": "100000.00",
+        "livrees": 0
+      },
+      {
+        "moyen_paiement": "mpesa",
+        "nombre": 2,
+        "montant_total": "65000.00",
+        "livrees": 0
+      }
+    ],
+    "parProduit": [
+      {
+        "productId": 22,
+        "produit": "makengo",
+        "quantite_vendue": 25,
+        "montant_total": 1250000,
+        "nombre_commandes": 24,
+        "parMoyenPaiement": [
+          { "moyen_paiement": "cash", "quantite": 22, "montant": "1100000" },
+          { "moyen_paiement": "non_defini", "quantite": 2, "montant": "100000" },
+          { "moyen_paiement": "mpesa", "quantite": 1, "montant": "50000" }
+        ]
+      },
+      {
+        "productId": 1,
+        "produit": "Samsung Galaxy A54",
+        "quantite_vendue": 4,
+        "montant_total": 1800000,
+        "nombre_commandes": 3,
+        "parMoyenPaiement": [
+          { "moyen_paiement": "cash", "quantite": 4, "montant": "1800000" }
+        ]
+      },
+      {
+        "productId": 12,
+        "produit": "Pizza Margherita",
+        "quantite_vendue": 2,
+        "montant_total": 30000,
+        "nombre_commandes": 2,
+        "parMoyenPaiement": [
+          { "moyen_paiement": "cash", "quantite": 1, "montant": "15000" },
+          { "moyen_paiement": "mpesa", "quantite": 1, "montant": "15000" }
+        ]
+      }
     ]
   }
 }
@@ -229,3 +284,5 @@ curl -X GET "http://localhost:3333/statistiques/vendeur/global" \
 | `parMois` | Historique des 12 derniers mois |
 | `topClients` | Top 10 clients (express uniquement) |
 | `topProduits` | Top 10 produits vendus (ecommerce, livrés uniquement) |
+| `parMoyenPaiement` | Répartition par moyen de paiement (cash, mpesa, etc.) |
+| `parProduit` | Tous les produits avec quantité, montant et moyen de paiement imbriqué |

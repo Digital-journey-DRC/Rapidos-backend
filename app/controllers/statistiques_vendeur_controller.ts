@@ -189,6 +189,67 @@ export default class StatistiquesVendeurController {
         [vendorId]
       )
 
+      // 6. Stats par moyen de paiement
+      const parMoyenPaiement = await db.rawQuery(
+        `SELECT 
+           COALESCE(pm.type, 'non_defini') AS moyen_paiement,
+           COUNT(*)::int AS nombre,
+           COALESCE(SUM(eo.total), 0) AS montant_total,
+           COUNT(CASE WHEN eo.status = 'delivered' THEN 1 END)::int AS livrees
+         FROM ecommerce_orders eo
+         LEFT JOIN payment_methods pm ON eo.payment_method_id = pm.id
+         WHERE eo.vendor_id = ?
+         GROUP BY pm.type
+         ORDER BY nombre DESC`,
+        [vendorId]
+      )
+
+      // 7. Stats par produit avec moyen de paiement imbriqué
+      const produitsAvecPaiement = await db.rawQuery(
+        `SELECT 
+           (item->>'productId')::int AS product_id,
+           item->>'name' AS produit,
+           COALESCE(pm.type, 'non_defini') AS moyen_paiement,
+           SUM((item->>'quantity')::int)::int AS quantite,
+           SUM((item->>'price')::numeric * (item->>'quantity')::int) AS montant,
+           COUNT(DISTINCT eo.id)::int AS nombre_commandes
+         FROM ecommerce_orders eo
+         LEFT JOIN payment_methods pm ON eo.payment_method_id = pm.id,
+              jsonb_array_elements(eo.items) AS item
+         WHERE eo.vendor_id = ?
+         GROUP BY item->>'productId', item->>'name', pm.type
+         ORDER BY quantite DESC`,
+        [vendorId]
+      )
+
+      // Regrouper par produit avec sous-tableau parMoyenPaiement
+      const produitsMap = new Map<string, any>()
+      for (const row of produitsAvecPaiement.rows) {
+        const key = `${row.product_id}_${row.produit}`
+        if (!produitsMap.has(key)) {
+          produitsMap.set(key, {
+            productId: row.product_id,
+            produit: row.produit,
+            quantite_vendue: 0,
+            montant_total: 0,
+            nombre_commandes: 0,
+            parMoyenPaiement: [],
+          })
+        }
+        const entry = produitsMap.get(key)!
+        entry.quantite_vendue += row.quantite
+        entry.montant_total += Number(row.montant)
+        entry.nombre_commandes += row.nombre_commandes
+        entry.parMoyenPaiement.push({
+          moyen_paiement: row.moyen_paiement,
+          quantite: row.quantite,
+          montant: row.montant,
+        })
+      }
+      const parProduit = Array.from(produitsMap.values()).sort(
+        (a: any, b: any) => b.quantite_vendue - a.quantite_vendue
+      )
+
       return response.status(200).json({
         success: true,
         data: {
@@ -197,6 +258,8 @@ export default class StatistiquesVendeurController {
           parJour: parJour.rows,
           parMois: parMois.rows,
           topProduits: topProduits.rows,
+          parMoyenPaiement: parMoyenPaiement.rows,
+          parProduit,
         },
       })
     } catch (error) {
