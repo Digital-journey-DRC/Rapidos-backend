@@ -598,3 +598,18 @@ router
 // ============================================================
 // FIN MODULE STATISTIQUES VENDEUR
 // ============================================================
+
+// ============================================================
+// MODULE STATISTIQUES LIVREUR
+// ============================================================
+
+const StatistiquesLivreurController = () => import('#controllers/statistiques_livreur_controller')
+
+// GET /statistiques/livreur/global - Résumé combiné express + ecommerce du livreur connecté
+router
+  .get('/statistiques/livreur/global', [StatistiquesLivreurController, 'statsGlobal'])
+  .use(middleware.auth({ guards: ['api'] }))
+
+// ============================================================
+// FIN MODULE STATISTIQUES LIVREUR
+// ============================================================
