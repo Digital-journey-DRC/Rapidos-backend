@@ -59,19 +59,16 @@ export default class StatistiquesLivreurController {
       // ═══════════════════════════════════════════════════════
       // 1. RÉSUMÉ par statut
       // ═══════════════════════════════════════════════════════
-      let expressResume: any = { total_livraisons: 0, montant_total: 0, en_cours: 0, livrees: 0, annulees: 0 }
-      let ecommerceResume: any = { total_livraisons: 0, montant_total: 0, acceptees: 0, en_route: 0, livrees: 0, annulees: 0 }
+      let expressResume: any = { total_livraisons_effectuees: 0, montant_total: 0 }
+      let ecommerceResume: any = { total_livraisons_effectuees: 0, montant_total: 0 }
 
       if (includeExpress) {
         const r = await db.rawQuery(
           `SELECT
-             COUNT(*)::int AS total_livraisons,
-             COALESCE(SUM(package_value), 0) AS montant_total,
-             COUNT(CASE WHEN statut = 'en_cours' THEN 1 END)::int AS en_cours,
-             COUNT(CASE WHEN statut = 'livre' THEN 1 END)::int AS livrees,
-             COUNT(CASE WHEN statut = 'annule' THEN 1 END)::int AS annulees
+             COUNT(*)::int AS total_livraisons_effectuees,
+             COALESCE(SUM(package_value), 0) AS montant_total
            FROM commande_express
-           WHERE delivery_person_id = ? AND ${dateSql()}`,
+           WHERE delivery_person_id = ? AND statut = 'livre' AND ${dateSql()}`,
           [livreurId]
         )
         expressResume = r.rows[0] || expressResume
@@ -80,14 +77,10 @@ export default class StatistiquesLivreurController {
       if (includeEcommerce) {
         const r = await db.rawQuery(
           `SELECT
-             COUNT(*)::int AS total_livraisons,
-             COALESCE(SUM(total), 0) AS montant_total,
-             COUNT(CASE WHEN status = 'accepte_livreur' THEN 1 END)::int AS acceptees,
-             COUNT(CASE WHEN status = 'en_route' THEN 1 END)::int AS en_route,
-             COUNT(CASE WHEN status = 'delivered' THEN 1 END)::int AS livrees,
-             COUNT(CASE WHEN status = 'cancelled' THEN 1 END)::int AS annulees
+             COUNT(*)::int AS total_livraisons_effectuees,
+             COALESCE(SUM(total), 0) AS montant_total
            FROM ecommerce_orders
-           WHERE delivery_person_id = ? AND ${dateSql()}`,
+           WHERE delivery_person_id = ? AND status = 'delivered' AND ${dateSql()}`,
           [livreurId]
         )
         ecommerceResume = r.rows[0] || ecommerceResume
@@ -110,7 +103,7 @@ export default class StatistiquesLivreurController {
            FROM commande_express ce
            LEFT JOIN users u ON ce.client_id = u.id
            LEFT JOIN users v ON ce.vendor_id = v.id
-           WHERE ce.delivery_person_id = ? AND ${dateSql('ce')}
+           WHERE ce.delivery_person_id = ? AND ce.statut = 'livre' AND ${dateSql('ce')}
            ORDER BY ce.created_at DESC`,
           [livreurId]
         )
@@ -171,7 +164,7 @@ export default class StatistiquesLivreurController {
            LEFT JOIN users u ON eo.client_id = u.id
            LEFT JOIN users v ON eo.vendor_id = v.id
            LEFT JOIN payment_methods pm ON eo.payment_method_id = pm.id
-           WHERE eo.delivery_person_id = ? AND ${dateSql('eo')}
+           WHERE eo.delivery_person_id = ? AND eo.status = 'delivered' AND ${dateSql('eo')}
            ORDER BY eo.created_at DESC`,
           [livreurId]
         )
@@ -311,7 +304,7 @@ export default class StatistiquesLivreurController {
              MAX(ce.created_at) AS derniere_livraison
            FROM commande_express ce
            LEFT JOIN users u ON ce.client_id = u.id
-           WHERE ce.delivery_person_id = ? AND ${dateSql('ce')}
+           WHERE ce.delivery_person_id = ? AND ce.statut = 'livre' AND ${dateSql('ce')}
            GROUP BY ce.client_id, ce.client_name, ce.client_phone, u.email, u.first_name, u.last_name`,
           [livreurId]
         )
@@ -347,7 +340,7 @@ export default class StatistiquesLivreurController {
              MAX(eo.created_at) AS derniere_livraison
            FROM ecommerce_orders eo
            LEFT JOIN users u ON eo.client_id = u.id
-           WHERE eo.delivery_person_id = ? AND ${dateSql('eo')}
+           WHERE eo.delivery_person_id = ? AND eo.status = 'delivered' AND ${dateSql('eo')}
            GROUP BY eo.client_id, eo.client, eo.phone, u.email, u.first_name, u.last_name`,
           [livreurId]
         )
@@ -395,11 +388,8 @@ export default class StatistiquesLivreurController {
             express: includeExpress ? expressResume : undefined,
             ecommerce: includeEcommerce ? ecommerceResume : undefined,
             combine: {
-              total_livraisons: (expressResume.total_livraisons || 0) + (ecommerceResume.total_livraisons || 0),
+              total_livraisons_effectuees: (expressResume.total_livraisons_effectuees || 0) + (ecommerceResume.total_livraisons_effectuees || 0),
               montant_total: Number(expressResume.montant_total || 0) + Number(ecommerceResume.montant_total || 0),
-              en_cours: (expressResume.en_cours || 0) + (ecommerceResume.acceptees || 0) + (ecommerceResume.en_route || 0),
-              livrees: (expressResume.livrees || 0) + (ecommerceResume.livrees || 0),
-              annulees: (expressResume.annulees || 0) + (ecommerceResume.annulees || 0),
             },
           },
           total_general: totalGeneral,

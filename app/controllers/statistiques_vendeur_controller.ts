@@ -332,21 +332,16 @@ export default class StatistiquesVendeurController {
       // ═══════════════════════════════════════════════════════
       // 1. RÉSUMÉ par statut (express + ecommerce)
       // ═══════════════════════════════════════════════════════
-      let expressResume: any = { total_commandes: 0, chiffre_affaires_total: 0, chiffre_affaires_livre: 0, en_attente: 0, en_cours: 0, livrees: 0, annulees: 0 }
-      let ecommerceResume: any = { total_commandes: 0, chiffre_affaires_total: 0, chiffre_affaires_livre: 0, en_attente: 0, en_cours: 0, livrees: 0, annulees: 0 }
+      let expressResume: any = { total_commandes_livrees: 0, chiffre_affaires: 0 }
+      let ecommerceResume: any = { total_commandes_livrees: 0, chiffre_affaires: 0 }
 
       if (includeExpress) {
         const r = await db.rawQuery(
           `SELECT 
-             COUNT(*)::int AS total_commandes,
-             COALESCE(SUM(package_value), 0) AS chiffre_affaires_total,
-             COALESCE(SUM(CASE WHEN statut = 'livre' THEN package_value ELSE 0 END), 0) AS chiffre_affaires_livre,
-             COUNT(CASE WHEN statut = 'pending' THEN 1 END)::int AS en_attente,
-             COUNT(CASE WHEN statut = 'en_cours' THEN 1 END)::int AS en_cours,
-             COUNT(CASE WHEN statut = 'livre' THEN 1 END)::int AS livrees,
-             COUNT(CASE WHEN statut = 'annule' THEN 1 END)::int AS annulees
+             COUNT(*)::int AS total_commandes_livrees,
+             COALESCE(SUM(package_value), 0) AS chiffre_affaires
            FROM commande_express
-           WHERE vendor_id = ? AND ${dateSql()}`,
+           WHERE vendor_id = ? AND statut = 'livre' AND ${dateSql()}`,
           [vendorId]
         )
         expressResume = r.rows[0] || expressResume
@@ -355,15 +350,10 @@ export default class StatistiquesVendeurController {
       if (includeEcommerce) {
         const r = await db.rawQuery(
           `SELECT 
-             COUNT(*)::int AS total_commandes,
-             COALESCE(SUM(total), 0) AS chiffre_affaires_total,
-             COALESCE(SUM(CASE WHEN status = 'delivered' THEN total ELSE 0 END), 0) AS chiffre_affaires_livre,
-             COUNT(CASE WHEN status IN ('pending', 'pending_payment') THEN 1 END)::int AS en_attente,
-             COUNT(CASE WHEN status IN ('en_preparation', 'pret_a_expedier', 'accepte_livreur', 'en_route') THEN 1 END)::int AS en_cours,
-             COUNT(CASE WHEN status = 'delivered' THEN 1 END)::int AS livrees,
-             COUNT(CASE WHEN status IN ('cancelled', 'rejected') THEN 1 END)::int AS annulees
+             COUNT(*)::int AS total_commandes_livrees,
+             COALESCE(SUM(total), 0) AS chiffre_affaires
            FROM ecommerce_orders
-           WHERE vendor_id = ? AND ${dateSql()}`,
+           WHERE vendor_id = ? AND status = 'delivered' AND ${dateSql()}`,
           [vendorId]
         )
         ecommerceResume = r.rows[0] || ecommerceResume
@@ -383,7 +373,7 @@ export default class StatistiquesVendeurController {
              ce.pickup_address, ce.delivery_address, ce.created_at
            FROM commande_express ce
            LEFT JOIN users u ON ce.client_id = u.id
-           WHERE ce.vendor_id = ? AND ${dateSql('ce')}
+           WHERE ce.vendor_id = ? AND ce.statut = 'livre' AND ${dateSql('ce')}
            ORDER BY ce.created_at DESC`,
           [vendorId]
         )
@@ -437,7 +427,7 @@ export default class StatistiquesVendeurController {
            FROM ecommerce_orders eo
            LEFT JOIN users u ON eo.client_id = u.id
            LEFT JOIN payment_methods pm ON eo.payment_method_id = pm.id
-           WHERE eo.vendor_id = ? AND ${dateSql('eo')}
+           WHERE eo.vendor_id = ? AND eo.status = 'delivered' AND ${dateSql('eo')}
            ORDER BY eo.created_at DESC`,
           [vendorId]
         )
@@ -573,7 +563,7 @@ export default class StatistiquesVendeurController {
              MAX(ce.created_at) AS derniere_commande
            FROM commande_express ce
            LEFT JOIN users u ON ce.client_id = u.id
-           WHERE ce.vendor_id = ? AND ${dateSql('ce')}
+           WHERE ce.vendor_id = ? AND ce.statut = 'livre' AND ${dateSql('ce')}
            GROUP BY ce.client_id, ce.client_name, ce.client_phone, u.email, u.first_name, u.last_name`,
           [vendorId]
         )
@@ -609,7 +599,7 @@ export default class StatistiquesVendeurController {
              MAX(eo.created_at) AS derniere_commande
            FROM ecommerce_orders eo
            LEFT JOIN users u ON eo.client_id = u.id
-           WHERE eo.vendor_id = ? AND ${dateSql('eo')}
+           WHERE eo.vendor_id = ? AND eo.status = 'delivered' AND ${dateSql('eo')}
            GROUP BY eo.client_id, eo.client, eo.phone, u.email, u.first_name, u.last_name`,
           [vendorId]
         )
@@ -657,13 +647,8 @@ export default class StatistiquesVendeurController {
             express: includeExpress ? expressResume : undefined,
             ecommerce: includeEcommerce ? ecommerceResume : undefined,
             combine: {
-              total_commandes: (expressResume.total_commandes || 0) + (ecommerceResume.total_commandes || 0),
-              chiffre_affaires_total: Number(expressResume.chiffre_affaires_total || 0) + Number(ecommerceResume.chiffre_affaires_total || 0),
-              chiffre_affaires_livre: Number(expressResume.chiffre_affaires_livre || 0) + Number(ecommerceResume.chiffre_affaires_livre || 0),
-              en_attente: (expressResume.en_attente || 0) + (ecommerceResume.en_attente || 0),
-              en_cours: (expressResume.en_cours || 0) + (ecommerceResume.en_cours || 0),
-              livrees: (expressResume.livrees || 0) + (ecommerceResume.livrees || 0),
-              annulees: (expressResume.annulees || 0) + (ecommerceResume.annulees || 0),
+              total_commandes_livrees: (expressResume.total_commandes_livrees || 0) + (ecommerceResume.total_commandes_livrees || 0),
+              chiffre_affaires: Number(expressResume.chiffre_affaires || 0) + Number(ecommerceResume.chiffre_affaires || 0),
             },
           },
           total_general: totalGeneral,

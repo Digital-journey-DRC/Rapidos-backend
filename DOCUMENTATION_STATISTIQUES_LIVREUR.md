@@ -1,5 +1,7 @@
 # 📊 Statistiques Livreur - API Documentation
 
+> **⚠️ IMPORTANT (v2 — 5 mars 2026)** : Cet endpoint ne retourne désormais que les **livraisons effectuées** (`statut = 'livre'` pour express, `status = 'delivered'` pour ecommerce). Les livraisons en cours, acceptées ou annulées ne sont plus incluses.
+
 ## Endpoint
 
 ```
@@ -23,7 +25,7 @@ GET /statistiques/livreur/global
 ## Exemples d'appel
 
 ```bash
-# Toutes les livraisons (sans filtre)
+# Toutes les livraisons effectuées (sans filtre)
 curl -H "Authorization: Bearer TOKEN" \
   "http://localhost:3333/statistiques/livreur/global"
 
@@ -57,30 +59,20 @@ curl -H "Authorization: Bearer TOKEN" \
   "data": {
     "resume": {
       "express": {
-        "total_livraisons": 8,
-        "montant_total": "100850.00",
-        "en_cours": 4,
-        "livrees": 4,
-        "annulees": 0
+        "total_livraisons_effectuees": 4,
+        "montant_total": "80000.00"
       },
       "ecommerce": {
-        "total_livraisons": 10,
-        "montant_total": "76000.00",
-        "acceptees": 5,
-        "en_route": 2,
-        "livrees": 3,
-        "annulees": 0
+        "total_livraisons_effectuees": 3,
+        "montant_total": "45000.00"
       },
       "combine": {
-        "total_livraisons": 18,
-        "montant_total": 176850,
-        "en_cours": 11,
-        "livrees": 7,
-        "annulees": 0
+        "total_livraisons_effectuees": 7,
+        "montant_total": 125000
       }
     },
-    "total_general": 176850,
-    "nombre_livraisons": 18,
+    "total_general": 125000,
+    "nombre_livraisons": 7,
     "livraisons": [
       {
         "id": 16,
@@ -107,7 +99,7 @@ curl -H "Authorization: Bearer TOKEN" \
         ],
         "quantite": 6,
         "total_partiel": 46500,
-        "statut": "en_cours",
+        "statut": "livre",
         "adresse_pickup": "...",
         "adresse_livraison": "...",
         "date": "2026-02-28T15:03:19.201Z"
@@ -141,28 +133,31 @@ curl -H "Authorization: Bearer TOKEN" \
 
 ---
 
+## Changements par rapport à la v1
+
+| Aspect | Avant (v1) | Maintenant (v2) |
+|--------|-----------|-----------------|
+| Livraisons considérées | Tous les statuts | **Uniquement livrées** |
+| Résumé Express | `total_livraisons`, `montant_total`, `en_cours`, `livrees`, `annulees` | **`total_livraisons_effectuees`**, **`montant_total`** |
+| Résumé Ecommerce | `total_livraisons`, `montant_total`, `acceptees`, `en_route`, `livrees`, `annulees` | **`total_livraisons_effectuees`**, **`montant_total`** |
+| Résumé Combiné | `total_livraisons`, `montant_total`, `en_cours`, `livrees`, `annulees` | **`total_livraisons_effectuees`**, **`montant_total`** |
+| Liste livraisons | Toutes | **Uniquement les livrées** |
+| Top clients | Basé sur toutes les livraisons | **Basé uniquement sur les livrées** |
+| Top produits | Déjà basé sur livrées | Inchangé |
+
+---
+
 ## Détail des champs
 
-### Resume Express
+### Resume (`resume.express` / `resume.ecommerce` / `resume.combine`)
+
 | Champ | Description |
 |-------|-------------|
-| `total_livraisons` | Nombre total de commandes express assignées |
-| `montant_total` | Montant total des commandes express |
-| `en_cours` | Livraisons en cours (statut `en_cours`) |
-| `livrees` | Livraisons terminées (statut `livre`) |
-| `annulees` | Livraisons annulées |
+| `total_livraisons_effectuees` | Nombre de livraisons effectuées (livrées) |
+| `montant_total` | Montant total des livraisons effectuées |
 
-### Resume Ecommerce
-| Champ | Description |
-|-------|-------------|
-| `total_livraisons` | Nombre total de commandes ecommerce assignées |
-| `montant_total` | Montant total des commandes |
-| `acceptees` | Commandes acceptées par le livreur |
-| `en_route` | Commandes en cours de livraison |
-| `livrees` | Commandes livrées (statut `delivered`) |
-| `annulees` | Commandes annulées/rejetées |
+### Livraison détaillée (toutes livrées)
 
-### Livraison détaillée
 | Champ | Description |
 |-------|-------------|
 | `type_commande` | `express` ou `ecommerce` |
@@ -171,14 +166,15 @@ curl -H "Authorization: Bearer TOKEN" \
 | `produits_commandes` | Liste des produits (nom, quantité, prix, sous-total) |
 | `quantite` | Quantité totale de produits |
 | `total_partiel` | Montant de la commande |
-| `statut` | Statut actuel de la commande |
+| `statut` | `livre` (express) ou `delivered` (ecommerce) |
 
-### Fréquence client (fidélisation)
+### Fréquence client (fidélisation — basée sur livraisons effectuées)
+
 | Valeur | Condition |
 |--------|-----------|
-| `régulier` | ≥ 5 livraisons |
-| `occasionnel` | 3-4 livraisons |
-| `nouveau` | < 3 livraisons |
+| `régulier` | ≥ 5 livraisons effectuées |
+| `occasionnel` | 3-4 livraisons effectuées |
+| `nouveau` | < 3 livraisons effectuées |
 
 ---
 
@@ -199,7 +195,7 @@ curl -H "Authorization: Bearer TOKEN" \
 | Aspect | Vendeur (`/statistiques/vendeur/global`) | Livreur (`/statistiques/livreur/global`) |
 |--------|------------------------------------------|------------------------------------------|
 | Filtre par | `vendor_id` | `delivery_person_id` |
-| Champ clé | `chiffre_affaires` | `montant_total` |
+| Champ résumé | `total_commandes_livrees`, `chiffre_affaires` | `total_livraisons_effectuees`, `montant_total` |
 | Fidélisation | `potentiel_fidelisation` (élevé/moyen/faible) | `frequence` (régulier/occasionnel/nouveau) |
 | Info vendeur | ❌ (c'est le vendeur lui-même) | ✅ Nom et téléphone du vendeur |
-| Résumé ecom | en_attente, en_cours | acceptees, en_route |
+| Données | Uniquement commandes livrées | Uniquement livraisons effectuées |

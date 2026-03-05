@@ -1,5 +1,7 @@
 # Statistiques Vendeur — Documentation API
 
+> **⚠️ IMPORTANT (v2 — 5 mars 2026)** : Cet endpoint ne retourne désormais que les **commandes livrées** (`statut = 'livre'` pour express, `status = 'delivered'` pour ecommerce). Les commandes en attente, en cours ou annulées ne sont plus incluses dans les statistiques.
+
 ## Endpoint principal
 
 ```
@@ -7,7 +9,7 @@ GET /statistiques/vendeur/global
 Authorization: Bearer <token_vendeur>
 ```
 
-Cet endpoint retourne les statistiques de vente complètes du vendeur connecté (commandes express + ecommerce).
+Cet endpoint retourne les statistiques de vente du vendeur connecté basées **uniquement sur les commandes livrées** (express + ecommerce).
 
 ---
 
@@ -75,42 +77,27 @@ curl -s -H "Authorization: Bearer <TOKEN>" \
 
   "data": {
 
-    // ── 1. RÉSUMÉ ──
+    // ── 1. RÉSUMÉ (uniquement commandes livrées) ──
     "resume": {
       "express": {                          // présent si type=express ou tous
-        "total_commandes": 12,
-        "chiffre_affaires_total": "3371550.00",
-        "chiffre_affaires_livre": "0",
-        "en_attente": 8,
-        "en_cours": 4,
-        "livrees": 0,
-        "annulees": 0
+        "total_commandes_livrees": 5,
+        "chiffre_affaires": "1250000.00"
       },
       "ecommerce": {                        // présent si type=ecommerce ou tous
-        "total_commandes": 33,
-        "chiffre_affaires_total": "8358000.00",
-        "chiffre_affaires_livre": "0",
-        "en_attente": 28,
-        "en_cours": 1,
-        "livrees": 0,
-        "annulees": 4
+        "total_commandes_livrees": 8,
+        "chiffre_affaires": "3200000.00"
       },
       "combine": {                          // toujours présent
-        "total_commandes": 45,
-        "chiffre_affaires_total": 11729550,
-        "chiffre_affaires_livre": 0,
-        "en_attente": 36,
-        "en_cours": 5,
-        "livrees": 0,
-        "annulees": 4
+        "total_commandes_livrees": 13,
+        "chiffre_affaires": 4450000
       }
     },
 
     // ── 2. TOTAL GÉNÉRAL ──
-    "total_general": 11729550,
-    "nombre_commandes": 45,
+    "total_general": 4450000,
+    "nombre_commandes": 13,
 
-    // ── 3. COMMANDES DÉTAILLÉES ──
+    // ── 3. COMMANDES DÉTAILLÉES (toutes livrées) ──
     "commandes": [
       {
         "id": 21,
@@ -149,8 +136,8 @@ curl -s -H "Authorization: Bearer <TOKEN>" \
         // ✅ Total partiel
         "total_partiel": 90000,
 
-        "statut": "pending",
-        "adresse_pickup": "23 Avenue Mobutu, ...",    // express
+        "statut": "livre",                              // toujours "livre"
+        "adresse_pickup": "23 Avenue Mobutu, ...",      // express
         "adresse_livraison": "24 du livre, ...",
         "date": "2026-03-02T19:19:25.911Z"
       },
@@ -180,13 +167,13 @@ curl -s -H "Authorization: Bearer <TOKEN>" \
         "total_partiel": 50000,
         "frais_livraison": 3830,            // ecommerce uniquement
         "moyen_paiement": "cash",           // ecommerce uniquement
-        "statut": "pending",
+        "statut": "delivered",              // toujours "delivered"
         "adresse_livraison": "Av. Du Dépôt, Gombe, Kinshasa",
         "date": "2026-01-12T20:24:43.044Z"
       }
     ],
 
-    // ── 4. PRODUITS LES PLUS VENDUS ──
+    // ── 4. PRODUITS LES PLUS VENDUS (basé sur commandes livrées) ──
     "produits_les_plus_vendus": [
       {
         "rang": 1,
@@ -197,7 +184,7 @@ curl -s -H "Authorization: Bearer <TOKEN>" \
       }
     ],
 
-    // ── 5. CLIENTS LES PLUS COMMANDÉS (fidélisation) ──
+    // ── 5. CLIENTS LES PLUS FIDÈLES (basé sur commandes livrées) ──
     "clients_les_plus_commandes": [
       {
         "rang": 1,
@@ -217,9 +204,28 @@ curl -s -H "Authorization: Bearer <TOKEN>" \
 
 ---
 
+## Changements par rapport à la v1
+
+| Aspect | Avant (v1) | Maintenant (v2) |
+|--------|-----------|-----------------|
+| Commandes considérées | Tous les statuts | **Uniquement livrées** |
+| Résumé | `total_commandes`, `chiffre_affaires_total`, `chiffre_affaires_livre`, `en_attente`, `en_cours`, `livrees`, `annulees` | **`total_commandes_livrees`**, **`chiffre_affaires`** |
+| Liste commandes | Toutes les commandes | **Uniquement les commandes livrées** |
+| Top clients | Basé sur toutes les commandes | **Basé uniquement sur les commandes livrées** |
+| Top produits | Déjà basé sur livrées | Inchangé |
+
+---
+
 ## Récapitulatif des données retournées
 
-### Pour chaque commande
+### Résumé (`resume`)
+
+| Champ | Description |
+|-------|-------------|
+| `total_commandes_livrees` | Nombre de commandes livrées |
+| `chiffre_affaires` | Chiffre d'affaires des commandes livrées |
+
+### Pour chaque commande (toutes livrées)
 
 | Champ | Description |
 |-------|-------------|
@@ -228,7 +234,7 @@ curl -s -H "Authorization: Bearer <TOKEN>" \
 | `quantite` | Quantité totale de produits dans la commande |
 | `total_partiel` | Montant total de la commande |
 | `type_commande` | `express` ou `ecommerce` |
-| `statut` | Statut actuel de la commande |
+| `statut` | `livre` (express) ou `delivered` (ecommerce) |
 | `date` | Date de création |
 
 ### Champs spécifiques Express
@@ -251,13 +257,13 @@ curl -s -H "Authorization: Bearer <TOKEN>" \
 
 ## Potentiel de fidélisation
 
-Le champ `potentiel_fidelisation` dans les top clients est calculé ainsi :
+Le champ `potentiel_fidelisation` dans les top clients est calculé sur les **commandes livrées uniquement** :
 
 | Valeur | Condition |
 |--------|-----------|
-| `élevé` | 5 commandes ou plus |
-| `moyen` | 3 à 4 commandes |
-| `faible` | Moins de 3 commandes |
+| `élevé` | 5 commandes livrées ou plus |
+| `moyen` | 3 à 4 commandes livrées |
+| `faible` | Moins de 3 commandes livrées |
 
 ---
 
@@ -267,6 +273,6 @@ Ces endpoints ne sont pas modifiés et continuent de fonctionner :
 
 | Endpoint | Description |
 |----------|-------------|
-| `GET /statistiques/vendeur/express` | Stats détaillées commandes express |
-| `GET /statistiques/vendeur/ecommerce` | Stats détaillées commandes ecommerce |
-| `GET /statistiques/vendeur/global` | **Amélioré** — Stats combinées avec filtres |
+| `GET /statistiques/vendeur/express` | Stats détaillées commandes express (tous statuts) |
+| `GET /statistiques/vendeur/ecommerce` | Stats détaillées commandes ecommerce (tous statuts) |
+| `GET /statistiques/vendeur/global` | **v2** — Stats combinées basées sur commandes livrées uniquement |
