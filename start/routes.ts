@@ -10,6 +10,7 @@ const HorairesOuvertureController = () => import('#controllers/horaires_ouvertur
 const EventsController = () => import('#controllers/events_controller')
 const EcommerceOrdersController = () => import('#controllers/ecommerce_orders_controller')
 const PaymentMethodsController = () => import('#controllers/payment_methods_controller')
+const AdminTransactionsController = () => import('#controllers/admin_transactions_controller')
 
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
@@ -375,6 +376,30 @@ router
 
 // ============================================================
 // FIN MODULE E-COMMERCE ORDERS
+// ============================================================
+
+// ============================================================
+// MODULE ADMIN TRANSACTIONS E-COMMERCE
+// ============================================================
+
+// GET /admin/transactions/stats - Statistiques globales des transactions (admin)
+// IMPORTANT: Déclaré AVANT la route avec :id
+router
+  .get('/admin/transactions/stats', [AdminTransactionsController, 'stats'])
+  .use(middleware.auth({ guards: ['api'] }))
+
+// GET /admin/transactions - Lister toutes les transactions e-commerce avec moyen de paiement (admin)
+router
+  .get('/admin/transactions', [AdminTransactionsController, 'index'])
+  .use(middleware.auth({ guards: ['api'] }))
+
+// GET /admin/transactions/:id - Détail d'une transaction (admin)
+router
+  .get('/admin/transactions/:id', [AdminTransactionsController, 'show'])
+  .use(middleware.auth({ guards: ['api'] }))
+
+// ============================================================
+// FIN MODULE ADMIN TRANSACTIONS
 // ============================================================
 
 // ============================================================
