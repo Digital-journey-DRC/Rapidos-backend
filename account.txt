@@ -12,3 +12,7 @@ Livreur:
 uid: +243888777666
 password: Livreur@123456789
 
+Admin
+uid : +243999999999
+password : Admin@123456789
+

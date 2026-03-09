@@ -25,6 +25,7 @@ export const createCommandeExpressValidator = vine.compile(
         price: vine.number().positive().decimal([0, 2]).optional(),
         quantity: vine.number().positive().min(1),
         weight: vine.string().trim().optional(),
+        urlProduct: vine.string().trim().optional(),
       })
     ).minLength(1),
   })

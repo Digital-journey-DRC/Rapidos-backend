@@ -228,6 +228,7 @@ interface CommandeExpressFirestore {
     price?: number
     quantity: number
     weight?: string
+    urlProduct?: string
   }>
   deliveryPersonId: number | null
   createdBy: number

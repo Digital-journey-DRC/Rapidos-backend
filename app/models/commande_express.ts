@@ -76,6 +76,7 @@ export default class CommandeExpress extends BaseModel {
     price?: number
     quantity: number
     weight?: string
+    urlProduct?: string
   }>
 
   @column()
