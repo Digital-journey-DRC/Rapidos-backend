@@ -82,6 +82,12 @@ export default class CommandeExpress extends BaseModel {
   @column()
   declare deliveryPersonId: number | null
 
+  @column()
+  declare imageColis: string | null
+
+  @column()
+  declare imageColisPublicId: string | null
+
   @column.dateTime({ autoCreate: true })
   declare createdAt: DateTime
 

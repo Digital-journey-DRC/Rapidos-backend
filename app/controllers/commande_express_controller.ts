@@ -11,6 +11,7 @@ import logger from '@adonisjs/core/services/logger'
 import db from '@adonisjs/lucid/services/db'
 import { saveCommandeExpressToFirestore } from '#services/firebase_service'
 import admin from 'firebase-admin'
+import ecommerceCloudinaryService from '#services/ecommerce_cloudinary_service'
 
 export default class CommandeExpressController {
   /**
@@ -108,6 +109,20 @@ export default class CommandeExpressController {
     const trx = await db.transaction()
 
     try {
+      // Si form-data, items arrive en string JSON — on le parse avant validation
+      const rawItems = request.input('items')
+      if (typeof rawItems === 'string') {
+        try {
+          request.updateBody({ ...request.body(), items: JSON.parse(rawItems) })
+        } catch {
+          await trx.rollback()
+          return response.status(400).json({
+            success: false,
+            message: 'Le champ items doit être un JSON valide',
+          })
+        }
+      }
+
       const payload = await request.validateUsing(createCommandeExpressValidator)
 
       // Séparer les items avec productId (gestion stock) et sans (colis hors app)
@@ -207,6 +222,40 @@ export default class CommandeExpressController {
 
       // Commit de la transaction
       await trx.commit()
+
+      // Upload de l'image du colis si fournie (optionnel)
+      const imageColisFile = request.file('imageColis', {
+        size: '20mb',
+        extnames: ['jpg', 'jpeg', 'png', 'webp'],
+      })
+
+      if (imageColisFile && imageColisFile.isValid && imageColisFile.tmpPath) {
+        try {
+          const uploadResult = await ecommerceCloudinaryService.uploadPackagePhoto(
+            imageColisFile.tmpPath,
+            `express_${commandeExpress.orderId}`
+          )
+          commandeExpress.imageColis = uploadResult.url
+          commandeExpress.imageColisPublicId = uploadResult.publicId
+          await commandeExpress.save()
+
+          logger.info('Image colis uploadée avec succès', {
+            orderId: commandeExpress.orderId,
+            imageUrl: uploadResult.url,
+          })
+        } catch (uploadError) {
+          // Ne pas bloquer la création si l'upload échoue
+          logger.error('Erreur upload image colis (non bloquant)', {
+            error: uploadError.message,
+            orderId: commandeExpress.orderId,
+          })
+        }
+      } else if (imageColisFile && !imageColisFile.isValid) {
+        logger.warn('Fichier imageColis invalide (non bloquant)', {
+          errors: imageColisFile.errors,
+          orderId: commandeExpress.orderId,
+        })
+      }
 
       // Enregistrer dans Firebase collection "commandesexpress" pour les notifications
       let firebaseDocId: string | null = null
@@ -505,6 +554,22 @@ export default class CommandeExpressController {
             previousStock,
             newStock: previousStock + item.quantity,
             restored: item.quantity,
+          })
+        }
+      }
+
+      // Supprimer l'image Cloudinary si elle existe
+      if (commande.imageColisPublicId) {
+        try {
+          await ecommerceCloudinaryService.deletePhoto(commande.imageColisPublicId)
+          logger.info('Image colis supprimée de Cloudinary', {
+            orderId: commande.orderId,
+            publicId: commande.imageColisPublicId,
+          })
+        } catch (cloudinaryError) {
+          logger.warn('Erreur suppression image colis Cloudinary (non bloquant)', {
+            error: cloudinaryError.message,
+            publicId: commande.imageColisPublicId,
           })
         }
       }
