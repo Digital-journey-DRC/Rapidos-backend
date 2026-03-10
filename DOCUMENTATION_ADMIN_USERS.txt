@@ -1,0 +1,396 @@
+================================================================================
+          DOCUMENTATION - MODULE ADMIN USERS (Gestion Utilisateurs)
+================================================================================
+
+Base URL : http://localhost:3333  (ou http://24.144.87.127:3333 en production)
+
+Authentification requise : Bearer Token (admin ou superadmin uniquement)
+Header : Authorization: Bearer <token>
+
+Rôles autorisés : admin, superadmin
+
+================================================================================
+1. CRÉER UN UTILISATEUR
+================================================================================
+
+POST /admin/users
+
+Description : Créer un utilisateur depuis le dashboard admin.
+              Le compte est créé directement en statut "active" (pas d'OTP).
+
+Headers :
+  Content-Type: application/json
+  Authorization: Bearer <token>
+
+Body (JSON) :
+{
+  "role": "acheteur",              // OBLIGATOIRE - admin | vendeur | acheteur | livreur | superadmin
+  "email": "user@example.com",    // OBLIGATOIRE - unique
+  "password": "MonMotDePasse@123", // OBLIGATOIRE - 12-64 chars, 1 majuscule, 1 minuscule, 1 chiffre, 1 spécial
+  "firstName": "Jean",            // OBLIGATOIRE - 2-50 chars
+  "lastName": "Dupont",           // OBLIGATOIRE - 2-50 chars
+  "phone": "+243812345678",       // OBLIGATOIRE - format international, unique
+  "userStatus": "active"          // OPTIONNEL - active (défaut) | inactive | pending | banned | suspended
+}
+
+Réponse succès (201) :
+{
+  "success": true,
+  "message": "Utilisateur créé avec succès",
+  "status": 201,
+  "data": {
+    "id": 17,
+    "firstName": "Jean",
+    "lastName": "Dupont",
+    "email": "user@example.com",
+    "phone": "+243812345678",
+    "role": "acheteur",
+    "userStatus": "active",
+    "createdAt": "2026-03-10T21:26:06.734+01:00"
+  }
+}
+
+Erreurs possibles :
+  - 403 : Utilisateur non admin
+  - 422 : Données invalides (email/phone déjà utilisé, mot de passe trop faible, etc.)
+  - 500 : Erreur serveur
+
+Exemple curl :
+  curl -X POST http://localhost:3333/admin/users \
+    -H "Content-Type: application/json" \
+    -H "Authorization: Bearer <token>" \
+    -d '{
+      "role": "vendeur",
+      "email": "nouveau.vendeur@test.com",
+      "password": "VendeurTest@12345",
+      "firstName": "Marie",
+      "lastName": "Vendeur",
+      "phone": "+243800000001"
+    }'
+
+
+================================================================================
+2. LISTER TOUS LES UTILISATEURS
+================================================================================
+
+GET /admin/users
+
+Description : Lister tous les utilisateurs avec pagination et filtres.
+
+Headers :
+  Authorization: Bearer <token>
+
+Query params (tous optionnels) :
+  - page       : numéro de page (défaut: 1)
+  - limit      : nombre par page (défaut: 20)
+  - role       : filtrer par rôle (admin | vendeur | acheteur | livreur | superadmin)
+  - status     : filtrer par statut (active | inactive | banned | pending | suspended | deleted)
+  - search     : recherche par nom, prénom, email ou téléphone
+
+Réponse succès (200) :
+{
+  "success": true,
+  "status": 200,
+  "data": [
+    {
+      "id": 3,
+      "firstName": "Stanislas",
+      "lastName": "Makengo",
+      "email": "vendeur@test.com",
+      "phone": "+243826016607",
+      "role": "vendeur",
+      "userStatus": "active",
+      "latitude": "-4.24080520",
+      "longitude": "15.29146670",
+      "createdAt": "2025-12-29T00:27:48.883+01:00",
+      "updatedAt": "2026-02-20T09:57:44.102+01:00"
+    }
+  ],
+  "meta": {
+    "total": 16,
+    "perPage": 20,
+    "currentPage": 1,
+    "lastPage": 1,
+    "firstPage": 1,
+    "firstPageUrl": "/?page=1",
+    "lastPageUrl": "/?page=1",
+    "nextPageUrl": null,
+    "previousPageUrl": null
+  }
+}
+
+Exemples curl :
+  # Tous les utilisateurs (page 1, 20 par page)
+  curl "http://localhost:3333/admin/users" -H "Authorization: Bearer <token>"
+
+  # Filtrer par rôle vendeur
+  curl "http://localhost:3333/admin/users?role=vendeur" -H "Authorization: Bearer <token>"
+
+  # Filtrer par statut active + page 2
+  curl "http://localhost:3333/admin/users?status=active&page=2&limit=10" -H "Authorization: Bearer <token>"
+
+  # Rechercher par nom ou téléphone
+  curl "http://localhost:3333/admin/users?search=Stanislas" -H "Authorization: Bearer <token>"
+  curl "http://localhost:3333/admin/users?search=+243826" -H "Authorization: Bearer <token>"
+
+
+================================================================================
+3. DÉTAILS D'UN UTILISATEUR
+================================================================================
+
+GET /admin/users/:id
+
+Description : Récupérer les détails complets d'un utilisateur (avec profil, adresses, wallet).
+
+Headers :
+  Authorization: Bearer <token>
+
+Paramètre URL :
+  :id  -  ID de l'utilisateur
+
+Réponse succès (200) :
+{
+  "success": true,
+  "status": 200,
+  "data": {
+    "id": 17,
+    "firstName": "Jean",
+    "lastName": "Dupont",
+    "email": "user@example.com",
+    "phone": "+243812345678",
+    "role": "acheteur",
+    "userStatus": "active",
+    "latitude": null,
+    "longitude": null,
+    "termsAccepted": true,
+    "createdAt": "2026-03-10T21:26:06.734+01:00",
+    "updatedAt": "2026-03-10T21:26:06.734+01:00",
+    "profil": null,
+    "adresses": [],
+    "wallet": null
+  }
+}
+
+Erreurs possibles :
+  - 403 : Utilisateur non admin
+  - 404 : Utilisateur non trouvé
+
+Exemple curl :
+  curl "http://localhost:3333/admin/users/17" -H "Authorization: Bearer <token>"
+
+
+================================================================================
+4. MODIFIER UN UTILISATEUR
+================================================================================
+
+PUT /admin/users/:id
+
+Description : Modifier les informations d'un utilisateur existant.
+              Tous les champs sont optionnels.
+
+Headers :
+  Content-Type: application/json
+  Authorization: Bearer <token>
+
+Paramètre URL :
+  :id  -  ID de l'utilisateur
+
+Body (JSON) - tous les champs sont optionnels :
+{
+  "firstName": "Jean-Pierre",         // 2-50 chars
+  "lastName": "NouveauNom",           // 2-50 chars
+  "email": "nouvel.email@test.com",   // doit être unique
+  "phone": "+243800000002",           // format international, doit être unique
+  "role": "vendeur",                  // admin | vendeur | acheteur | livreur | superadmin
+  "userStatus": "active"              // active | inactive | banned | pending | suspended | deleted
+}
+
+Réponse succès (200) :
+{
+  "success": true,
+  "message": "Utilisateur modifié avec succès",
+  "status": 200,
+  "data": {
+    "id": 17,
+    "firstName": "Jean-Pierre",
+    "lastName": "NouveauNom",
+    "email": "nouvel.email@test.com",
+    "phone": "+243800000002",
+    "role": "vendeur",
+    "userStatus": "active",
+    "createdAt": "2026-03-10T21:26:06.734+01:00",
+    "updatedAt": "2026-03-10T21:29:28.925+01:00"
+  }
+}
+
+Erreurs possibles :
+  - 403 : Utilisateur non admin
+  - 404 : Utilisateur non trouvé
+  - 409 : Email ou téléphone déjà utilisé par un autre compte
+  - 422 : Données invalides
+
+Exemple curl :
+  curl -X PUT "http://localhost:3333/admin/users/17" \
+    -H "Content-Type: application/json" \
+    -H "Authorization: Bearer <token>" \
+    -d '{"firstName": "Jean-Pierre", "role": "vendeur"}'
+
+
+================================================================================
+5. CHANGER LE STATUT D'UN UTILISATEUR
+================================================================================
+
+PATCH /admin/users/:id/status
+
+Description : Modifier le statut d'un utilisateur (activer, désactiver, bannir, suspendre...).
+              Un admin ne peut pas modifier son propre statut.
+
+Headers :
+  Content-Type: application/json
+  Authorization: Bearer <token>
+
+Paramètre URL :
+  :id  -  ID de l'utilisateur
+
+Body (JSON) :
+{
+  "userStatus": "active"    // OBLIGATOIRE - active | inactive | banned | pending | suspended | deleted
+}
+
+Statuts disponibles :
+  - active     : Compte actif, l'utilisateur peut se connecter
+  - inactive   : Compte inactif
+  - pending    : En attente de validation
+  - banned     : Compte banni
+  - suspended  : Compte suspendu temporairement
+  - deleted    : Compte supprimé (soft delete)
+
+Réponse succès (200) :
+{
+  "success": true,
+  "message": "Statut de l'utilisateur modifié de \"suspended\" à \"active\"",
+  "status": 200,
+  "data": {
+    "id": 17,
+    "firstName": "Jean-Pierre",
+    "lastName": "TestModifie",
+    "role": "acheteur",
+    "oldStatus": "suspended",
+    "newStatus": "active"
+  }
+}
+
+Erreurs possibles :
+  - 400 : Tentative de modifier son propre statut
+  - 403 : Utilisateur non admin
+  - 404 : Utilisateur non trouvé
+  - 422 : Statut invalide
+
+Exemples curl :
+  # Activer un compte
+  curl -X PATCH "http://localhost:3333/admin/users/17/status" \
+    -H "Content-Type: application/json" \
+    -H "Authorization: Bearer <token>" \
+    -d '{"userStatus": "active"}'
+
+  # Bannir un compte
+  curl -X PATCH "http://localhost:3333/admin/users/17/status" \
+    -H "Content-Type: application/json" \
+    -H "Authorization: Bearer <token>" \
+    -d '{"userStatus": "banned"}'
+
+  # Suspendre un compte
+  curl -X PATCH "http://localhost:3333/admin/users/17/status" \
+    -H "Content-Type: application/json" \
+    -H "Authorization: Bearer <token>" \
+    -d '{"userStatus": "suspended"}'
+
+
+================================================================================
+6. SUPPRIMER UN UTILISATEUR (SOFT DELETE)
+================================================================================
+
+DELETE /admin/users/:id
+
+Description : Supprimer un utilisateur. Il s'agit d'une suppression douce :
+              le statut passe à "deleted" mais le compte reste en base.
+              Un admin ne peut pas se supprimer lui-même.
+              Seul un superadmin peut supprimer un superadmin.
+
+Headers :
+  Authorization: Bearer <token>
+
+Paramètre URL :
+  :id  -  ID de l'utilisateur
+
+Réponse succès (200) :
+{
+  "success": true,
+  "message": "Utilisateur supprimé avec succès",
+  "status": 200,
+  "data": {
+    "id": 17,
+    "firstName": "Jean-Pierre",
+    "lastName": "TestModifie",
+    "role": "acheteur",
+    "userStatus": "deleted"
+  }
+}
+
+Erreurs possibles :
+  - 400 : Tentative de se supprimer soi-même
+  - 403 : Utilisateur non admin, ou admin essayant de supprimer un superadmin
+  - 404 : Utilisateur non trouvé
+
+Exemple curl :
+  curl -X DELETE "http://localhost:3333/admin/users/17" \
+    -H "Authorization: Bearer <token>"
+
+
+================================================================================
+RÉCAPITULATIF DES ENDPOINTS
+================================================================================
+
+  POST   /admin/users            →  Créer un utilisateur
+  GET    /admin/users            →  Lister (pagination + filtres role/status/search)
+  GET    /admin/users/:id        →  Détails d'un utilisateur
+  PUT    /admin/users/:id        →  Modifier un utilisateur
+  PATCH  /admin/users/:id/status →  Changer le statut
+  DELETE /admin/users/:id        →  Supprimer (soft delete)
+
+================================================================================
+RÈGLES DE SÉCURITÉ
+================================================================================
+
+  1. Toutes les routes nécessitent un token Bearer valide
+  2. Seuls les rôles "admin" et "superadmin" ont accès
+  3. Un admin ne peut PAS modifier son propre statut
+  4. Un admin ne peut PAS supprimer son propre compte
+  5. Seul un superadmin peut supprimer un compte superadmin
+  6. Les comptes créés via l'admin sont directement en statut "active" (pas d'OTP/SMS)
+  7. Email et téléphone doivent être uniques (vérification à la création et modification)
+  8. Mot de passe : 12-64 caractères, 1 majuscule, 1 minuscule, 1 chiffre, 1 caractère spécial
+  9. Téléphone : format international (+243XXXXXXXXX)
+
+================================================================================
+VALEURS DES RÔLES
+================================================================================
+
+  - admin       : Administrateur
+  - superadmin  : Super administrateur
+  - vendeur     : Vendeur / Marchand
+  - acheteur    : Acheteur / Client
+  - livreur     : Livreur
+
+================================================================================
+VALEURS DES STATUTS
+================================================================================
+
+  - active      : Compte actif
+  - inactive    : Compte inactif
+  - pending     : En attente de validation
+  - banned      : Compte banni
+  - suspended   : Compte suspendu
+  - deleted     : Compte supprimé (soft delete)
+
+================================================================================

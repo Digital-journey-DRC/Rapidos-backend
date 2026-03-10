@@ -403,6 +403,46 @@ router
 // ============================================================
 
 // ============================================================
+// MODULE ADMIN USERS (GESTION UTILISATEURS DEPUIS DASHBOARD)
+// ============================================================
+
+const AdminUsersController = () => import('#controllers/admin_users_controller')
+
+// POST /admin/users - Créer un utilisateur (admin, acheteur, vendeur, livreur)
+router
+  .post('/admin/users', [AdminUsersController, 'createUser'])
+  .use(middleware.auth({ guards: ['api'] }))
+
+// GET /admin/users - Lister tous les utilisateurs (avec pagination, filtres, recherche)
+router
+  .get('/admin/users', [AdminUsersController, 'listUsers'])
+  .use(middleware.auth({ guards: ['api'] }))
+
+// GET /admin/users/:id - Détails d'un utilisateur
+router
+  .get('/admin/users/:id', [AdminUsersController, 'getUserById'])
+  .use(middleware.auth({ guards: ['api'] }))
+
+// PUT /admin/users/:id - Modifier un utilisateur
+router
+  .put('/admin/users/:id', [AdminUsersController, 'updateUser'])
+  .use(middleware.auth({ guards: ['api'] }))
+
+// PATCH /admin/users/:id/status - Changer le statut d'un utilisateur
+router
+  .patch('/admin/users/:id/status', [AdminUsersController, 'toggleStatus'])
+  .use(middleware.auth({ guards: ['api'] }))
+
+// DELETE /admin/users/:id - Supprimer un utilisateur (soft delete)
+router
+  .delete('/admin/users/:id', [AdminUsersController, 'deleteUser'])
+  .use(middleware.auth({ guards: ['api'] }))
+
+// ============================================================
+// FIN MODULE ADMIN USERS
+// ============================================================
+
+// ============================================================
 // MODULE MOYENS DE PAIEMENT VENDEUR
 // ============================================================
 
