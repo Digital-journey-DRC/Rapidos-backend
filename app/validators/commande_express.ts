@@ -10,7 +10,7 @@ export const createCommandeExpressValidator = vine.compile(
     clientPhone: vine.string().trim().minLength(10).maxLength(50),
     vendorId: vine.number().positive(),
     packageValue: vine.number().positive().decimal([0, 2]),
-    packageDescription: vine.string().trim().minLength(5),
+    packageDescription: vine.string().trim().optional(),
     pickupAddress: vine.string().trim().minLength(10),
     deliveryAddress: vine.string().trim().minLength(10),
     pickupReference: vine.string().trim().optional(),
