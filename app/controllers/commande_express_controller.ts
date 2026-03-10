@@ -113,7 +113,9 @@ export default class CommandeExpressController {
       const rawItems = request.input('items')
       if (typeof rawItems === 'string') {
         try {
-          request.updateBody({ ...request.body(), items: JSON.parse(rawItems) })
+          const allFields = request.all()
+          allFields.items = JSON.parse(rawItems)
+          request.updateBody(allFields)
         } catch {
           await trx.rollback()
           return response.status(400).json({
@@ -316,6 +318,15 @@ export default class CommandeExpressController {
       })
     } catch (error) {
       await trx.rollback()
+
+      // Si c'est une erreur de validation, retourner les détails
+      if (error.code === 'E_VALIDATION_ERROR') {
+        return response.status(422).json({
+          success: false,
+          message: 'Erreur de validation',
+          errors: error.messages,
+        })
+      }
 
       logger.error('Erreur création commande express', {
         error: error.message,
