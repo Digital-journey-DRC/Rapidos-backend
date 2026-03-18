@@ -379,6 +379,59 @@ router
 // ============================================================
 
 // ============================================================
+// MODULE EXPRESS ORDERS
+// ============================================================
+const ExpressOrdersController = () => import('#controllers/express_orders_controller')
+
+// Gestion des clients express (vendeur)
+router
+  .post('/express/clients', [ExpressOrdersController, 'createClient'])
+  .use(middleware.auth({ guards: ['api'] }))
+
+router
+  .get('/express/clients/vendeur', [ExpressOrdersController, 'getVendorClients'])
+  .use(middleware.auth({ guards: ['api'] }))
+
+// Initialiser une commande express (vendeur)
+router
+  .post('/express/commandes/initialize', [ExpressOrdersController, 'initializeOrder'])
+  .use(middleware.auth({ guards: ['api'] }))
+
+// Ajouter moyen de paiement (vendeur)
+router
+  .patch('/express/commandes/:id/payment-method', [ExpressOrdersController, 'updatePaymentMethod'])
+  .use(middleware.auth({ guards: ['api'] }))
+
+// Voir ses commandes (vendeur)
+router
+  .get('/express/commandes/vendeur', [ExpressOrdersController, 'getVendorOrders'])
+  .use(middleware.auth({ guards: ['api'] }))
+
+// Mettre à jour le statut
+router
+  .patch('/express/commandes/:id/status', [ExpressOrdersController, 'updateStatus'])
+  .use(middleware.auth({ guards: ['api'] }))
+
+// Upload photo du colis (vendeur)
+router
+  .post('/express/commandes/:id/upload-package-photo', [ExpressOrdersController, 'uploadPackagePhoto'])
+  .use(middleware.auth({ guards: ['api'] }))
+
+// Liste des livraisons disponibles (livreur)
+router
+  .get('/express/livraison/disponibles', [ExpressOrdersController, 'getAvailableDeliveries'])
+  .use(middleware.auth({ guards: ['api'] }))
+
+// Prendre une livraison (livreur)
+router
+  .post('/express/livraison/:id/take', [ExpressOrdersController, 'takeDelivery'])
+  .use(middleware.auth({ guards: ['api'] }))
+
+// ============================================================
+// FIN MODULE EXPRESS ORDERS
+// ============================================================
+
+// ============================================================
 // MODULE ADMIN TRANSACTIONS E-COMMERCE
 // ============================================================
 

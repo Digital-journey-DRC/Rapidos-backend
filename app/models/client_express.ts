@@ -38,6 +38,12 @@ export default class ClientExpress extends BaseModel {
   declare defaultReference: string | null
 
   @column()
+  declare latitude: number | null
+
+  @column()
+  declare longitude: number | null
+
+  @column()
   declare vendorId: number
 
   @column()

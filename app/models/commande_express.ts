@@ -2,10 +2,15 @@ import { DateTime } from 'luxon'
 import { BaseModel, column } from '@adonisjs/lucid/orm'
 
 export enum CommandeExpressStatus {
+  PENDING_PAYMENT = 'pending_payment',
   PENDING = 'pending',
-  EN_COURS = 'en_cours',
-  LIVRE = 'livre',
-  ANNULE = 'annule',
+  EN_PREPARATION = 'en_preparation',
+  PRET_A_EXPEDIER = 'pret_a_expedier',
+  ACCEPTE_LIVREUR = 'accepte_livreur',
+  EN_ROUTE = 'en_route',
+  DELIVERED = 'delivered',
+  CANCELLED = 'cancelled',
+  REJECTED = 'rejected',
 }
 
 export default class CommandeExpress extends BaseModel {
@@ -87,6 +92,63 @@ export default class CommandeExpress extends BaseModel {
 
   @column()
   declare imageColisPublicId: string | null
+
+  @column()
+  declare paymentMethodId: number | null
+
+  @column()
+  declare packagePhoto: string | null
+
+  @column()
+  declare packagePhotoPublicId: string | null
+
+  @column()
+  declare codeColis: string | null
+
+  @column()
+  declare deliveryFee: number | null
+
+  @column()
+  declare totalAvecLivraison: number | null
+
+  @column()
+  declare latitude: number | null
+
+  @column()
+  declare longitude: number | null
+
+  @column()
+  declare firebaseOrderId: string | null
+
+  @column({
+    prepare: (value: any) => {
+      if (typeof value === 'string') return value
+      return JSON.stringify(value)
+    },
+    consume: (value: any) => {
+      if (typeof value === 'string') {
+        try {
+          return JSON.parse(value)
+        } catch {
+          return null
+        }
+      }
+      return value || null
+    },
+  })
+  declare address: {
+    pays?: string
+    ville?: string
+    commune?: string
+    quartier?: string
+    avenue?: string
+    numero?: string
+    codePostale?: string
+    refAdresse?: string
+  } | null
+
+  @column()
+  declare numeroPayment: string | null
 
   @column.dateTime({ autoCreate: true })
   declare createdAt: DateTime
