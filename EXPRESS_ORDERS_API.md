@@ -200,6 +200,32 @@ Content-Type: application/json
 }
 ```
 
+**📍 Gestion des coordonnées GPS :**
+
+Le système stocke **4 coordonnées** pour chaque commande :
+
+| Coordonnée | Source (priorité) | Description |
+|------------|-------------------|-------------|
+| `client_latitude` | 1. `payload.latitude`<br>2. `client_express.latitude`<br>3. `null` | Point de livraison (client) |
+| `client_longitude` | 1. `payload.longitude`<br>2. `client_express.longitude`<br>3. `null` | Point de livraison (client) |
+| `vendor_latitude` | `user.latitude` (vendeur connecté) | Point de départ (vendeur) |
+| `vendor_longitude` | `user.longitude` (vendeur connecté) | Point de départ (vendeur) |
+
+**Calcul des frais de livraison :**
+- Si les 4 coordonnées sont disponibles → Distance réelle vendeur → client
+- Sinon → `deliveryFee = 0`
+
+**Exemple sans coordonnées dans le payload :**
+```json
+{
+  "clientId": 13,
+  "items": [{"name": "Colis", "quantity": 1}],
+  "packageValue": 50000,
+  "packageDescription": "Documents"
+}
+```
+→ Le système utilisera automatiquement `client_express.latitude/longitude` du client #13
+
 **Réponse :**
 ```json
 {
@@ -214,8 +240,12 @@ Content-Type: application/json
     "clientPhone": "+243999888777",
     "vendorId": 3,
     "packageValue": 50000,
-    "deliveryFee": 14337.28,
-    "totalAvecLivraison": 64337.28
+    "deliveryFee": 13550,
+    "totalAvecLivraison": 63550,
+    "clientLatitude": -4.3217,
+    "clientLongitude": 15.3010,
+    "vendorLatitude": -4.2408052,
+    "vendorLongitude": 15.2914667
   }
 }
 ```
@@ -706,7 +736,28 @@ class ExpressOrderService {
 - **Deuxième code** : Généré quand le livreur passe en `en_route` (ex: `8924`)
 - Le livreur doit fournir le code à chaque transition
 
-### 3. Différence avec E-commerce
+### 3. Coordonnées GPS (Client et Vendeur)
+Chaque commande stocke **4 coordonnées GPS** :
+
+**Coordonnées CLIENT (point de livraison) :**
+- Source prioritaire : `latitude/longitude` dans le payload de la requête
+- Source secondaire : `latitude/longitude` du client enregistré (`client_express`)
+- Si aucune source : `null`
+
+**Coordonnées VENDEUR (point de départ) :**
+- Source : `latitude/longitude` du vendeur connecté (table `users`)
+- Si non disponible : `null`
+
+**Calcul des frais de livraison :**
+- Si les 4 coordonnées sont disponibles → Distance réelle calculée entre vendeur et client
+- Sinon → `deliveryFee = 0`
+
+**Avantages :**
+- ✅ Traçabilité complète du trajet
+- ✅ Frais de livraison précis basés sur la vraie distance
+- ✅ Historique figé au moment de la création de la commande
+
+### 4. Différence avec E-commerce
 - **Express** : Vendeur crée pour un client enregistré
 - **E-commerce** : Acheteur crée sa propre commande
 - Les deux modules sont **complètement indépendants**

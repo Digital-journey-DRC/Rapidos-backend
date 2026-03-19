@@ -115,11 +115,19 @@ export default class ExpressOrdersController {
         })
       }
 
-      // Calculer frais de livraison si coordonnées fournies
+      // Déterminer les coordonnées du client (priorité: payload > client_express)
+      const clientLat = payload.latitude || client.latitude || null
+      const clientLng = payload.longitude || client.longitude || null
+
+      // Récupérer les coordonnées du vendeur
+      const vendorLat = user.latitude || null
+      const vendorLng = user.longitude || null
+
+      // Calculer frais de livraison si coordonnées disponibles
       let deliveryFee = 0
-      if (payload.latitude && payload.longitude) {
-        const vendorCoords = { latitude: -4.3217, longitude: 15.3010 }
-        const clientCoords = { latitude: payload.latitude, longitude: payload.longitude }
+      if (vendorLat && vendorLng && clientLat && clientLng) {
+        const vendorCoords = { latitude: vendorLat, longitude: vendorLng }
+        const clientCoords = { latitude: clientLat, longitude: clientLng }
         
         const distance = DistanceCalculator.calculateDistance(vendorCoords, clientCoords)
         deliveryFee = DistanceCalculator.calculateDeliveryFee(distance)
@@ -152,6 +160,10 @@ export default class ExpressOrdersController {
         totalAvecLivraison,
         latitude: payload.latitude || null,
         longitude: payload.longitude || null,
+        clientLatitude: clientLat,
+        clientLongitude: clientLng,
+        vendorLatitude: vendorLat,
+        vendorLongitude: vendorLng,
         address: payload.address || null,
         numeroPayment: null,
       })

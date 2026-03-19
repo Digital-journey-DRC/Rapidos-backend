@@ -118,6 +118,18 @@ export default class CommandeExpress extends BaseModel {
   declare longitude: number | null
 
   @column()
+  declare clientLatitude: number | null
+
+  @column()
+  declare clientLongitude: number | null
+
+  @column()
+  declare vendorLatitude: number | null
+
+  @column()
+  declare vendorLongitude: number | null
+
+  @column()
   declare firebaseOrderId: string | null
 
   @column({
