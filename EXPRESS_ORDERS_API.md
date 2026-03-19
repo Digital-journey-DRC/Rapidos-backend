@@ -412,11 +412,30 @@ Authorization: Bearer {token}
       "deliveryAddress": "123 Avenue du Port, Gombe",
       "packagePhoto": "https://...",
       "codeColis": "7477",
-      "totalAvecLivraison": 64337.28
+      "items": [
+        {
+          "name": "Smartphone Samsung",
+          "quantity": 1,
+          "price": 450000,
+          "urlProduct": "https://..."
+        }
+      ],
+      "clientLatitude": -4.3217,
+      "clientLongitude": 15.3010,
+      "vendorLatitude": -4.2408052,
+      "vendorLongitude": 15.2914667,
+      "packageValue": 50000,
+      "deliveryFee": 13550,
+      "totalAvecLivraison": 63550
     }
   ]
 }
 ```
+
+**📍 Coordonnées GPS pour la navigation :**
+- `clientLatitude/clientLongitude` : Point de livraison (destination)
+- `vendorLatitude/vendorLongitude` : Point de départ (pickup chez le vendeur)
+- Ces coordonnées permettent au livreur de calculer l'itinéraire complet
 
 ---
 
@@ -761,6 +780,35 @@ Chaque commande stocke **4 coordonnées GPS** :
 - **Express** : Vendeur crée pour un client enregistré
 - **E-commerce** : Acheteur crée sa propre commande
 - Les deux modules sont **complètement indépendants**
+
+### 5. Données disponibles pour le livreur
+
+L'endpoint `GET /express/livraison/disponibles` fournit au livreur **toutes les informations** nécessaires pour effectuer la livraison :
+
+**Informations client :**
+- `clientName` : Nom du client
+- `clientPhone` : Téléphone du client
+- `clientLatitude/clientLongitude` : Coordonnées GPS exactes de la destination
+
+**Informations vendeur :**
+- `vendorLatitude/vendorLongitude` : Coordonnées GPS du point de départ (pickup)
+
+**Informations colis :**
+- `packagePhoto` : Photo du colis à récupérer
+- `codeColis` : Code de vérification
+- `items[]` : Liste détaillée des produits avec photos (`urlProduct`)
+- `packageValue` : Valeur du colis
+- `deliveryFee` : Frais de livraison
+
+**Adresses :**
+- `deliveryAddress` : Adresse textuelle de livraison
+- `pickupAddress` : Adresse textuelle de pickup (si fournie)
+
+**Utilisation recommandée :**
+1. Utiliser `vendorLatitude/vendorLongitude` pour naviguer vers le vendeur
+2. Récupérer le colis en vérifiant avec `packagePhoto` et `items[]`
+3. Utiliser `clientLatitude/clientLongitude` pour naviguer vers le client
+4. Livrer en vérifiant le `codeColis`
 
 ---
 
