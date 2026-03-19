@@ -309,16 +309,44 @@ Authorization: Bearer {token}
       "id": 63,
       "orderId": "adc08410-f944-404b-9bb8-da1ae28d61d7",
       "statut": "pending",
+      "clientId": 12,
       "clientName": "Jean Kabongo",
       "clientPhone": "+243999888777",
+      "deliveryAddress": "123 Avenue du Port, Gombe",
+      "packagePhoto": "https://res.cloudinary.com/deb9kfhnx/image/upload/v1773861636/rapidos/ecommerce-packages/order_2cd0c06a-f14d-4f25-93e9-292cc6ed61f8_1773861633964.png",
+      "items": [
+        {
+          "name": "Colis urgent",
+          "description": "Documents importants",
+          "quantity": 1,
+          "price": 50000,
+          "urlProduct": "https://..."
+        }
+      ],
+      "clientLatitude": -4.3217,
+      "clientLongitude": 15.3010,
+      "vendorLatitude": -4.2408052,
+      "vendorLongitude": 15.2914667,
       "packageValue": 50000,
-      "deliveryFee": 14337.28,
-      "totalAvecLivraison": 64337.28,
-      "createdAt": "2026-03-18T20:15:00.000Z"
+      "deliveryFee": 13550,
+      "totalAvecLivraison": 63550,
+      "codeColis": "7477",
+      "paymentMethodId": 1,
+      "deliveryPersonId": null,
+      "createdAt": "2026-03-18T20:15:00.000Z",
+      "updatedAt": "2026-03-18T20:15:00.000Z"
     }
   ]
 }
 ```
+
+**📦 Détails retournés :**
+- `items[]` : Liste complète des produits avec photos (`urlProduct`)
+- `packagePhoto` : Photo du colis uploadée
+- `clientLatitude/clientLongitude` : Coordonnées GPS du client (destination)
+- `vendorLatitude/vendorLongitude` : Coordonnées GPS du vendeur (départ)
+- `codeColis` : Code de vérification (généré après upload photo)
+- `deliveryPersonId` : ID du livreur (null si pas encore assigné)
 
 ---
 
