@@ -242,6 +242,7 @@ Le système stocke **4 coordonnées** pour chaque commande :
     "packageValue": 50000,
     "deliveryFee": 13550,
     "totalAvecLivraison": 63550,
+    "codeColis": "1266",
     "clientLatitude": -4.3217,
     "clientLongitude": 15.3010,
     "vendorLatitude": -4.2408052,
@@ -249,6 +250,10 @@ Le système stocke **4 coordonnées** pour chaque commande :
   }
 }
 ```
+
+**📋 Note importante :**
+- Le `codeColis` est généré **automatiquement** dès la création
+- Ce code sera **remplacé** par un nouveau code lors du passage en `pret_a_expedier`
 
 ---
 
@@ -406,12 +411,14 @@ formData.append('packagePhoto', fileBlob, 'photo.jpg');
   "data": {
     "orderId": "adc08410-f944-404b-9bb8-da1ae28d61d7",
     "packagePhoto": "https://res.cloudinary.com/deb9kfhnx/image/upload/v1773858594/rapidos/ecommerce-packages/order_xxx.png",
-    "codeColis": "7477"
+    "codeColis": "1266"
   }
 }
 ```
 
-**Note :** Un code de livraison à 4 chiffres est généré automatiquement.
+**📋 Note :**
+- Le `codeColis` retourné est le code initial (généré à la création)
+- Un **nouveau code** sera généré automatiquement lors du passage en `pret_a_expedier`
 
 ---
 
@@ -779,9 +786,23 @@ class ExpressOrderService {
 - Le numéro utilisé est `client.phone` de la table `client_express`
 
 ### 2. Codes de livraison
-- **Premier code** : Généré lors de l'upload de la photo (ex: `7477`)
-- **Deuxième code** : Généré quand le livreur passe en `en_route` (ex: `8924`)
-- Le livreur doit fournir le code à chaque transition
+Le système utilise **2 codes** distincts pour sécuriser le processus :
+
+**Code #1 - Code vendeur** (ex: `1266`)
+- Généré **automatiquement** lors de la création de la commande
+- Utilisé par le vendeur pour suivre la commande
+- Visible dans `GET /express/commandes/vendeur`
+
+**Code #2 - Code livreur** (ex: `9636`)
+- Généré **automatiquement** lors du passage en `pret_a_expedier`
+- Utilisé par le livreur pour récupérer le colis chez le vendeur
+- Le livreur doit fournir ce code pour passer en `en_route`
+- Visible dans `GET /express/livraison/disponibles`
+
+**Code #3 - Code livraison client** (ex: `8924`)
+- Généré **automatiquement** quand le livreur passe en `en_route`
+- Envoyé par SMS au client
+- Le client doit fournir ce code pour confirmer la réception
 
 ### 3. Coordonnées GPS (Client et Vendeur)
 Chaque commande stocke **4 coordonnées GPS** :

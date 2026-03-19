@@ -135,6 +135,9 @@ export default class ExpressOrdersController {
 
       const totalAvecLivraison = payload.packageValue + deliveryFee
 
+      // Générer code colis initial
+      const initialCodeColis = Math.floor(1000 + Math.random() * 9000).toString()
+
       // Créer la commande
       const order = await CommandeExpress.create({
         orderId: randomUUID(),
@@ -155,7 +158,7 @@ export default class ExpressOrdersController {
         paymentMethodId: null,
         packagePhoto: null,
         packagePhotoPublicId: null,
-        codeColis: null,
+        codeColis: initialCodeColis,
         deliveryFee,
         totalAvecLivraison,
         latitude: payload.latitude || null,
@@ -352,14 +355,17 @@ export default class ExpressOrdersController {
         })
       }
 
-      // Vérification photo et code pour pret_a_expedier
+      // Vérification photo pour pret_a_expedier et génération nouveau code
       if (payload.status === CommandeExpressStatus.PRET_A_EXPEDIER) {
-        if (!order.packagePhoto || !order.codeColis) {
+        if (!order.packagePhoto) {
           return response.status(400).json({
             success: false,
-            message: 'Photo du colis et code obligatoires pour marquer prêt à expédier',
+            message: 'Photo du colis obligatoire pour marquer prêt à expédier',
           })
         }
+        // Générer nouveau code pour le livreur
+        const newCodeForDelivery = Math.floor(1000 + Math.random() * 9000).toString()
+        order.codeColis = newCodeForDelivery
       }
 
       // Assigner le livreur quand il accepte
@@ -535,12 +541,8 @@ export default class ExpressOrdersController {
         order.orderId
       )
 
-      // Générer code colis
-      const codeColis = Math.floor(1000 + Math.random() * 9000).toString()
-
       order.packagePhoto = uploadResult.url
       order.packagePhotoPublicId = uploadResult.publicId
-      order.codeColis = codeColis
       await order.save()
 
       return response.status(200).json({
