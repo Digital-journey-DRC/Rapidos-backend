@@ -422,6 +422,11 @@ router
   .get('/express/livraison/disponibles', [ExpressOrdersController, 'getAvailableDeliveries'])
   .use(middleware.auth({ guards: ['api'] }))
 
+// Mes livraisons en cours (livreur - accepte_livreur, en_route)
+router
+  .get('/express/livraison/mes-livraisons', [ExpressOrdersController, 'getMyDeliveries'])
+  .use(middleware.auth({ guards: ['api'] }))
+
 // Prendre une livraison (livreur)
 router
   .post('/express/livraison/:id/take', [ExpressOrdersController, 'takeDelivery'])

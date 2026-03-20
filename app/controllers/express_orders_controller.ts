@@ -14,6 +14,7 @@ import { randomUUID } from 'node:crypto'
 import logger from '@adonisjs/core/services/logger'
 import ecommerceCloudinaryService from '#services/ecommerce_cloudinary_service'
 import { DistanceCalculator } from '#services/distance_calculator'
+import Product from '#models/product'
 
 export default class ExpressOrdersController {
   /**
@@ -138,6 +139,39 @@ export default class ExpressOrdersController {
       // Générer code colis initial
       const initialCodeColis = Math.floor(1000 + Math.random() * 9000).toString()
 
+      // Enrichir les items avec les données produit si productId fourni
+      const enrichedItems = await Promise.all(
+        payload.items.map(async (item) => {
+          if (item.productId) {
+            const product = await Product.query()
+              .where('id', item.productId)
+              .preload('media')
+              .first()
+
+            if (product) {
+              return {
+                productId: item.productId,
+                name: item.name || product.name,
+                description: item.description || product.description || null,
+                price: item.price || product.price,
+                quantity: item.quantity,
+                weight: item.weight || null,
+                urlProduct: item.urlProduct || product.media?.mediaUrl || null,
+              }
+            }
+          }
+          return {
+            productId: item.productId || null,
+            name: item.name,
+            description: item.description || null,
+            price: item.price || null,
+            quantity: item.quantity,
+            weight: item.weight || null,
+            urlProduct: item.urlProduct || null,
+          }
+        })
+      ) as any
+
       // Créer la commande
       const order = await CommandeExpress.create({
         orderId: randomUUID(),
@@ -153,7 +187,7 @@ export default class ExpressOrdersController {
         pickupReference: payload.pickupReference || null,
         deliveryReference: payload.deliveryReference || client.defaultReference || null,
         createdBy: user.id,
-        items: payload.items,
+        items: enrichedItems,
         deliveryPersonId: null,
         paymentMethodId: null,
         packagePhoto: null,
@@ -592,6 +626,42 @@ export default class ExpressOrdersController {
       return response.status(500).json({
         success: false,
         message: 'Erreur lors de la récupération des livraisons',
+      })
+    }
+  }
+
+  /**
+   * GET /express/livraison/mes-livraisons
+   * Livraisons en cours du livreur connecté
+   */
+  async getMyDeliveries({ response, auth }: HttpContext) {
+    try {
+      const user = auth.user!
+      
+      if (user.role !== 'livreur') {
+        return response.status(403).json({
+          success: false,
+          message: 'Accès réservé aux livreurs',
+        })
+      }
+
+      const deliveries = await CommandeExpress.query()
+        .where('delivery_person_id', user.id)
+        .whereIn('statut', [
+          CommandeExpressStatus.ACCEPTE_LIVREUR,
+          CommandeExpressStatus.EN_ROUTE,
+        ])
+        .orderBy('updated_at', 'desc')
+
+      return response.status(200).json({
+        success: true,
+        deliveries,
+      })
+    } catch (error) {
+      logger.error('Erreur récupération mes livraisons', { error: error.message })
+      return response.status(500).json({
+        success: false,
+        message: 'Erreur lors de la récupération de vos livraisons',
       })
     }
   }
