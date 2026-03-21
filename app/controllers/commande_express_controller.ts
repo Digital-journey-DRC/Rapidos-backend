@@ -141,6 +141,7 @@ export default class CommandeExpressController {
 
         const products = await Product.query({ client: trx })
           .whereIn('id', productIds)
+          .preload('media')
           .forUpdate() // Lock pour éviter les race conditions
 
         // Créer un map des produits par ID
@@ -181,6 +182,31 @@ export default class CommandeExpressController {
         }
       }
 
+      // Enrichir les items avec les données produit (image, description, prix) si productId fourni
+      const enrichedItems = payload.items.map((item) => {
+        if (item.productId && productMap.has(item.productId)) {
+          const product = productMap.get(item.productId)!
+          return {
+            productId: item.productId,
+            name: item.name || product.name,
+            description: item.description || product.description || undefined,
+            price: item.price || product.price,
+            quantity: item.quantity,
+            weight: item.weight || undefined,
+            urlProduct: item.urlProduct || product.media?.mediaUrl || undefined,
+          }
+        }
+        return {
+          productId: item.productId || undefined,
+          name: item.name,
+          description: item.description || undefined,
+          price: item.price || undefined,
+          quantity: item.quantity,
+          weight: item.weight || undefined,
+          urlProduct: item.urlProduct || undefined,
+        }
+      })
+
       // Créer la commande express
       const commandeExpress = await CommandeExpress.create(
         {
@@ -197,7 +223,7 @@ export default class CommandeExpressController {
           deliveryReference: payload.deliveryReference || null,
           createdBy: payload.createdBy,
           statut: (payload.statut as CommandeExpressStatus) || CommandeExpressStatus.PENDING,
-          items: payload.items,
+          items: enrichedItems,
           deliveryPersonId: null,
         },
         { client: trx }
