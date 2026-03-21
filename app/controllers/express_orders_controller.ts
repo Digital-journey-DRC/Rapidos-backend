@@ -341,9 +341,12 @@ export default class ExpressOrdersController {
         .where('statut', '!=', CommandeExpressStatus.PENDING_PAYMENT)
         .orderBy('created_at', 'desc')
 
+      // Enrichir les items avec les images produit si productId présent
+      const enrichedOrders = await this.enrichDeliveriesItems(orders)
+
       return response.status(200).json({
         success: true,
-        commandes: orders,
+        commandes: enrichedOrders,
       })
     } catch (error) {
       logger.error('Erreur récupération commandes vendeur', { error: error.message })
@@ -617,9 +620,12 @@ export default class ExpressOrdersController {
         .whereNull('delivery_person_id')
         .orderBy('created_at', 'desc')
 
+      // Enrichir les items avec les images produit si productId présent
+      const enrichedDeliveries = await this.enrichDeliveriesItems(deliveries)
+
       return response.status(200).json({
         success: true,
-        deliveries,
+        deliveries: enrichedDeliveries,
       })
     } catch (error) {
       logger.error('Erreur récupération livraisons', { error: error.message })
@@ -653,9 +659,12 @@ export default class ExpressOrdersController {
         ])
         .orderBy('updated_at', 'desc')
 
+      // Enrichir les items avec les images produit si productId présent
+      const enrichedDeliveries = await this.enrichDeliveriesItems(deliveries)
+
       return response.status(200).json({
         success: true,
-        deliveries,
+        deliveries: enrichedDeliveries,
       })
     } catch (error) {
       logger.error('Erreur récupération mes livraisons', { error: error.message })
@@ -814,5 +823,93 @@ export default class ExpressOrdersController {
     }
 
     return { allowed: true }
+  }
+
+  /**
+   * Enrichit les items des livraisons avec les données produit (image, description, prix)
+   * Pour les items ayant un productId, récupère urlProduct depuis product.media
+   */
+  private async enrichDeliveriesItems(deliveries: CommandeExpress[]): Promise<any[]> {
+    // Collecter tous les productIds uniques
+    const allProductIds = new Set<number>()
+    for (const delivery of deliveries) {
+      const items = delivery.items as any[]
+      if (Array.isArray(items)) {
+        for (const item of items) {
+          if (item.productId) {
+            allProductIds.add(item.productId)
+          }
+        }
+      }
+    }
+
+    // Si aucun productId, retourner tel quel avec structure normalisée
+    if (allProductIds.size === 0) {
+      return deliveries.map((d) => {
+        const json = d.toJSON()
+        json.items = this.normalizeItems(json.items)
+        return json
+      })
+    }
+
+    // Charger tous les produits avec leurs médias en une seule requête
+    const products = await Product.query()
+      .whereIn('id', Array.from(allProductIds))
+      .preload('media')
+
+    const productMap = new Map<number, any>()
+    for (const product of products) {
+      productMap.set(product.id, product)
+    }
+
+    // Enrichir chaque livraison
+    return deliveries.map((delivery) => {
+      const json = delivery.toJSON()
+      const items = json.items as any[]
+
+      if (Array.isArray(items)) {
+        json.items = items.map((item: any) => {
+          if (item.productId && productMap.has(item.productId)) {
+            const product = productMap.get(item.productId)
+            return {
+              productId: item.productId,
+              name: item.name || product.name,
+              description: item.description || product.description || null,
+              price: item.price || product.price,
+              quantity: item.quantity,
+              weight: item.weight || null,
+              urlProduct: item.urlProduct || product.media?.mediaUrl || null,
+            }
+          }
+          return {
+            productId: item.productId || null,
+            name: item.name,
+            description: item.description || null,
+            price: item.price || null,
+            quantity: item.quantity,
+            weight: item.weight || null,
+            urlProduct: item.urlProduct || null,
+          }
+        })
+      }
+
+      return json
+    })
+  }
+
+  /**
+   * Normalise les items pour toujours retourner les 7 champs
+   */
+  private normalizeItems(items: any[]): any[] {
+    if (!Array.isArray(items)) return items
+    return items.map((item: any) => ({
+      productId: item.productId || null,
+      name: item.name,
+      description: item.description || null,
+      price: item.price || null,
+      quantity: item.quantity,
+      weight: item.weight || null,
+      urlProduct: item.urlProduct || null,
+    }))
   }
 }
