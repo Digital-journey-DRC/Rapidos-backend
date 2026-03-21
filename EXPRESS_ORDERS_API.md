@@ -397,14 +397,34 @@ Authorization: Bearer {token}
 }
 ```
 
+**✨ Enrichissement automatique des items (à la lecture) :**
+- Le système enrichit **automatiquement** les items au moment où le vendeur consulte ses commandes
+- Si `productId` présent → `description`, `price` et `urlProduct` sont récupérés depuis la base produit
+- **`urlProduct`** = **URL de la photo du produit** sur Cloudinary — utiliser cette URL pour afficher l'image
+- Si `productId` est `null` → `urlProduct` sera `null` (item hors catalogue)
+
 **📦 Détails retournés :**
-- `items[]` : Liste complète des produits avec les 7 champs (`productId`, `name`, `description`, `price`, `quantity`, `weight`, `urlProduct`)
-- `urlProduct` : Photo du produit (auto-remplie depuis le catalogue si `productId` fourni)
-- `packagePhoto` : Photo du colis uploadée par le vendeur
-- `clientLatitude/clientLongitude` : Coordonnées GPS du client (destination)
-- `vendorLatitude/vendorLongitude` : Coordonnées GPS du vendeur (départ)
-- `codeColis` : Code de vérification
-- `deliveryPersonId` : ID du livreur (null si pas encore assigné)
+
+| Champ | Type | Description |
+|-------|------|-------------|
+| `items[]` | array | Liste des produits — **toujours 7 champs par item** |
+| `items[].productId` | number \| null | ID produit catalogue. `null` = hors catalogue |
+| `items[].name` | string | Nom du produit |
+| `items[].description` | string \| null | Description — auto-remplie si `productId` |
+| `items[].price` | number \| null | Prix unitaire — auto-rempli si `productId` |
+| `items[].quantity` | number | Quantité |
+| `items[].weight` | string \| null | Poids |
+| `items[].urlProduct` | string \| null | **Photo du produit** — auto-remplie si `productId` |
+| `packagePhoto` | string \| null | Photo du **colis** uploadée par le vendeur |
+| `clientLatitude` | string | Latitude du client (destination) |
+| `clientLongitude` | string | Longitude du client (destination) |
+| `vendorLatitude` | string | Latitude du vendeur (départ) |
+| `vendorLongitude` | string | Longitude du vendeur (départ) |
+| `codeColis` | string | Code de vérification |
+| `deliveryPersonId` | number \| null | ID du livreur (`null` = pas encore assigné) |
+
+> **⚠️ Ne pas confondre** `urlProduct` (photo du **produit** dans le catalogue) et `packagePhoto` (photo du **colis** prise par le vendeur).
+
 - **Tous les statuts sont visibles** sauf `pending_payment`
 
 ---
@@ -502,15 +522,15 @@ Authorization: Bearer {token}
   "success": true,
   "deliveries": [
     {
-      "id": 80,
-      "orderId": "841e16a9-7558-41f7-8e32-f5b7a5a29893",
+      "id": 3,
+      "orderId": "71c928fe-8ba7-4a9f-8c0a-45b44586e67c",
       "statut": "pret_a_expedier",
-      "clientName": "Paul Mukendi",
-      "clientPhone": "+243897654321",
-      "deliveryAddress": "789 Boulevard Lumumba, Kinshasa",
-      "deliveryReference": "Près du marché central",
-      "packagePhoto": "https://res.cloudinary.com/.../order_xxx.png",
-      "codeColis": "2342",
+      "clientName": "Marie Tshala",
+      "clientPhone": "+243811222333",
+      "deliveryAddress": "456 Avenue Lumumba, Limete",
+      "deliveryReference": "Face à la station Total",
+      "packagePhoto": "https://res.cloudinary.com/deb9kfhnx/image/upload/v1774103514/rapidos/ecommerce-packages/order_71c928fe-8ba7-4a9f-8c0a-45b44586e67c_1774103512957.png",
+      "codeColis": "7503",
       "items": [
         {
           "productId": 1,
@@ -519,26 +539,44 @@ Authorization: Bearer {token}
           "price": 450000,
           "quantity": 2,
           "weight": null,
-          "urlProduct": "https://res.cloudinary.com/.../products/image.jpg"
+          "urlProduct": "https://res.cloudinary.com/deb9kfhnx/image/upload/v1766985798/products/cpapivljgeiunbgjfcwt.jpg"
+        },
+        {
+          "productId": null,
+          "name": "Coque protection",
+          "description": "Coque silicone",
+          "price": 5000,
+          "quantity": 1,
+          "weight": null,
+          "urlProduct": null
         }
       ],
-      "clientLatitude": -4.3400,
-      "clientLongitude": 15.3100,
-      "vendorLatitude": -4.3443732,
-      "vendorLongitude": 15.2629869,
-      "packageValue": 1200000,
-      "deliveryFee": 6240,
-      "totalAvecLivraison": 1206240,
+      "clientLatitude": "-4.35000000",
+      "clientLongitude": "15.32000000",
+      "vendorLatitude": "-4.24080520",
+      "vendorLongitude": "15.29146670",
+      "packageValue": "460000.00",
+      "deliveryFee": "13550.00",
+      "totalAvecLivraison": "473550.00",
       "deliveryPersonId": null
     }
   ]
 }
 ```
 
+**✨ Enrichissement automatique des items (à la lecture) :**
+- Le système enrichit **automatiquement** les items au moment où le livreur consulte cet endpoint
+- Si un item a un `productId` → `description`, `price` et `urlProduct` sont récupérés depuis la base produit
+- `urlProduct` contient l'**URL réelle de la photo du produit** (Cloudinary) — **c'est cette URL que le frontend doit utiliser pour afficher l'image du produit**
+- Si un item n'a **pas** de `productId` (colis hors catalogue) → `urlProduct` sera `null`
+- Les 7 champs sont **toujours** retournés : `productId`, `name`, `description`, `price`, `quantity`, `weight`, `urlProduct`
+
 **📍 Coordonnées GPS pour la navigation :**
 - `clientLatitude/clientLongitude` : Point de livraison (destination)
 - `vendorLatitude/vendorLongitude` : Point de départ (pickup chez le vendeur)
 - Ces coordonnées permettent au livreur de calculer l'itinéraire complet
+
+> **⚠️ Note :** Les coordonnées et montants sont retournés en `string` (ex: `"-4.35000000"`, `"460000.00"`). Le frontend doit les convertir en `number` si nécessaire (`parseFloat()`).
 
 ---
 
@@ -553,40 +591,81 @@ Authorization: Bearer {token}
 Authorization: Bearer {token}
 ```
 
-**Réponse :**
+**Réponse (exemple réel testé le 21/03/2026) :**
 ```json
 {
   "success": true,
   "deliveries": [
     {
-      "id": 78,
-      "orderId": "4bd43ebe-f925-4719-af5b-4551a030257a",
-      "statut": "en_route",
+      "id": 3,
+      "orderId": "71c928fe-8ba7-4a9f-8c0a-45b44586e67c",
+      "statut": "accepte_livreur",
+      "clientId": 13,
       "clientName": "Marie Tshala",
       "clientPhone": "+243811222333",
+      "packageValue": "460000.00",
+      "packageDescription": "Smartphone + accessoires",
+      "pickupAddress": "",
       "deliveryAddress": "456 Avenue Lumumba, Limete",
-      "packagePhoto": "https://res.cloudinary.com/.../order_xxx.png",
-      "codeColis": "9729",
+      "pickupReference": null,
+      "deliveryReference": "Face à la station Total",
+      "createdBy": 3,
+      "vendorId": 3,
       "items": [
         {
+          "productId": 1,
+          "name": "Samsung Galaxy",
+          "description": "Smartphone Samsung Galaxy A54 5G avec écran AMOLED",
+          "price": 450000,
+          "quantity": 2,
+          "weight": null,
+          "urlProduct": "https://res.cloudinary.com/deb9kfhnx/image/upload/v1766985798/products/cpapivljgeiunbgjfcwt.jpg"
+        },
+        {
           "productId": null,
-          "name": "Test livreur",
-          "description": null,
-          "price": null,
+          "name": "Coque protection",
+          "description": "Coque silicone",
+          "price": 5000,
           "quantity": 1,
           "weight": null,
           "urlProduct": null
         }
       ],
-      "clientLatitude": -4.3500,
-      "clientLongitude": 15.3200,
-      "vendorLatitude": -4.2408052,
-      "vendorLongitude": 15.2914667,
-      "deliveryPersonId": 5
+      "deliveryPersonId": 5,
+      "paymentMethodId": 1,
+      "packagePhoto": "https://res.cloudinary.com/deb9kfhnx/image/upload/v1774103514/rapidos/ecommerce-packages/order_71c928fe.png",
+      "codeColis": "7503",
+      "deliveryFee": "13550.00",
+      "totalAvecLivraison": "473550.00",
+      "clientLatitude": "-4.35000000",
+      "clientLongitude": "15.32000000",
+      "vendorLatitude": "-4.24080520",
+      "vendorLongitude": "15.29146670",
+      "createdAt": "2026-03-21T15:28:44.857+01:00",
+      "updatedAt": "2026-03-21T15:37:31.093+01:00"
     }
   ]
 }
 ```
+
+**✨ Enrichissement automatique des items (à la lecture) :**
+- Le système enrichit **automatiquement** les items au moment de la lecture
+- Si `productId` est présent → `description`, `price` et `urlProduct` sont récupérés depuis la base produit
+- **`urlProduct`** = URL de la photo du produit sur Cloudinary — **utiliser cette URL pour afficher l'image**
+- Si `productId` est `null` → `urlProduct` sera `null` (item hors catalogue)
+- **Les 7 champs sont TOUJOURS retournés** pour chaque item
+
+**📊 Champs retournés par item :**
+
+| Champ | Type | Description |
+|-------|------|-------------|
+| `productId` | number \| null | ID du produit dans le catalogue. `null` = colis hors catalogue |
+| `name` | string | Nom du produit/colis |
+| `description` | string \| null | Description du produit. Auto-remplie si `productId` présent |
+| `price` | number \| null | Prix unitaire. Auto-rempli si `productId` présent |
+| `quantity` | number | Quantité |
+| `weight` | string \| null | Poids (ex: "2kg") |
+| `urlProduct` | string \| null | **URL de la photo du produit** (Cloudinary). Auto-remplie si `productId` présent |
 
 ---
 
@@ -1742,9 +1821,20 @@ L'endpoint `GET /express/livraison/disponibles` fournit au livreur **toutes les 
 
 ---
 
-**Version :** 1.3.0  
+**Version :** 1.4.0  
 **Date :** 21 Mars 2026  
 **Module :** Express Orders + Commande Express  
+
+**Changelog v1.4.0 :**
+- **Enrichissement des items à la lecture** — les endpoints GET enrichissent désormais les items en temps réel depuis la base produit :
+  - `GET /express/livraison/disponibles` — items enrichis avec `description`, `price`, `urlProduct`
+  - `GET /express/livraison/mes-livraisons` — items enrichis avec `description`, `price`, `urlProduct`
+  - `GET /express/commandes/vendeur` — items enrichis avec `description`, `price`, `urlProduct`
+- **`urlProduct`** = URL Cloudinary de la photo du produit (auto-remplie si `productId` fourni, `null` sinon)
+- Exemples de réponses mis à jour avec des **données réelles testées** le 21/03/2026
+- Ajout tableaux détaillés des champs retournés par item (7 champs explicites)
+- Précision : les coordonnées GPS et montants sont retournés en `string` (ex: `"-4.35000000"`, `"460000.00"`) — le frontend doit utiliser `parseFloat()`
+- Distinction explicite : `urlProduct` (photo **produit**) vs `packagePhoto` (photo **colis**)
 
 **Changelog v1.3.0 :**
 - `POST /commande-express/create` — **enrichissement automatique des items** : si `productId` fourni, `description`, `price` et `urlProduct` (photo) sont récupérés depuis la base produit

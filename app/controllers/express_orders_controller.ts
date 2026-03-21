@@ -15,6 +15,9 @@ import logger from '@adonisjs/core/services/logger'
 import ecommerceCloudinaryService from '#services/ecommerce_cloudinary_service'
 import { DistanceCalculator } from '#services/distance_calculator'
 import Product from '#models/product'
+import db from '@adonisjs/lucid/services/db'
+import { saveCommandeExpressToFirestore } from '#services/firebase_service'
+import admin from 'firebase-admin'
 
 export default class ExpressOrdersController {
   /**
@@ -139,25 +142,74 @@ export default class ExpressOrdersController {
       // Générer code colis initial
       const initialCodeColis = Math.floor(1000 + Math.random() * 9000).toString()
 
-      // Enrichir les items avec les données produit si productId fourni
-      const enrichedItems = await Promise.all(
-        payload.items.map(async (item) => {
-          if (item.productId) {
-            const product = await Product.query()
-              .where('id', item.productId)
-              .preload('media')
-              .first()
+      // === GESTION DU STOCK + ENRICHISSEMENT (dans une transaction) ===
+      const trx = await db.transaction()
 
-            if (product) {
-              return {
+      try {
+        // Séparer items avec/sans productId
+        const itemsWithProduct = payload.items.filter((item) => item.productId)
+        const stockErrors: any[] = []
+        const stockUpdates: any[] = []
+        let productMap = new Map<number, any>()
+
+        // Charger les produits et vérifier le stock
+        if (itemsWithProduct.length > 0) {
+          const productIds = itemsWithProduct.map((item) => item.productId!)
+
+          const products = await Product.query({ client: trx })
+            .whereIn('id', productIds)
+            .preload('media')
+            .forUpdate() // Lock pour éviter les race conditions
+
+          productMap = new Map(products.map((p) => [p.id, p]))
+
+          // Vérifier le stock pour chaque item
+          for (const item of itemsWithProduct) {
+            const product = productMap.get(item.productId!)
+
+            if (!product) {
+              stockErrors.push({
                 productId: item.productId,
-                name: item.name || product.name,
-                description: item.description || product.description || null,
-                price: item.price || product.price,
-                quantity: item.quantity,
-                weight: item.weight || null,
-                urlProduct: item.urlProduct || product.media?.mediaUrl || null,
-              }
+                productName: item.name,
+                error: 'Produit non trouvé',
+              })
+              continue
+            }
+
+            if (product.stock < item.quantity) {
+              stockErrors.push({
+                productId: item.productId,
+                productName: item.name,
+                requestedQuantity: item.quantity,
+                availableStock: product.stock,
+                error: 'Stock insuffisant',
+              })
+            }
+          }
+
+          // Si erreurs de stock, annuler
+          if (stockErrors.length > 0) {
+            await trx.rollback()
+            return response.status(400).json({
+              success: false,
+              message: 'Stock insuffisant pour certains produits',
+              errors: stockErrors,
+            })
+          }
+        }
+
+        // Enrichir les items avec les données produit (image, description, prix)
+        const enrichedItems = payload.items.map((item) => {
+          if (item.productId && productMap.has(item.productId)) {
+            const product = productMap.get(item.productId)!
+            return {
+              productId: item.productId,
+              name: item.name || product.name,
+              description: item.description || product.description || null,
+              price: item.price || product.price,
+              quantity: item.quantity,
+              weight: item.weight || null,
+              urlProduct: item.urlProduct || product.media?.mediaUrl || null,
             }
           }
           return {
@@ -169,58 +221,120 @@ export default class ExpressOrdersController {
             weight: item.weight || null,
             urlProduct: item.urlProduct || null,
           }
+        }) as any
+
+        // Créer la commande dans la transaction
+        const order = await CommandeExpress.create({
+          orderId: randomUUID(),
+          statut: CommandeExpressStatus.PENDING_PAYMENT,
+          clientId: client.id,
+          clientName: client.name,
+          clientPhone: client.phone,
+          vendorId: user.id,
+          packageValue: payload.packageValue,
+          packageDescription: payload.packageDescription,
+          pickupAddress: payload.pickupAddress || '',
+          deliveryAddress: payload.deliveryAddress || client.defaultAddress || '',
+          pickupReference: payload.pickupReference || null,
+          deliveryReference: payload.deliveryReference || client.defaultReference || null,
+          createdBy: user.id,
+          items: enrichedItems,
+          deliveryPersonId: null,
+          paymentMethodId: null,
+          packagePhoto: null,
+          packagePhotoPublicId: null,
+          codeColis: initialCodeColis,
+          deliveryFee,
+          totalAvecLivraison,
+          latitude: payload.latitude || null,
+          longitude: payload.longitude || null,
+          clientLatitude: clientLat,
+          clientLongitude: clientLng,
+          vendorLatitude: vendorLat,
+          vendorLongitude: vendorLng,
+          address: payload.address || null,
+          numeroPayment: null,
+        }, { client: trx })
+
+        // Déduire le stock pour les items avec productId
+        for (const item of itemsWithProduct) {
+          const product = productMap.get(item.productId!)!
+          const previousStock = product.stock
+
+          await Product.query({ client: trx })
+            .where('id', item.productId!)
+            .decrement('stock', item.quantity)
+
+          stockUpdates.push({
+            productId: item.productId,
+            productName: item.name,
+            previousStock,
+            newStock: previousStock - item.quantity,
+            deducted: item.quantity,
+          })
+        }
+
+        // Commit la transaction
+        await trx.commit()
+
+        // Logger la création (hors transaction)
+        await CommandeExpressLog.create({
+          logId: randomUUID(),
+          orderId: order.orderId,
+          oldStatus: null,
+          newStatus: CommandeExpressStatus.PENDING_PAYMENT,
+          changedBy: user.id,
+          changedByRole: user.role,
+          reason: 'Initialisation de la commande express',
         })
-      ) as any
 
-      // Créer la commande
-      const order = await CommandeExpress.create({
-        orderId: randomUUID(),
-        statut: CommandeExpressStatus.PENDING_PAYMENT,
-        clientId: client.id,
-        clientName: client.name,
-        clientPhone: client.phone,
-        vendorId: user.id,
-        packageValue: payload.packageValue,
-        packageDescription: payload.packageDescription,
-        pickupAddress: payload.pickupAddress || '',
-        deliveryAddress: payload.deliveryAddress || client.defaultAddress || '',
-        pickupReference: payload.pickupReference || null,
-        deliveryReference: payload.deliveryReference || client.defaultReference || null,
-        createdBy: user.id,
-        items: enrichedItems,
-        deliveryPersonId: null,
-        paymentMethodId: null,
-        packagePhoto: null,
-        packagePhotoPublicId: null,
-        codeColis: initialCodeColis,
-        deliveryFee,
-        totalAvecLivraison,
-        latitude: payload.latitude || null,
-        longitude: payload.longitude || null,
-        clientLatitude: clientLat,
-        clientLongitude: clientLng,
-        vendorLatitude: vendorLat,
-        vendorLongitude: vendorLng,
-        address: payload.address || null,
-        numeroPayment: null,
-      })
+        // Enregistrer dans Firebase pour les notifications
+        let firebaseDocId: string | null = null
+        try {
+          firebaseDocId = await saveCommandeExpressToFirestore({
+            timestamp: admin.firestore.FieldValue.serverTimestamp(),
+            orderId: order.orderId,
+            clientId: order.clientId,
+            clientName: order.clientName,
+            clientPhone: order.clientPhone,
+            vendorId: order.vendorId,
+            packageValue: order.packageValue,
+            packageDescription: order.packageDescription,
+            pickupAddress: order.pickupAddress,
+            deliveryAddress: order.deliveryAddress,
+            pickupReference: order.pickupReference,
+            deliveryReference: order.deliveryReference,
+            statut: order.statut,
+            items: order.items,
+            deliveryPersonId: order.deliveryPersonId,
+            createdBy: order.createdBy,
+          })
+          logger.info('Commande express enregistrée dans Firebase', {
+            firebaseDocId,
+            orderId: order.orderId,
+          })
+        } catch (firebaseError) {
+          logger.error('Erreur Firebase (non bloquant)', { error: firebaseError.message })
+        }
 
-      // Logger la création
-      await CommandeExpressLog.create({
-        logId: randomUUID(),
-        orderId: order.orderId,
-        oldStatus: null,
-        newStatus: CommandeExpressStatus.PENDING_PAYMENT,
-        changedBy: user.id,
-        changedByRole: user.role,
-        reason: 'Initialisation de la commande express',
-      })
+        if (stockUpdates.length > 0) {
+          logger.info('Stock déduit pour commande express', {
+            orderId: order.orderId,
+            stockUpdates,
+          })
+        }
 
-      return response.status(201).json({
-        success: true,
-        message: 'Commande express initialisée avec succès',
-        order,
-      })
+        return response.status(201).json({
+          success: true,
+          message: 'Commande express initialisée avec succès',
+          order,
+          stockUpdates: stockUpdates.length > 0 ? stockUpdates : undefined,
+          firebaseDocId,
+        })
+      } catch (trxError) {
+        await trx.rollback()
+        throw trxError
+      }
     } catch (error) {
       logger.error('Erreur initialisation commande express', { error: error.message })
       return response.status(500).json({
