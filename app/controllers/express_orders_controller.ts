@@ -770,6 +770,7 @@ export default class ExpressOrdersController {
         .whereIn('statut', [
           CommandeExpressStatus.ACCEPTE_LIVREUR,
           CommandeExpressStatus.EN_ROUTE,
+          CommandeExpressStatus.DELIVERED,
         ])
         .orderBy('updated_at', 'desc')
 
