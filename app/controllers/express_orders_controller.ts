@@ -288,35 +288,6 @@ export default class ExpressOrdersController {
           reason: 'Initialisation de la commande express',
         })
 
-        // Enregistrer dans Firebase pour les notifications
-        let firebaseDocId: string | null = null
-        try {
-          firebaseDocId = await saveCommandeExpressToFirestore({
-            timestamp: admin.firestore.FieldValue.serverTimestamp(),
-            orderId: order.orderId,
-            clientId: order.clientId,
-            clientName: order.clientName,
-            clientPhone: order.clientPhone,
-            vendorId: order.vendorId,
-            packageValue: order.packageValue,
-            packageDescription: order.packageDescription,
-            pickupAddress: order.pickupAddress,
-            deliveryAddress: order.deliveryAddress,
-            pickupReference: order.pickupReference,
-            deliveryReference: order.deliveryReference,
-            statut: order.statut,
-            items: order.items,
-            deliveryPersonId: order.deliveryPersonId,
-            createdBy: order.createdBy,
-          })
-          logger.info('Commande express enregistrée dans Firebase', {
-            firebaseDocId,
-            orderId: order.orderId,
-          })
-        } catch (firebaseError) {
-          logger.error('Erreur Firebase (non bloquant)', { error: firebaseError.message })
-        }
-
         if (stockUpdates.length > 0) {
           logger.info('Stock déduit pour commande express', {
             orderId: order.orderId,
@@ -329,7 +300,6 @@ export default class ExpressOrdersController {
           message: 'Commande express initialisée avec succès',
           order,
           stockUpdates: stockUpdates.length > 0 ? stockUpdates : undefined,
-          firebaseDocId,
         })
       } catch (trxError) {
         await trx.rollback()
@@ -517,6 +487,34 @@ export default class ExpressOrdersController {
         // Générer nouveau code pour le livreur
         const newCodeForDelivery = Math.floor(1000 + Math.random() * 9000).toString()
         order.codeColis = newCodeForDelivery
+
+        // Enregistrer dans Firebase pour les notifications (livreurs)
+        try {
+          const firebaseDocId = await saveCommandeExpressToFirestore({
+            timestamp: admin.firestore.FieldValue.serverTimestamp(),
+            orderId: order.orderId,
+            clientId: order.clientId,
+            clientName: order.clientName,
+            clientPhone: order.clientPhone,
+            vendorId: order.vendorId,
+            packageValue: order.packageValue,
+            packageDescription: order.packageDescription,
+            pickupAddress: order.pickupAddress,
+            deliveryAddress: order.deliveryAddress,
+            pickupReference: order.pickupReference,
+            deliveryReference: order.deliveryReference,
+            statut: CommandeExpressStatus.PRET_A_EXPEDIER,
+            items: order.items,
+            deliveryPersonId: order.deliveryPersonId,
+            createdBy: order.createdBy,
+          })
+          logger.info('Commande express enregistrée dans Firebase (pret_a_expedier)', {
+            firebaseDocId,
+            orderId: order.orderId,
+          })
+        } catch (firebaseError) {
+          logger.error('Erreur Firebase (non bloquant)', { error: firebaseError.message })
+        }
       }
 
       // Assigner le livreur quand il accepte

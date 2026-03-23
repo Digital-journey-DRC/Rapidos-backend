@@ -185,19 +185,18 @@ Content-Type: application/json
   "clientId": 12,
   "items": [
     {
-      "productId": 1,
-      "name": "Samsung Galaxy",
+      "productId": 10,
+      "name": "Samsung Galaxy S24 Ultra",
       "quantity": 2
     },
     {
+      "productId": 3,
       "name": "Coque protection",
-      "description": "Coque silicone transparente",
-      "quantity": 1,
-      "price": 5000
+      "quantity": 1
     }
   ],
-  "packageValue": 460000,
-  "packageDescription": "Smartphone + accessoires",
+  "packageValue": 3350000,
+  "packageDescription": "2x Samsung S24 Ultra + coque",
   "pickupAddress": "Bureau vendeur, Gombe",
   "deliveryAddress": "123 Avenue du Port, Gombe",
   "latitude": -4.3217,
@@ -208,7 +207,7 @@ Content-Type: application/json
 **Champs items :**
 | Champ | Type | Obligatoire | Description |
 |-------|------|-------------|-------------|
-| `productId` | number | Non | ID du produit dans le catalogue. Si fourni, `description`, `price` et `urlProduct` sont auto-remplis depuis la base |
+| `productId` | number | **Oui** | ID du produit dans le catalogue. Obligatoire pour la gestion du stock. `description`, `price` et `urlProduct` sont auto-remplis depuis la base |
 | `name` | string | **Oui** | Nom du produit/colis |
 | `description` | string | Non | Description (auto-remplie si `productId` fourni) |
 | `price` | number | Non | Prix unitaire (auto-rempli si `productId` fourni) |

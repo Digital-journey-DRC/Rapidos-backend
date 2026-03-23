@@ -8,7 +8,7 @@ export const initializeExpressOrderValidator = vine.compile(
     clientId: vine.number().positive(),
     items: vine.array(
       vine.object({
-        productId: vine.number().positive().optional(),
+        productId: vine.number().positive(),
         name: vine.string().trim(),
         description: vine.string().trim().optional(),
         price: vine.number().positive().optional(),
