@@ -302,7 +302,15 @@ export default class CommandeExpressController {
           pickupReference: commandeExpress.pickupReference,
           deliveryReference: commandeExpress.deliveryReference,
           statut: commandeExpress.statut,
-          items: commandeExpress.items,
+          items: (commandeExpress.items as any[]).map((item) => ({
+            productId: item.productId ?? null,
+            name: item.name,
+            description: item.description ?? null,
+            price: item.price ?? null,
+            quantity: item.quantity,
+            weight: item.weight ?? null,
+            urlProduct: item.urlProduct ?? null,
+          })),
           deliveryPersonId: commandeExpress.deliveryPersonId,
           createdBy: commandeExpress.createdBy,
         })
@@ -314,6 +322,7 @@ export default class CommandeExpressController {
         // Ne pas bloquer la création si Firebase échoue
         logger.error('Erreur enregistrement commande express dans Firebase (non bloquant)', {
           error: firebaseError.message,
+          code: firebaseError.code,
           orderId: commandeExpress.orderId,
         })
       }

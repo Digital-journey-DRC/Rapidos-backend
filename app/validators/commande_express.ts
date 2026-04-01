@@ -19,7 +19,7 @@ export const createCommandeExpressValidator = vine.compile(
     statut: vine.enum(['pending', 'en_cours', 'livre', 'annule']).optional(),
     items: vine.array(
       vine.object({
-        productId: vine.number().positive().optional(),
+        productId: vine.number().positive(),
         name: vine.string().trim().minLength(1),
         description: vine.string().trim().optional(),
         price: vine.number().positive().decimal([0, 2]).optional(),
