@@ -403,6 +403,10 @@ export default class EcommerceOrdersController {
             ? `${order.vendor.firstName || ''} ${order.vendor.lastName || ''}`.trim() 
             : null,
           vendorPhone: order.vendor?.phone || null,
+          clientLatitude: order.clientUser?.latitude ?? order.latitude ?? null,
+          clientLongitude: order.clientUser?.longitude ?? order.longitude ?? null,
+          vendorLatitude: order.vendor?.latitude ?? null,
+          vendorLongitude: order.vendor?.longitude ?? null,
           paymentMethod: order.paymentMethod
             ? {
                 id: order.paymentMethod.id,

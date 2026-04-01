@@ -1,0 +1,136 @@
+========================================================
+PROMPT — Menu "Frais de livraison" dans le Dashboard Admin
+========================================================
+
+CONTEXTE
+--------
+Ajouter un menu "Frais de livraison" dans le sidebar du dashboard admin.
+Ce menu permet à l'admin de configurer le calcul des frais de livraison en temps réel.
+BASE URL : http://localhost:3333 (ou l'URL de prod)
+Auth : toutes les requêtes nécessitent → Authorization: Bearer <token_admin>
+
+
+MENU SIDEBAR
+------------
+Icône : 📦
+Libellé : Frais de livraison
+Route : /admin/frais-livraison
+
+
+========================================================
+PAGE : /admin/frais-livraison
+========================================================
+
+SECTION 1 — TYPE DE CALCUL ACTIF
+---------------------------------
+Au chargement, appeler :
+  GET /admin/delivery-fee-settings
+
+Réponse reçue :
+{
+  "activeType": "distance",       ← type actif ("flat" | "distance" | "commune")
+  "flatFee": null,
+  "distanceBaseFee": "1000.00",
+  "distancePerKmFee": "1000.00",
+  "communeDefaultFee": "10000.00"
+}
+
+Afficher 3 cartes/onglets cliquables :
+
+┌─────────────────────────────────┐
+│  🔒 FORFAITAIRE (flat)          │
+│  Un prix unique pour tous       │
+│  Champ : Prix fixe (FC)         │
+│  → flatFee                      │
+└─────────────────────────────────┘
+
+┌─────────────────────────────────┐
+│  📏 PAR DISTANCE (distance)     │
+│  Base + Distance × Prix/km      │
+│  Champ 1 : Frais de base (FC)   │
+│  → distanceBaseFee              │
+│  Champ 2 : Prix par km (FC)     │
+│  → distancePerKmFee             │
+└─────────────────────────────────┘
+
+┌─────────────────────────────────┐
+│  🗺️ PAR COMMUNE (commune)       │
+│  Prix selon la zone             │
+│  Champ : Frais par défaut (FC)  │
+│  → communeDefaultFee            │
+│  (si commune inconnue)          │
+└─────────────────────────────────┘
+
+La carte correspondant à activeType est sélectionnée/surlignée par défaut.
+Les champs sont pré-remplis avec les valeurs reçues.
+
+Bouton "Enregistrer" → PUT /admin/delivery-fee-settings
+
+Body à envoyer selon le type sélectionné :
+
+  Type flat :
+  { "activeType": "flat", "flatFee": 5000 }
+
+  Type distance :
+  { "activeType": "distance", "distanceBaseFee": 1000, "distancePerKmFee": 1000 }
+
+  Type commune :
+  { "activeType": "commune", "communeDefaultFee": 10000 }
+
+Réponse succès :
+{ "success": true, "message": "Configuration mise à jour avec succès", "settings": { ... } }
+
+
+SECTION 2 — TARIFS PAR COMMUNE
+-------------------------------
+Visible UNIQUEMENT si activeType === "commune"
+
+Charger la liste :
+  GET /admin/communes
+
+Réponse :
+{
+  "communes": [
+    { "id": 1, "communeName": "Gombe",  "fee": "6000.00", "isActive": true },
+    { "id": 2, "communeName": "Limete", "fee": "3000.00", "isActive": true }
+  ]
+}
+
+Afficher un tableau avec les colonnes :
+  Commune | Prix (FC) | Actif | Actions (Modifier / Supprimer)
+
+--- Ajouter une commune ---
+Bouton "+ Ajouter"
+POST /admin/communes
+Body : { "communeName": "Masina", "fee": 4000 }
+
+--- Modifier une commune ---
+PUT /admin/communes/:id
+Body : { "fee": 4500, "isActive": true }
+
+--- Supprimer une commune ---
+DELETE /admin/communes/:id
+Demander confirmation avant suppression.
+
+
+========================================================
+NOTES UX
+========================================================
+- Toast de succès (vert) après chaque action réussie
+- Toast d'erreur (rouge) si la requête échoue
+- Tous les montants sont en Francs Congolais (FC)
+- La section "Tarifs par commune" s'affiche/masque dynamiquement
+  selon le type actif sélectionné
+- Champs numériques uniquement (pas de lettres)
+- Bouton "Enregistrer" désactivé si aucun changement
+
+
+========================================================
+RÉSUMÉ DES ENDPOINTS
+========================================================
+GET    /admin/delivery-fee-settings       → voir config actuelle
+PUT    /admin/delivery-fee-settings       → modifier le type et les tarifs
+GET    /admin/communes                    → lister les communes
+POST   /admin/communes                    → ajouter une commune
+PUT    /admin/communes/:id                → modifier une commune
+DELETE /admin/communes/:id               → supprimer une commune
