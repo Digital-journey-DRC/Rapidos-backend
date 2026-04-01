@@ -9,6 +9,7 @@ import db from '@adonisjs/lucid/services/db'
 import PaymentMethod from '#models/payment_method'
 import PaymentMethodTemplate from '#models/payment_method_template'
 import { DistanceCalculator } from '#services/distance_calculator'
+import { DeliveryFeeCalculator } from '#services/delivery_fee_calculator'
 import Product from '#models/product'
 import User from '#models/user'
 import Media from '#models/media'
@@ -957,14 +958,18 @@ export default class EcommerceOrdersController {
           })
         }
 
-        // Calculer la distance entre le client et le vendeur
+        // Calculer la distance (pour stockage en BD)
         const distance = DistanceCalculator.calculateDistance(
           { latitude: payload.latitude, longitude: payload.longitude },
           { latitude: vendor.latitude, longitude: vendor.longitude }
         )
 
         // Calculer les frais de livraison
-        const deliveryFee = DistanceCalculator.calculateDeliveryFee(distance)
+        const deliveryFee = await DeliveryFeeCalculator.calculate({
+          commune: payload.address?.commune,
+          clientCoords: { latitude: payload.latitude, longitude: payload.longitude },
+          vendorCoords: { latitude: vendor.latitude, longitude: vendor.longitude }
+        })
 
         // Calculer le total des produits
         const totalProduits = vendorProducts.reduce(

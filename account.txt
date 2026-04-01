@@ -3,9 +3,14 @@ uid: +243828191010
 password: 0826016607Makengo?
 
 
-Vendeur: 
+Vendeur1: 
 uid: +243826016607
 password: 0826016607Makengo@
+
+
+Vendeur2: 
+uid: +243990890450
+password: Vendeur@0243
 
 
 Livreur: 

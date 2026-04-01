@@ -13,7 +13,7 @@ import {
 import { randomUUID } from 'node:crypto'
 import logger from '@adonisjs/core/services/logger'
 import ecommerceCloudinaryService from '#services/ecommerce_cloudinary_service'
-import { DistanceCalculator } from '#services/distance_calculator'
+import { DeliveryFeeCalculator } from '#services/delivery_fee_calculator'
 import Product from '#models/product'
 import db from '@adonisjs/lucid/services/db'
 import { saveCommandeExpressToFirestore } from '#services/firebase_service'
@@ -130,11 +130,11 @@ export default class ExpressOrdersController {
       // Calculer frais de livraison si coordonnées disponibles
       let deliveryFee = 0
       if (vendorLat && vendorLng && clientLat && clientLng) {
-        const vendorCoords = { latitude: vendorLat, longitude: vendorLng }
-        const clientCoords = { latitude: clientLat, longitude: clientLng }
-        
-        const distance = DistanceCalculator.calculateDistance(vendorCoords, clientCoords)
-        deliveryFee = DistanceCalculator.calculateDeliveryFee(distance)
+        deliveryFee = await DeliveryFeeCalculator.calculate({
+          commune: payload.address?.commune,
+          clientCoords: { latitude: clientLat, longitude: clientLng },
+          vendorCoords: { latitude: vendorLat, longitude: vendorLng }
+        })
       }
 
       const totalAvecLivraison = payload.packageValue + deliveryFee
@@ -588,11 +588,14 @@ export default class ExpressOrdersController {
       if (payload.status === CommandeExpressStatus.EN_ROUTE && order.clientPhone) {
         try {
           const client = await ClientExpress.find(order.clientId)
-          if (client) {
-            // TODO: Intégrer votre service SMS ici
-            logger.info('SMS à envoyer au client', {
-              phone: client.phone,
-              message: `Votre colis est en route! Code de livraison: ${order.codeColis}`,
+          if (client && client.phone) {
+            const SmsService = (await import('#services/smsservice')).default
+            const message = `Votre colis est en route! Code de livraison: ${order.codeColis}`
+            
+            await SmsService.envoyerSmsPersonnalise(client.phone, message)
+            
+            logger.info('SMS envoyé au client avec succès', {
+              phone: SmsService.formatPhoneNumber(client.phone),
               orderId: order.orderId,
             })
           }

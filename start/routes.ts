@@ -11,6 +11,7 @@ const EventsController = () => import('#controllers/events_controller')
 const EcommerceOrdersController = () => import('#controllers/ecommerce_orders_controller')
 const PaymentMethodsController = () => import('#controllers/payment_methods_controller')
 const AdminTransactionsController = () => import('#controllers/admin_transactions_controller')
+const DeliveryFeeSettingsController = () => import('#controllers/delivery_fee_settings_controller')
 
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
@@ -735,4 +736,42 @@ router
 
 // ============================================================
 // FIN MODULE STATISTIQUES LIVREUR
+// ============================================================
+
+// ============================================================
+// MODULE ADMIN DELIVERY FEE SETTINGS
+// ============================================================
+
+// GET /admin/delivery-fee-settings - Voir la configuration actuelle
+router
+  .get('/admin/delivery-fee-settings', [DeliveryFeeSettingsController, 'show'])
+  .use(middleware.auth({ guards: ['api'] }))
+
+// PUT /admin/delivery-fee-settings - Modifier la configuration
+router
+  .put('/admin/delivery-fee-settings', [DeliveryFeeSettingsController, 'update'])
+  .use(middleware.auth({ guards: ['api'] }))
+
+// GET /admin/communes - Lister toutes les communes
+router
+  .get('/admin/communes', [DeliveryFeeSettingsController, 'indexCommunes'])
+  .use(middleware.auth({ guards: ['api'] }))
+
+// POST /admin/communes - Créer une commune
+router
+  .post('/admin/communes', [DeliveryFeeSettingsController, 'createCommune'])
+  .use(middleware.auth({ guards: ['api'] }))
+
+// PUT /admin/communes/:id - Modifier une commune
+router
+  .put('/admin/communes/:id', [DeliveryFeeSettingsController, 'updateCommune'])
+  .use(middleware.auth({ guards: ['api'] }))
+
+// DELETE /admin/communes/:id - Supprimer une commune
+router
+  .delete('/admin/communes/:id', [DeliveryFeeSettingsController, 'deleteCommune'])
+  .use(middleware.auth({ guards: ['api'] }))
+
+// ============================================================
+// FIN MODULE ADMIN DELIVERY FEE SETTINGS
 // ============================================================
