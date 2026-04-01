@@ -5,6 +5,7 @@ import {
   createCommandeExpressValidator,
   updateCommandeExpressStatusValidator,
   assignDeliveryPersonValidator,
+  cancelCommandeExpressVendeurValidator,
 } from '#validators/commande_express'
 import { randomUUID } from 'node:crypto'
 import logger from '@adonisjs/core/services/logger'
@@ -892,6 +893,159 @@ export default class CommandeExpressController {
       return response.status(500).json({
         success: false,
         message: 'Erreur lors de la récupération de vos livraisons',
+        error: error.message,
+      })
+    }
+  }
+
+  /**
+   * PATCH /commande-express/vendeur/:id/annuler
+   * Annuler une commande express en tant que vendeur
+   * Règles :
+   *   - L'utilisateur connecté doit être le vendeur de la commande (vendor_id)
+   *   - La commande doit être dans un statut annulable (pending_payment, pending, en_preparation, pret_a_expedier)
+   *   - Le stock des produits liés est restauré
+   */
+  async annulerVendeur({ params, request, response, auth }: HttpContext) {
+    const trx = await db.transaction()
+
+    try {
+      const user = auth.user!
+      const payload = await request.validateUsing(cancelCommandeExpressVendeurValidator)
+
+      // Récupérer la commande avec lock pour éviter les race conditions
+      let commande = await CommandeExpress.query({ client: trx })
+        .where('id', params.id)
+        .forUpdate()
+        .first()
+
+      if (!commande) {
+        commande = await CommandeExpress.query({ client: trx })
+          .where('orderId', params.id)
+          .forUpdate()
+          .first()
+      }
+
+      if (!commande) {
+        await trx.rollback()
+        return response.status(404).json({
+          success: false,
+          message: 'Commande express non trouvée',
+        })
+      }
+
+      // Vérifier que le vendeur connecté est bien propriétaire de la commande
+      if (commande.vendorId !== user.id) {
+        await trx.rollback()
+        return response.status(403).json({
+          success: false,
+          message: 'Vous n\'êtes pas autorisé à annuler cette commande',
+        })
+      }
+
+      // Statuts qui autorisent l'annulation par le vendeur
+      const statutsAnnulables: string[] = [
+        CommandeExpressStatus.PENDING_PAYMENT,
+        CommandeExpressStatus.PENDING,
+        CommandeExpressStatus.EN_PREPARATION,
+        CommandeExpressStatus.PRET_A_EXPEDIER,
+      ]
+
+      const statutActuel = String(commande.statut)
+
+      if (commande.statut === CommandeExpressStatus.CANCELLED) {
+        await trx.rollback()
+        return response.status(409).json({
+          success: false,
+          message: 'Cette commande est déjà annulée',
+        })
+      }
+
+      if (!statutsAnnulables.includes(statutActuel)) {
+        await trx.rollback()
+        return response.status(422).json({
+          success: false,
+          message: 'Impossible d\'annuler cette commande : un livreur a déjà pris en charge la livraison ou la commande est terminée',
+          statut_actuel: statutActuel,
+          statuts_annulables: statutsAnnulables,
+        })
+      }
+
+      const ancienStatut = commande.statut
+
+      // Restaurer le stock pour les items ayant un productId
+      const itemsAvecProduit = commande.items.filter((item) => item.productId)
+      const stockRestaure: any[] = []
+
+      for (const item of itemsAvecProduit) {
+        const product = await Product.find(item.productId!, { client: trx })
+
+        if (product) {
+          const stockPrecedent = product.stock
+
+          await Product.query({ client: trx })
+            .where('id', item.productId!)
+            .increment('stock', item.quantity)
+
+          stockRestaure.push({
+            productId: item.productId,
+            productName: item.name,
+            stockPrecedent,
+            nouveauStock: stockPrecedent + item.quantity,
+            quantiteRestauree: item.quantity,
+          })
+        }
+      }
+
+      // Mettre à jour le statut en annulé
+      commande.statut = CommandeExpressStatus.CANCELLED
+      await commande.useTransaction(trx).save()
+
+      await trx.commit()
+
+      logger.info('Commande express annulée par le vendeur', {
+        commandeId: commande.id,
+        orderId: commande.orderId,
+        vendorId: user.id,
+        ancienStatut,
+        raison: payload.raison || null,
+        stockRestaure: stockRestaure.length,
+      })
+
+      return response.status(200).json({
+        success: true,
+        message: 'Commande express annulée avec succès',
+        data: {
+          commande: {
+            id: commande.id,
+            orderId: commande.orderId,
+            statut: commande.statut,
+            ancienStatut,
+          },
+          raison: payload.raison || null,
+          stockRestaure: stockRestaure.length > 0 ? stockRestaure : null,
+        },
+      })
+    } catch (error) {
+      await trx.rollback()
+
+      if (error.code === 'E_VALIDATION_ERROR') {
+        return response.status(422).json({
+          success: false,
+          message: 'Erreur de validation',
+          errors: error.messages,
+        })
+      }
+
+      logger.error('Erreur annulation commande express vendeur', {
+        commandeId: params.id,
+        vendorId: auth.user?.id,
+        error: error.message,
+      })
+
+      return response.status(500).json({
+        success: false,
+        message: 'Erreur lors de l\'annulation de la commande',
         error: error.message,
       })
     }

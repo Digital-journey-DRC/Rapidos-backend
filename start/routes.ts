@@ -606,6 +606,11 @@ router
   .get('/commande-express/vendeur/mes-commandes', [CommandeExpressController, 'mesCommandesVendeur'])
   .use(middleware.auth({ guards: ['api'] }))
 
+// PATCH /commande-express/vendeur/:id/annuler - Annuler une commande express (vendeur propriétaire)
+router
+  .patch('/commande-express/vendeur/:id/annuler', [CommandeExpressController, 'annulerVendeur'])
+  .use(middleware.auth({ guards: ['api'] }))
+
 // GET /commande-express/:id - Détails d'une commande express
 router
   .get('/commande-express/:id', [CommandeExpressController, 'show'])

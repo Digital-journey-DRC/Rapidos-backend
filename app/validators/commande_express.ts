@@ -49,3 +49,12 @@ export const assignDeliveryPersonValidator = vine.compile(
     deliveryPersonId: vine.number().positive(),
   })
 )
+
+/**
+ * Validator pour l'annulation d'une commande express par le vendeur
+ */
+export const cancelCommandeExpressVendeurValidator = vine.compile(
+  vine.object({
+    raison: vine.string().trim().minLength(3).maxLength(500).optional(),
+  })
+)
