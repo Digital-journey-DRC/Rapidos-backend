@@ -68,7 +68,7 @@ export default class StatistiquesLivreurController {
              COUNT(*)::int AS total_livraisons_effectuees,
              COALESCE(SUM(package_value), 0) AS montant_total
            FROM commande_express
-           WHERE delivery_person_id = ? AND statut = 'livre' AND ${dateSql()}`,
+           WHERE delivery_person_id = ? AND statut = 'delivered' AND ${dateSql()}`,
           [livreurId]
         )
         expressResume = r.rows[0] || expressResume
@@ -103,7 +103,7 @@ export default class StatistiquesLivreurController {
            FROM commande_express ce
            LEFT JOIN users u ON ce.client_id = u.id
            LEFT JOIN users v ON ce.vendor_id = v.id
-           WHERE ce.delivery_person_id = ? AND ce.statut = 'livre' AND ${dateSql('ce')}
+           WHERE ce.delivery_person_id = ? AND ce.statut = 'delivered' AND ${dateSql('ce')}
            ORDER BY ce.created_at DESC`,
           [livreurId]
         )
@@ -242,7 +242,7 @@ export default class StatistiquesLivreurController {
              COUNT(DISTINCT ce.id)::int AS nombre_livraisons
            FROM commande_express ce,
                 jsonb_array_elements(ce.items) AS item
-           WHERE ce.delivery_person_id = ? AND ce.statut = 'livre' AND ${dateSql('ce')}
+           WHERE ce.delivery_person_id = ? AND ce.statut = 'delivered' AND ${dateSql('ce')}
            GROUP BY item->>'name', item->>'productId'`,
           [livreurId]
         )
@@ -304,7 +304,7 @@ export default class StatistiquesLivreurController {
              MAX(ce.created_at) AS derniere_livraison
            FROM commande_express ce
            LEFT JOIN users u ON ce.client_id = u.id
-           WHERE ce.delivery_person_id = ? AND ce.statut = 'livre' AND ${dateSql('ce')}
+           WHERE ce.delivery_person_id = ? AND ce.statut = 'delivered' AND ${dateSql('ce')}
            GROUP BY ce.client_id, ce.client_name, ce.client_phone, u.email, u.first_name, u.last_name`,
           [livreurId]
         )

@@ -27,11 +27,11 @@ export default class StatistiquesVendeurController {
         `SELECT 
            COUNT(*)::int AS total_commandes,
            COALESCE(SUM(package_value), 0) AS chiffre_affaires_total,
-           COALESCE(SUM(CASE WHEN statut = 'livre' THEN package_value ELSE 0 END), 0) AS chiffre_affaires_livre,
+           COALESCE(SUM(CASE WHEN statut = 'delivered' THEN package_value ELSE 0 END), 0) AS chiffre_affaires_livre,
            COUNT(CASE WHEN statut = 'pending' THEN 1 END)::int AS en_attente,
-           COUNT(CASE WHEN statut = 'en_cours' THEN 1 END)::int AS en_cours,
-           COUNT(CASE WHEN statut = 'livre' THEN 1 END)::int AS livrees,
-           COUNT(CASE WHEN statut = 'annule' THEN 1 END)::int AS annulees
+           COUNT(CASE WHEN statut = 'en_route' THEN 1 END)::int AS en_cours,
+           COUNT(CASE WHEN statut = 'delivered' THEN 1 END)::int AS livrees,
+           COUNT(CASE WHEN statut = 'cancelled' THEN 1 END)::int AS annulees
          FROM commande_express
          WHERE vendor_id = ?`,
         [vendorId]
@@ -57,7 +57,7 @@ export default class StatistiquesVendeurController {
            TO_CHAR(created_at, 'YYYY-MM') AS mois,
            COUNT(*)::int AS nombre,
            COALESCE(SUM(package_value), 0) AS montant_total,
-           COUNT(CASE WHEN statut = 'livre' THEN 1 END)::int AS livrees
+           COUNT(CASE WHEN statut = 'delivered' THEN 1 END)::int AS livrees
          FROM commande_express
          WHERE vendor_id = ?
            AND created_at >= NOW() - INTERVAL '12 months'
@@ -341,7 +341,7 @@ export default class StatistiquesVendeurController {
              COUNT(*)::int AS total_commandes_livrees,
              COALESCE(SUM(package_value), 0) AS chiffre_affaires
            FROM commande_express
-           WHERE vendor_id = ? AND statut = 'livre' AND ${dateSql()}`,
+           WHERE vendor_id = ? AND statut = 'delivered' AND ${dateSql()}`,
           [vendorId]
         )
         expressResume = r.rows[0] || expressResume
@@ -373,7 +373,7 @@ export default class StatistiquesVendeurController {
              ce.pickup_address, ce.delivery_address, ce.created_at
            FROM commande_express ce
            LEFT JOIN users u ON ce.client_id = u.id
-           WHERE ce.vendor_id = ? AND ce.statut = 'livre' AND ${dateSql('ce')}
+           WHERE ce.vendor_id = ? AND ce.statut = 'delivered' AND ${dateSql('ce')}
            ORDER BY ce.created_at DESC`,
           [vendorId]
         )
@@ -501,7 +501,7 @@ export default class StatistiquesVendeurController {
              COUNT(DISTINCT ce.id)::int AS nombre_commandes
            FROM commande_express ce,
                 jsonb_array_elements(ce.items) AS item
-           WHERE ce.vendor_id = ? AND ce.statut = 'livre' AND ${dateSql('ce')}
+           WHERE ce.vendor_id = ? AND ce.statut = 'delivered' AND ${dateSql('ce')}
            GROUP BY item->>'name', item->>'productId'`,
           [vendorId]
         )
@@ -563,7 +563,7 @@ export default class StatistiquesVendeurController {
              MAX(ce.created_at) AS derniere_commande
            FROM commande_express ce
            LEFT JOIN users u ON ce.client_id = u.id
-           WHERE ce.vendor_id = ? AND ce.statut = 'livre' AND ${dateSql('ce')}
+           WHERE ce.vendor_id = ? AND ce.statut = 'delivered' AND ${dateSql('ce')}
            GROUP BY ce.client_id, ce.client_name, ce.client_phone, u.email, u.first_name, u.last_name`,
           [vendorId]
         )
