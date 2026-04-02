@@ -411,14 +411,16 @@ export default class CommandeExpressController {
 
       return response.status(200).json({
         success: true,
-        data: formattedCommandes,
-        meta: {
-          total: commandes.total,
-          perPage: commandes.perPage,
-          currentPage: commandes.currentPage,
-          lastPage: commandes.lastPage,
-          firstPage: commandes.firstPage,
-          hasMorePages: commandes.hasMorePages,
+        data: {
+          meta: {
+            total: commandes.total,
+            perPage: commandes.perPage,
+            currentPage: commandes.currentPage,
+            lastPage: commandes.lastPage,
+            firstPage: commandes.firstPage,
+            hasMorePages: commandes.hasMorePages,
+          },
+          data: formattedCommandes,
         },
       })
     } catch (error) {
