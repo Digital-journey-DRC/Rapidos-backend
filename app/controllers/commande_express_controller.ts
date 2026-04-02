@@ -395,9 +395,31 @@ export default class CommandeExpressController {
 
       const commandes = await query.paginate(page, limit)
 
+      const formattedCommandes = commandes.all().map((commande) => {
+        const serialized = commande.serialize()
+        return {
+          ...serialized,
+          prixColis: Number(commande.packageValue),
+          fraisLivraison: commande.deliveryFee ?? 0,
+          totalAvecLivraison:
+            commande.totalAvecLivraison ??
+            (commande.deliveryFee
+              ? Number(commande.packageValue) + commande.deliveryFee
+              : Number(commande.packageValue)),
+        }
+      })
+
       return response.status(200).json({
         success: true,
-        data: commandes,
+        data: formattedCommandes,
+        meta: {
+          total: commandes.total,
+          perPage: commandes.perPage,
+          currentPage: commandes.currentPage,
+          lastPage: commandes.lastPage,
+          firstPage: commandes.firstPage,
+          hasMorePages: commandes.hasMorePages,
+        },
       })
     } catch (error) {
       logger.error('Erreur liste commandes express', {

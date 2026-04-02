@@ -1975,6 +1975,9 @@ export default class EcommerceOrdersController {
         return {
           ...serialized,
           paymentMethod,
+          prixColis: Number(order.total),
+          fraisLivraison: order.deliveryFee ?? 0,
+          totalAvecLivraison: order.deliveryFee ? Number(order.total) + order.deliveryFee : Number(order.total),
         }
       })
 
