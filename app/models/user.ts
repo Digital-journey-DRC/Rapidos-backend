@@ -66,10 +66,9 @@ export default class User extends compose(BaseModel, AuthFinder) {
   declare longitude: number | null
 
   @column({
-    prepare: (value: string[]) => JSON.stringify(value ?? []),
     consume: (value: string | string[]) => {
       if (Array.isArray(value)) return value
-      if (typeof value === 'string') return JSON.parse(value)
+      if (value === null || value === undefined) return []
       return []
     },
   })
