@@ -497,6 +497,11 @@ router
   .delete('/admin/users/:id', [AdminUsersController, 'deleteUser'])
   .use(middleware.auth({ guards: ['api'] }))
 
+// PATCH /admin/livreurs/:id/communes - Assigner des communes à un livreur
+router
+  .patch('/admin/livreurs/:id/communes', [AdminUsersController, 'assignCommunes'])
+  .use(middleware.auth({ guards: ['api'] }))
+
 // ============================================================
 // FIN MODULE ADMIN USERS
 // ============================================================

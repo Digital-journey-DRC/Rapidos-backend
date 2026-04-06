@@ -660,11 +660,22 @@ export default class EcommerceOrdersController {
         })
       }
 
-      const deliveries = await EcommerceOrder.query()
+      let deliveriesQuery = EcommerceOrder.query()
         .where('status', EcommerceOrderStatus.PRET_A_EXPEDIER)
         .whereNull('deliveryPersonId') // Seulement les commandes non assignées
         .preload('paymentMethod')
         .orderBy('createdAt', 'desc')
+
+      // Filtrer par communes si le livreur a des zones assignées
+      if (user.communes && user.communes.length > 0) {
+        deliveriesQuery = deliveriesQuery.where((builder) => {
+          builder
+            .whereIn(db.raw("address->>'commune'"), user.communes)
+            .orWhereRaw("(address->>'commune') IS NULL")
+        })
+      }
+
+      const deliveries = await deliveriesQuery
 
       // Récupérer les templates pour les images des moyens de paiement
       const templates = await PaymentMethodTemplate.query()

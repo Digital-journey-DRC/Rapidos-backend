@@ -730,10 +730,21 @@ export default class ExpressOrdersController {
         })
       }
 
-      const deliveries = await CommandeExpress.query()
+      let deliveriesQuery = CommandeExpress.query()
         .where('statut', CommandeExpressStatus.PRET_A_EXPEDIER)
         .whereNull('delivery_person_id')
         .orderBy('created_at', 'desc')
+
+      // Filtrer par communes si le livreur a des zones assignées
+      if (user.communes && user.communes.length > 0) {
+        deliveriesQuery = deliveriesQuery.where((builder) => {
+          builder
+            .whereIn(db.raw("address->>'commune'"), user.communes)
+            .orWhereRaw("(address->>'commune') IS NULL")
+        })
+      }
+
+      const deliveries = await deliveriesQuery
 
       // Enrichir les items avec les images produit si productId présent
       const enrichedDeliveries = await this.enrichDeliveriesItems(deliveries)

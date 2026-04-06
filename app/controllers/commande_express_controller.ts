@@ -850,16 +850,27 @@ export default class CommandeExpressController {
    * GET /commande-express/livreur/disponibles
    * Récupérer les commandes disponibles pour les livreurs (statut pending uniquement)
    */
-  async disponiblesPourLivreur({ request, response }: HttpContext) {
+  async disponiblesPourLivreur({ request, response, auth }: HttpContext) {
     try {
+      const user = auth.user!
       const page = request.input('page', 1)
       const limit = request.input('limit', 20)
 
-      const commandes = await CommandeExpress.query()
+      let commandesQuery = CommandeExpress.query()
         .where('statut', CommandeExpressStatus.PENDING)
         .whereNull('delivery_person_id')
         .orderBy('created_at', 'desc')
-        .paginate(page, limit)
+
+      // Filtrer par communes si le livreur a des zones assignées
+      if (user.communes && user.communes.length > 0) {
+        commandesQuery = commandesQuery.where((builder) => {
+          builder
+            .whereIn(db.raw("address->>'commune'"), user.communes)
+            .orWhereRaw("(address->>'commune') IS NULL")
+        })
+      }
+
+      const commandes = await commandesQuery.paginate(page, limit)
 
       return response.status(200).json({
         success: true,

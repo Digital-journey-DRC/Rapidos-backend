@@ -533,4 +533,95 @@ export default class AdminUsersController {
       })
     }
   }
+
+  /**
+   * PATCH /admin/livreurs/:id/communes
+   * Assigner une ou plusieurs communes à un livreur
+   * Body: { "communes": ["Gombe", "Kalamu"] }
+   * Si communes est un tableau vide [], le livreur voit toutes les commandes (aucune restriction)
+   */
+  async assignCommunes({ params, request, response, auth }: HttpContext) {
+    try {
+      const currentUser = auth.user!
+
+      if (!this.isAdmin(currentUser)) {
+        return response.forbidden({
+          success: false,
+          message: 'Seuls les administrateurs peuvent assigner des communes',
+          status: 403,
+        })
+      }
+
+      const user = await User.find(params.id)
+
+      if (!user) {
+        return response.notFound({
+          success: false,
+          message: 'Utilisateur non trouvé',
+          status: 404,
+        })
+      }
+
+      if (user.role !== UserRole.Livreur) {
+        return response.badRequest({
+          success: false,
+          message: 'Cet utilisateur n\'est pas un livreur',
+          status: 400,
+        })
+      }
+
+      const communes = request.input('communes')
+
+      if (!Array.isArray(communes)) {
+        return response.badRequest({
+          success: false,
+          message: 'Le champ "communes" doit être un tableau (ex: ["Gombe", "Kalamu"])',
+          status: 400,
+        })
+      }
+
+      // Nettoyer et dédupliquer les communes
+      const communesPropres = [...new Set(
+        communes
+          .filter((c) => typeof c === 'string' && c.trim().length > 0)
+          .map((c) => c.trim())
+      )]
+
+      user.communes = communesPropres
+      await user.save()
+
+      logger.info(
+        `[AdminUsers] Communes assignées au livreur #${user.id} par admin #${currentUser.id}`,
+        { communes: communesPropres }
+      )
+
+      return response.ok({
+        success: true,
+        message: communesPropres.length === 0
+          ? 'Restrictions supprimées : le livreur voit toutes les commandes'
+          : `${communesPropres.length} commune(s) assignée(s) au livreur`,
+        status: 200,
+        data: {
+          id: user.id,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          phone: user.phone,
+          role: user.role,
+          communes: user.communes,
+        },
+      })
+    } catch (err) {
+      logger.error('[AdminUsers] Erreur lors de l\'assignation des communes', {
+        message: err.message,
+        stack: err.stack,
+      })
+
+      return response.internalServerError({
+        success: false,
+        message: 'Erreur interne du serveur',
+        status: 500,
+        error: err.message,
+      })
+    }
+  }
 }
