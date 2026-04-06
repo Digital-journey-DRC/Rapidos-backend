@@ -624,4 +624,102 @@ export default class AdminUsersController {
       })
     }
   }
+
+  async listLivreurs({ response, auth }: HttpContext) {
+    try {
+      const currentUser = auth.user!
+
+      if (!this.isAdmin(currentUser)) {
+        return response.forbidden({
+          success: false,
+          message: 'Accès réservé aux administrateurs',
+          status: 403,
+        })
+      }
+
+      const livreurs = await User.query()
+        .where('role', UserRole.Livreur)
+        .orderBy('id', 'asc')
+        .select('id', 'first_name', 'last_name', 'phone', 'email', 'user_status', 'communes')
+
+      return response.ok({
+        success: true,
+        message: `${livreurs.length} livreur(s) trouvé(s)`,
+        status: 200,
+        data: livreurs.map((l) => ({
+          id: l.id,
+          firstName: l.firstName,
+          lastName: l.lastName,
+          phone: l.phone,
+          email: l.email,
+          statut: l.userStatus,
+          communes: l.communes ?? [],
+          nbCommunes: (l.communes ?? []).length,
+        })),
+      })
+    } catch (err) {
+      logger.error('[AdminUsers] Erreur listLivreurs', { message: err.message })
+      return response.internalServerError({
+        success: false,
+        message: 'Erreur interne du serveur',
+        status: 500,
+        error: err.message,
+      })
+    }
+  }
+
+  async getLivreurById({ params, response, auth }: HttpContext) {
+    try {
+      const currentUser = auth.user!
+
+      if (!this.isAdmin(currentUser)) {
+        return response.forbidden({
+          success: false,
+          message: 'Accès réservé aux administrateurs',
+          status: 403,
+        })
+      }
+
+      const livreur = await User.query()
+        .where('id', params.id)
+        .where('role', UserRole.Livreur)
+        .select('id', 'first_name', 'last_name', 'phone', 'email', 'user_status', 'communes', 'latitude', 'longitude', 'created_at', 'updated_at')
+        .first()
+
+      if (!livreur) {
+        return response.notFound({
+          success: false,
+          message: 'Livreur non trouvé',
+          status: 404,
+        })
+      }
+
+      return response.ok({
+        success: true,
+        status: 200,
+        data: {
+          id: livreur.id,
+          firstName: livreur.firstName,
+          lastName: livreur.lastName,
+          phone: livreur.phone,
+          email: livreur.email,
+          statut: livreur.userStatus,
+          latitude: livreur.latitude,
+          longitude: livreur.longitude,
+          communes: livreur.communes ?? [],
+          nbCommunes: (livreur.communes ?? []).length,
+          createdAt: livreur.createdAt,
+          updatedAt: livreur.updatedAt,
+        },
+      })
+    } catch (err) {
+      logger.error('[AdminUsers] Erreur getLivreurById', { message: err.message })
+      return response.internalServerError({
+        success: false,
+        message: 'Erreur interne du serveur',
+        status: 500,
+        error: err.message,
+      })
+    }
+  }
 }

@@ -497,6 +497,16 @@ router
   .delete('/admin/users/:id', [AdminUsersController, 'deleteUser'])
   .use(middleware.auth({ guards: ['api'] }))
 
+// GET /admin/livreurs - Lister tous les livreurs avec leurs communes assignées
+router
+  .get('/admin/livreurs', [AdminUsersController, 'listLivreurs'])
+  .use(middleware.auth())
+
+// GET /admin/livreurs/:id - Détail d'un livreur avec ses communes
+router
+  .get('/admin/livreurs/:id', [AdminUsersController, 'getLivreurById'])
+  .use(middleware.auth())
+
 // PATCH /admin/livreurs/:id/communes - Assigner des communes à un livreur
 router
   .patch('/admin/livreurs/:id/communes', [AdminUsersController, 'assignCommunes'])
