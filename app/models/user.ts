@@ -65,7 +65,14 @@ export default class User extends compose(BaseModel, AuthFinder) {
   @column()
   declare longitude: number | null
 
-  @column()
+  @column({
+    prepare: (value: string[]) => JSON.stringify(value ?? []),
+    consume: (value: string | string[]) => {
+      if (Array.isArray(value)) return value
+      if (typeof value === 'string') return JSON.parse(value)
+      return []
+    },
+  })
   declare communes: string[]
 
   static accessTokens = DbAccessTokensProvider.forModel(User, {
