@@ -605,9 +605,13 @@ export default class AdminUsersController {
           id: user.id,
           firstName: user.firstName,
           lastName: user.lastName,
+          email: user.email,
           phone: user.phone,
           role: user.role,
+          statut: user.userStatus,
           communes: user.communes,
+          nbCommunes: user.communes.length,
+          updatedAt: user.updatedAt,
         },
       })
     } catch (err) {
