@@ -1,16 +1,66 @@
 # Documentation — Gestion des Livreurs & Assignation de Communes
 
-> **Base URL** : `http://localhost:3333`  
-> **Authentification** : Tous ces endpoints nécessitent un token **admin**  
+> **Base URL (production)** : `http://24.144.87.127:3333`
+> **Authentification** : Tous ces endpoints nécessitent un token **admin**
 > Header : `Authorization: Bearer <token_admin>`
 
 ---
 
 ## Table des matières
 
-1. [Lister tous les livreurs](#1-lister-tous-les-livreurs)
-2. [Détail d'un livreur](#2-détail-dun-livreur)
-3. [Assigner des communes à un livreur](#3-assigner-des-communes-à-un-livreur)
+1. [Authentification admin](#0-authentification-admin)
+2. [Lister tous les livreurs](#1-lister-tous-les-livreurs)
+3. [Détail d'un livreur](#2-détail-dun-livreur)
+4. [Assigner des communes à un livreur](#3-assigner-des-communes-à-un-livreur)
+5. [Comportement du filtrage](#4-comportement-du-filtrage)
+6. [Codes d'erreur](#5-codes-derreur)
+
+---
+
+## 0. Authentification admin
+
+Avant tout appel aux endpoints admin, il faut obtenir un token.
+
+```
+POST /login
+```
+
+### Body
+
+```json
+{
+  "uid": "+243900000000",
+  "password": "Admin@123456"
+}
+```
+
+> **Important** : utiliser le champ `uid` (et non `phone` ou `email`)
+
+### Exemple de requête
+
+```bash
+curl -s -X POST "http://24.144.87.127:3333/login" \
+  -H "Content-Type: application/json" \
+  -d '{"uid": "+243900000000", "password": "Admin@123456"}'
+```
+
+### Réponse succès `200`
+
+```json
+{
+  "token": {
+    "token": "oat_MTUyOA.xxxxxxxxxxxxxxxxxxxx"
+  }
+}
+```
+
+Récupérer le token pour tous les appels suivants :
+
+```bash
+TOKEN=$(curl -s -X POST "http://24.144.87.127:3333/login" \
+  -H "Content-Type: application/json" \
+  -d '{"uid": "+243900000000", "password": "Admin@123456"}' | jq -r '.token.token')
+```
 
 ---
 
@@ -24,16 +74,15 @@ GET /admin/livreurs
 
 ### Headers
 
-| Clé             | Valeur                        |
-|-----------------|-------------------------------|
-| Authorization   | Bearer `<token_admin>`        |
-| Content-Type    | application/json              |
+| Clé           | Valeur                 |
+|---------------|------------------------|
+| Authorization | Bearer `<token_admin>` |
 
 ### Exemple de requête
 
 ```bash
-curl -s GET "http://localhost:3333/admin/livreurs" \
-  -H "Authorization: Bearer <token_admin>"
+curl -s "http://24.144.87.127:3333/admin/livreurs" \
+  -H "Authorization: Bearer $TOKEN" | jq .
 ```
 
 ### Réponse succès `200`
@@ -70,18 +119,18 @@ curl -s GET "http://localhost:3333/admin/livreurs" \
 
 ### Champs de réponse
 
-| Champ        | Type       | Description                                              |
-|--------------|------------|----------------------------------------------------------|
-| `id`         | number     | Identifiant du livreur                                   |
-| `firstName`  | string     | Prénom                                                   |
-| `lastName`   | string     | Nom                                                      |
-| `phone`      | string     | Numéro de téléphone                                      |
-| `email`      | string     | Email                                                    |
-| `statut`     | string     | `active` ou `inactive`                                   |
-| `communes`   | string[]   | Communes assignées (tableau vide = aucune restriction)   |
-| `nbCommunes` | number     | Nombre de communes assignées                             |
+| Champ        | Type     | Description                                    |
+|--------------|----------|------------------------------------------------|
+| `id`         | number   | Identifiant unique du livreur                  |
+| `firstName`  | string   | Prénom                                         |
+| `lastName`   | string   | Nom                                            |
+| `phone`      | string   | Numéro de téléphone                            |
+| `email`      | string   | Email                                          |
+| `statut`     | string   | `active` ou `inactive`                         |
+| `communes`   | string[] | Communes assignées (`[]` = aucune restriction) |
+| `nbCommunes` | number   | Nombre de communes assignées                   |
 
-> **Note** : `communes: []` signifie que le livreur voit **toutes** les commandes sans restriction de zone.
+> `communes: []` signifie que le livreur voit **toutes** les commandes sans restriction de zone.
 
 ---
 
@@ -95,15 +144,15 @@ GET /admin/livreurs/:id
 
 ### Paramètres URL
 
-| Paramètre | Type   | Description           |
-|-----------|--------|-----------------------|
-| `id`      | number | ID du livreur         |
+| Paramètre | Type   | Description   |
+|-----------|--------|---------------|
+| `id`      | number | ID du livreur |
 
 ### Exemple de requête
 
 ```bash
-curl -s "http://localhost:3333/admin/livreurs/5" \
-  -H "Authorization: Bearer <token_admin>"
+curl -s "http://24.144.87.127:3333/admin/livreurs/5" \
+  -H "Authorization: Bearer $TOKEN" | jq .
 ```
 
 ### Réponse succès `200`
@@ -121,10 +170,10 @@ curl -s "http://localhost:3333/admin/livreurs/5" \
     "statut": "active",
     "latitude": null,
     "longitude": null,
-    "communes": ["Gombe"],
-    "nbCommunes": 1,
-    "createdAt": "2025-12-29T06:46:30.177+01:00",
-    "updatedAt": "2026-04-06T14:48:22.775+01:00"
+    "communes": ["Gombe", "Kalamu"],
+    "nbCommunes": 2,
+    "createdAt": "2025-12-29T06:46:30.177+00:00",
+    "updatedAt": "2026-04-06T18:05:52.745+00:00"
   }
 }
 ```
@@ -143,7 +192,8 @@ curl -s "http://localhost:3333/admin/livreurs/5" \
 
 ## 3. Assigner des communes à un livreur
 
-Assigne une ou plusieurs communes à un livreur pour limiter les livraisons qu'il verra à sa zone.
+Assigne une liste de communes à un livreur. Cette liste **remplace entièrement** les communes existantes.
+Envoyer `[]` supprime toutes les restrictions (le livreur voit toutes les commandes).
 
 ```
 PATCH /admin/livreurs/:id/communes
@@ -151,9 +201,16 @@ PATCH /admin/livreurs/:id/communes
 
 ### Paramètres URL
 
-| Paramètre | Type   | Description           |
-|-----------|--------|-----------------------|
-| `id`      | number | ID du livreur         |
+| Paramètre | Type   | Description   |
+|-----------|--------|---------------|
+| `id`      | number | ID du livreur |
+
+### Headers
+
+| Clé           | Valeur                 |
+|---------------|------------------------|
+| Authorization | Bearer `<token_admin>` |
+| Content-Type  | application/json       |
 
 ### Body (JSON)
 
@@ -161,25 +218,20 @@ PATCH /admin/livreurs/:id/communes
 |------------|----------|-------------|-----------------------------------------------------|
 | `communes` | string[] | Oui         | Tableau de noms de communes. `[]` pour tout enlever |
 
-### Exemples de requêtes
+> Les communes sont automatiquement déduplicées et les espaces superflus supprimés côté serveur.
 
-**Assigner des communes :**
+---
+
+### Cas 1 — Assigner des communes
+
 ```bash
-curl -s -X PATCH "http://localhost:3333/admin/livreurs/5/communes" \
+curl -s -X PATCH "http://24.144.87.127:3333/admin/livreurs/5/communes" \
   -H "Content-Type: application/json" \
-  -H "Authorization: Bearer <token_admin>" \
-  -d '{"communes": ["Gombe", "Kalamu", "Lingwala"]}'
+  -H "Authorization: Bearer $TOKEN" \
+  -d '{"communes": ["Gombe", "Kalamu", "Lingwala"]}' | jq .
 ```
 
-**Supprimer toutes les restrictions :**
-```bash
-curl -s -X PATCH "http://localhost:3333/admin/livreurs/5/communes" \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer <token_admin>" \
-  -d '{"communes": []}'
-```
-
-### Réponse succès — commandes assignées `200`
+#### Réponse `200`
 
 ```json
 {
@@ -190,14 +242,29 @@ curl -s -X PATCH "http://localhost:3333/admin/livreurs/5/communes" \
     "id": 5,
     "firstName": "Jean",
     "lastName": "Livreur",
+    "email": "livreur@test.com",
     "phone": "+243888777666",
     "role": "livreur",
-    "communes": ["Gombe", "Kalamu", "Lingwala"]
+    "statut": "active",
+    "communes": ["Gombe", "Kalamu", "Lingwala"],
+    "nbCommunes": 3,
+    "updatedAt": "2026-04-06T18:05:52.745+00:00"
   }
 }
 ```
 
-### Réponse succès — restrictions supprimées `200`
+---
+
+### Cas 2 — Supprimer toutes les restrictions
+
+```bash
+curl -s -X PATCH "http://24.144.87.127:3333/admin/livreurs/5/communes" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $TOKEN" \
+  -d '{"communes": []}' | jq .
+```
+
+#### Réponse `200`
 
 ```json
 {
@@ -208,24 +275,49 @@ curl -s -X PATCH "http://localhost:3333/admin/livreurs/5/communes" \
     "id": 5,
     "firstName": "Jean",
     "lastName": "Livreur",
+    "email": "livreur@test.com",
     "phone": "+243888777666",
     "role": "livreur",
-    "communes": []
+    "statut": "active",
+    "communes": [],
+    "nbCommunes": 0,
+    "updatedAt": "2026-04-06T18:07:34.568+00:00"
   }
 }
 ```
 
-### Réponse erreur `400` — utilisateur non livreur
+---
 
-```json
-{
-  "success": false,
-  "message": "Cet utilisateur n'est pas un livreur",
-  "status": 400
-}
+### Champs de réponse (data)
+
+| Champ        | Type     | Description                                         |
+|--------------|----------|-----------------------------------------------------|
+| `id`         | number   | Identifiant du livreur                              |
+| `firstName`  | string   | Prénom                                              |
+| `lastName`   | string   | Nom                                                 |
+| `email`      | string   | Email                                               |
+| `phone`      | string   | Numéro de téléphone                                 |
+| `role`       | string   | Toujours `"livreur"`                                |
+| `statut`     | string   | `"active"` ou `"inactive"`                          |
+| `communes`   | string[] | Communes enregistrées après l'opération             |
+| `nbCommunes` | number   | Nombre de communes (màj front sans GET additionnel) |
+| `updatedAt`  | string   | Timestamp ISO de la dernière modification           |
+
+> **Note front** : La réponse contient toutes les données nécessaires pour mettre à jour
+> le state côté client sans faire un GET supplémentaire.
+
+---
+
+### Erreurs possibles du PATCH
+
+#### `400` — Body invalide (pas un tableau)
+
+```bash
+curl -s -X PATCH "http://24.144.87.127:3333/admin/livreurs/5/communes" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $TOKEN" \
+  -d '{"communes": "Gombe"}' | jq .
 ```
-
-### Réponse erreur `400` — format invalide
 
 ```json
 {
@@ -235,15 +327,78 @@ curl -s -X PATCH "http://localhost:3333/admin/livreurs/5/communes" \
 }
 ```
 
+#### `400` — Utilisateur non livreur
+
+```json
+{
+  "success": false,
+  "message": "Cet utilisateur n'est pas un livreur",
+  "status": 400
+}
+```
+
+#### `403` — Non admin
+
+```json
+{
+  "success": false,
+  "message": "Seuls les administrateurs peuvent assigner des communes",
+  "status": 403
+}
+```
+
+#### `404` — Livreur introuvable
+
+```bash
+curl -s -X PATCH "http://24.144.87.127:3333/admin/livreurs/9999/communes" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $TOKEN" \
+  -d '{"communes": ["Gombe"]}' | jq .
+```
+
+```json
+{
+  "success": false,
+  "message": "Utilisateur non trouvé",
+  "status": 404
+}
+```
+
+#### `500` — Erreur serveur
+
+```json
+{
+  "success": false,
+  "message": "Erreur interne du serveur",
+  "status": 500,
+  "error": "<message d'erreur technique détaillé>"
+}
+```
+
+> Le champ `error` contient le message exact de l'exception (utile pour déboguer une erreur DB).
+
 ---
 
-## Comportement du filtrage
+## 4. Comportement du filtrage
 
-| Communes assignées      | Commandes visibles                                     |
-|-------------------------|--------------------------------------------------------|
-| `[]` (vide)             | **Toutes** les commandes disponibles (pas de filtre)   |
-| `["Gombe"]`             | Uniquement les commandes avec `commune = "Gombe"`      |
-| `["Gombe", "Kalamu"]`   | Commandes de Gombe **ou** Kalamu                       |
+| Communes assignées    | Commandes visibles                                   |
+|-----------------------|------------------------------------------------------|
+| `[]` (vide)           | **Toutes** les commandes disponibles (pas de filtre) |
+| `["Gombe"]`           | Uniquement les commandes avec `commune = "Gombe"`    |
+| `["Gombe", "Kalamu"]` | Commandes de Gombe **ou** Kalamu                     |
 
-> Le filtrage s'applique sur les **3 modules** : ecommerce, express et commande-express.  
+> Le filtrage s'applique sur les **3 modules** : ecommerce, express et commande-express.
 > Les commandes sans commune définie (`null`) sont toujours visibles, avec ou sans restriction.
+
+---
+
+## 5. Codes d'erreur
+
+| Code  | Cause                                      |
+|-------|--------------------------------------------|
+| `400` | `communes` n'est pas un tableau            |
+| `400` | L'utilisateur ciblé n'est pas un livreur   |
+| `401` | Token manquant ou expiré                   |
+| `403` | L'utilisateur authentifié n'est pas admin  |
+| `404` | ID introuvable dans la base de données     |
+| `500` | Erreur serveur (DB indisponible, etc.)     |
