@@ -405,9 +405,17 @@ export default class CommandeExpressController {
         : []
       const livreursMap = new Map(livreurs.map((l) => [l.id, l]))
 
+      // Récupérer les détails des vendeurs
+      const vendorIds = [...new Set(commandes.all().map((c) => c.vendorId).filter((id): id is number => id !== null && id !== undefined))]
+      const vendors = vendorIds.length > 0
+        ? await User.query().whereIn('id', vendorIds).select('id', 'first_name', 'last_name', 'phone', 'email')
+        : []
+      const vendorsMap = new Map(vendors.map((v) => [v.id, v]))
+
       const formattedCommandes = commandes.all().map((commande) => {
         const serialized = commande.serialize()
         const livreur = commande.deliveryPersonId ? livreursMap.get(commande.deliveryPersonId) ?? null : null
+        const vendor = commande.vendorId ? vendorsMap.get(commande.vendorId) ?? null : null
         return {
           ...serialized,
           prixColis: Number(commande.packageValue),
@@ -419,6 +427,9 @@ export default class CommandeExpressController {
               : Number(commande.packageValue)),
           livreur: livreur
             ? { id: livreur.id, firstName: livreur.firstName, lastName: livreur.lastName, phone: livreur.phone, email: livreur.email }
+            : null,
+          vendor: vendor
+            ? { id: vendor.id, firstName: vendor.firstName, lastName: vendor.lastName, phone: vendor.phone, email: vendor.email }
             : null,
         }
       })

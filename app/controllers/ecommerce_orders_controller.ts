@@ -1973,6 +1973,13 @@ export default class EcommerceOrdersController {
         : []
       const livreursMap = new Map(livreurs.map((l) => [l.id, l]))
 
+      // Récupérer les détails des vendeurs
+      const vendorIds = [...new Set(orders.all().map((o) => (o as any).vendorId).filter((id): id is number => id !== null && id !== undefined))]
+      const vendors = vendorIds.length > 0
+        ? await User.query().whereIn('id', vendorIds).select('id', 'first_name', 'last_name', 'phone', 'email')
+        : []
+      const vendorsMap = new Map(vendors.map((v) => [v.id, v]))
+
       // Formater les commandes pour inclure le type de moyen de paiement avec image
       const formattedOrders = orders.all().map((order) => {
         const serialized = order.serialize()
@@ -1994,6 +2001,8 @@ export default class EcommerceOrdersController {
 
         const livreurId = (order as any).deliveryPersonId ?? null
         const livreur = livreurId ? livreursMap.get(livreurId) ?? null : null
+        const vendorId = (order as any).vendorId ?? null
+        const vendor = vendorId ? vendorsMap.get(vendorId) ?? null : null
 
         return {
           ...serialized,
@@ -2003,6 +2012,9 @@ export default class EcommerceOrdersController {
           totalAvecLivraison: order.deliveryFee ? Number(order.total) + order.deliveryFee : Number(order.total),
           livreur: livreur
             ? { id: livreur.id, firstName: livreur.firstName, lastName: livreur.lastName, phone: livreur.phone, email: livreur.email }
+            : null,
+          vendor: vendor
+            ? { id: vendor.id, firstName: vendor.firstName, lastName: vendor.lastName, phone: vendor.phone, email: vendor.email }
             : null,
         }
       })
