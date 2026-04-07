@@ -1964,6 +1964,15 @@ export default class EcommerceOrdersController {
       const templates = await PaymentMethodTemplate.query()
       const templatesMap = new Map(templates.map(t => [t.type, t]))
 
+      // Récupérer les détails des livreurs assignés
+      const livreurIds = orders.all()
+        .map((o) => (o as any).deliveryPersonId)
+        .filter((id): id is number => id !== null && id !== undefined)
+      const livreurs = livreurIds.length > 0
+        ? await User.query().whereIn('id', livreurIds).select('id', 'first_name', 'last_name', 'phone', 'email')
+        : []
+      const livreursMap = new Map(livreurs.map((l) => [l.id, l]))
+
       // Formater les commandes pour inclure le type de moyen de paiement avec image
       const formattedOrders = orders.all().map((order) => {
         const serialized = order.serialize()
@@ -1983,12 +1992,18 @@ export default class EcommerceOrdersController {
             })()
           : null
 
+        const livreurId = (order as any).deliveryPersonId ?? null
+        const livreur = livreurId ? livreursMap.get(livreurId) ?? null : null
+
         return {
           ...serialized,
           paymentMethod,
           prixColis: Number(order.total),
           fraisLivraison: order.deliveryFee ?? 0,
           totalAvecLivraison: order.deliveryFee ? Number(order.total) + order.deliveryFee : Number(order.total),
+          livreur: livreur
+            ? { id: livreur.id, firstName: livreur.firstName, lastName: livreur.lastName, phone: livreur.phone, email: livreur.email }
+            : null,
         }
       })
 

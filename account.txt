@@ -13,9 +13,13 @@ uid: +243990890450
 password: Vendeur@0243
 
 
-Livreur: 
+Livreur1: 
 uid: +243888777666
 password: Livreur@123456789
+
+Livreur2:
+uid: +243894316827
+password: 0826016607Makengo@
 
 Admin
 uid : +243999999999

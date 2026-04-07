@@ -1,6 +1,7 @@
 import type { HttpContext } from '@adonisjs/core/http'
 import CommandeExpress, { CommandeExpressStatus } from '#models/commande_express'
 import Product from '#models/product'
+import User from '#models/user'
 import {
   createCommandeExpressValidator,
   updateCommandeExpressStatusValidator,
@@ -395,8 +396,18 @@ export default class CommandeExpressController {
 
       const commandes = await query.paginate(page, limit)
 
+      // Récupérer les détails des livreurs assignés
+      const livreurIds = commandes.all()
+        .map((c) => c.deliveryPersonId)
+        .filter((id): id is number => id !== null && id !== undefined)
+      const livreurs = livreurIds.length > 0
+        ? await User.query().whereIn('id', livreurIds).select('id', 'first_name', 'last_name', 'phone', 'email')
+        : []
+      const livreursMap = new Map(livreurs.map((l) => [l.id, l]))
+
       const formattedCommandes = commandes.all().map((commande) => {
         const serialized = commande.serialize()
+        const livreur = commande.deliveryPersonId ? livreursMap.get(commande.deliveryPersonId) ?? null : null
         return {
           ...serialized,
           prixColis: Number(commande.packageValue),
@@ -406,6 +417,9 @@ export default class CommandeExpressController {
             (commande.deliveryFee
               ? Number(commande.packageValue) + commande.deliveryFee
               : Number(commande.packageValue)),
+          livreur: livreur
+            ? { id: livreur.id, firstName: livreur.firstName, lastName: livreur.lastName, phone: livreur.phone, email: livreur.email }
+            : null,
         }
       })
 
