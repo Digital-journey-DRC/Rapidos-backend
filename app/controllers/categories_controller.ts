@@ -29,7 +29,7 @@ export default class CategoriesController {
         data: category,
       })
     } catch (error) {
-      if (error.code === 'E_VALIDATION_FAILURE') {
+      if (error.code === 'E_VALIDATION_ERROR') {
         return response.status(422).json({
           message: 'Validation failed',
           errors: error.messages,
@@ -98,7 +98,7 @@ export default class CategoriesController {
           message: 'Category not found',
         })
       }
-      if (error.code === 'E_VALIDATION_FAILURE') {
+      if (error.code === 'E_VALIDATION_ERROR') {
         return response.status(422).json({
           message: 'Validation failed',
           errors: error.messages,

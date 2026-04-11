@@ -152,7 +152,7 @@ export default class ProductsController {
         medias: mediasForProduct,
       })
     } catch (error) {
-      if (error.code === 'E_VALIDATION_FAILURE') {
+      if (error.code === 'E_VALIDATION_ERROR') {
         return response.status(422).json({ message: error.messages })
       }
       if (error.code === 'E_UNAUTHORIZED_ACCESS') {
@@ -585,7 +585,7 @@ export default class ProductsController {
         product: productFormatted,
       })
     } catch (error) {
-      if (error.code === 'E_VALIDATION_FAILURE') {
+      if (error.code === 'E_VALIDATION_ERROR') {
         return response.status(422).json({ message: error.messages })
       }
       if (error.code === 'E_ROW_NOT_FOUND') {
@@ -771,7 +771,7 @@ export default class ProductsController {
       if (error.code === 'E_UNAUTHORIZED_ACCESS') {
         return response.status(403).json({ message: error.message })
       }
-      if (error.code === 'E_VALIDATION_FAILURE') {
+      if (error.code === 'E_VALIDATION_ERROR') {
         return response.status(422).json({ message: error.messages })
       }
 

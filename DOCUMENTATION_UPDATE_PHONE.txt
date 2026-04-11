@@ -1,182 +1,245 @@
 ================================================================================
-DOCUMENTATION - MISE À JOUR DU NUMÉRO DE TÉLÉPHONE AVEC OTP
+DOCUMENTATION - GESTION DU PROFIL UTILISATEUR
+================================================================================
+Toutes les routes nécessitent un token Bearer sauf mention contraire.
+Header commun : Authorization: Bearer {token}
 ================================================================================
 
-DESCRIPTION
------------
-Cette fonctionnalité permet aux utilisateurs de modifier leur numéro de 
-téléphone. Le processus se fait en deux étapes :
-1. Demander le changement de numéro (génère et envoie un OTP)
-2. Vérifier l'OTP pour confirmer le changement
-
 ================================================================================
-ENDPOINT 1: DEMANDER LE CHANGEMENT DE NUMÉRO
+1. RÉCUPÉRER LES CHAMPS MODIFIABLES
 ================================================================================
+GET /users/editables-fields/:userId
+Auth : REQUISE
 
-URL: POST /users/update-phone
-Authentification: REQUISE (Bearer Token)
+Description : Retourne les champs que l'utilisateur connecté peut modifier
+              pour le compte cible.
 
-DESCRIPTION:
-Génère un code OTP à 6 chiffres et l'envoie au nouveau numéro de téléphone 
-via SMS (ou WhatsApp en cas d'échec SMS). Le numéro n'est pas encore modifié, 
-il le sera uniquement après vérification réussie de l'OTP.
-
-REQUÊTE:
-Headers:
-  Content-Type: application/json
-  Authorization: Bearer {token}
-
-Body (JSON):
+RÉPONSE 200 :
 {
-  "newPhone": "+243999999999"
-}
-
-VALIDATIONS:
-- L'utilisateur doit être connecté
-- Le nouveau numéro doit être différent de l'ancien
-- Le nouveau numéro ne doit pas être déjà utilisé par un autre utilisateur
-- Le format du numéro doit être valide (format international avec +)
-
-RÉPONSE SUCCÈS (200):
-{
-  "message": "Un code de vérification a été envoyé à votre nouveau numéro de téléphone",
+  "message": "Données récupérées avec succès",
   "status": 200,
-  "newPhone": "+243999999999",
-  "expiresAt": "2025-01-20T12:00:00.000Z"
+  "data": { "firstName": "...", "lastName": "...", "phone": "..." }
 }
 
-RÉPONSES D'ERREUR:
-- 400: Le nouveau numéro de téléphone est requis
-- 400: Le nouveau numéro de téléphone doit être différent de l'ancien
-- 401: Vous devez être connecté pour modifier votre numéro de téléphone
-- 409: Ce numéro de téléphone est déjà utilisé par un autre utilisateur
-- 500: Erreur interne lors de la demande de changement de numéro de téléphone
+ERREURS :
+- 401 : non autorisé à consulter ce compte
+- 404 : utilisateur introuvable
 
-EXEMPLE CURL:
-curl -X POST http://localhost:3333/users/update-phone \
-  -H 'Content-Type: application/json' \
-  -H 'Authorization: Bearer YOUR_TOKEN_HERE' \
-  -d '{"newPhone":"+243999999999"}'
 
 ================================================================================
-ENDPOINT 2: VÉRIFIER L'OTP ET CONFIRMER LE CHANGEMENT
+2. MODIFIER LES INFORMATIONS PERSONNELLES (NOM / PRÉNOM)
 ================================================================================
+POST /users/update/:userId
+Auth : REQUISE
 
-URL: POST /users/verify-phone-otp
-Authentification: REQUISE (Bearer Token)
+Description : Modifie firstName et/ou lastName de l'utilisateur.
+              Un utilisateur ne peut modifier QUE son propre compte.
+              Un admin peut modifier n'importe quel compte.
 
-DESCRIPTION:
-Vérifie le code OTP reçu et met à jour définitivement le numéro de téléphone 
-de l'utilisateur si l'OTP est valide et non expiré.
-
-REQUÊTE:
-Headers:
-  Content-Type: application/json
-  Authorization: Bearer {token}
-
-Body (JSON):
+BODY (JSON) :
 {
-  "otp": "123456",
-  "newPhone": "+243999999999"
+  "firstName": "Stanislas",   // min 2 - max 50 caractères
+  "lastName":  "Makengo"      // min 2 - max 50 caractères
 }
 
-VALIDATIONS:
-- L'utilisateur doit être connecté
-- L'OTP et le nouveau numéro sont requis
-- L'OTP doit correspondre au code généré
-- L'OTP ne doit pas être expiré (validité: 50 minutes)
-- Le nouveau numéro ne doit pas être déjà utilisé par un autre utilisateur
+RÉPONSE 200 :
+{
+  "message": "Utilisateur mis à jour avec succès",
+  "status": 200,
+  "data": { ...user }
+}
 
-RÉPONSE SUCCÈS (200):
+ERREURS :
+- 400 : données invalides (champ trop court, etc.)
+- 403 : modification d'un autre compte interdit
+- 404 : utilisateur introuvable
+
+
+================================================================================
+3. CHANGER LE NUMÉRO DE TÉLÉPHONE
+================================================================================
+POST /users/update-phone
+Auth : REQUISE
+
+Description : Change le numéro de téléphone directement, sans OTP.
+              Le changement est immédiat.
+
+BODY (JSON) :
+{
+  "newPhone": "+243999999999"   // format international obligatoire
+}
+
+RÉPONSE 200 :
 {
   "message": "Numéro de téléphone mis à jour avec succès",
   "status": 200,
   "phone": "+243999999999"
 }
 
-RÉPONSES D'ERREUR:
-- 400: L'OTP et le nouveau numéro de téléphone sont requis
-- 400: Code OTP invalide
-- 400: Code OTP expiré. Veuillez demander un nouveau code
-- 401: Vous devez être connecté pour vérifier l'OTP
-- 409: Ce numéro de téléphone est déjà utilisé par un autre utilisateur
-- 404: Utilisateur introuvable
-- 500: Erreur interne lors de la vérification de l'OTP
+ERREURS :
+- 400 : newPhone manquant
+- 400 : même numéro qu'avant
+- 409 : numéro déjà utilisé par un autre compte
 
-EXEMPLE CURL:
-curl -X POST http://localhost:3333/users/verify-phone-otp \
-  -H 'Content-Type: application/json' \
-  -H 'Authorization: Bearer YOUR_TOKEN_HERE' \
-  -d '{"otp":"123456","newPhone":"+243999999999"}'
-
-================================================================================
-FLUX COMPLET D'UTILISATION
-================================================================================
-
-ÉTAPE 1: L'utilisateur demande le changement
-  POST /users/update-phone
-  Body: { "newPhone": "+243999999999" }
-  
-  → Un OTP est généré et envoyé au nouveau numéro
-  → L'utilisateur reçoit un SMS/WhatsApp avec le code
-
-ÉTAPE 2: L'utilisateur vérifie l'OTP
-  POST /users/verify-phone-otp
-  Body: { "otp": "123456", "newPhone": "+243999999999" }
-  
-  → Si l'OTP est valide, le numéro est mis à jour
-  → Si l'OTP est invalide ou expiré, le numéro reste inchangé
-
-================================================================================
-NOTES IMPORTANTES
-================================================================================
-
-1. SÉCURITÉ:
-   - Les deux endpoints nécessitent une authentification
-   - L'OTP expire après 50 minutes
-   - Le numéro n'est modifié qu'après vérification réussie de l'OTP
-
-2. ENVOI DE L'OTP:
-   - L'OTP est d'abord envoyé via SMS
-   - En cas d'échec SMS, un envoi WhatsApp est tenté
-   - Le code OTP est un nombre à 6 chiffres (ex: 123456)
-
-3. VALIDATION:
-   - Le nouveau numéro doit être au format international (ex: +243999999999)
-   - Le nouveau numéro ne peut pas être le même que l'ancien
-   - Le nouveau numéro ne peut pas être déjà utilisé par un autre utilisateur
-
-4. GESTION DES ERREURS:
-   - Si l'OTP est incorrect, l'utilisateur peut redemander un nouveau code
-   - Si l'OTP est expiré, l'utilisateur doit redemander un nouveau code
-   - Le numéro de téléphone n'est jamais modifié si l'OTP n'est pas vérifié
-
-================================================================================
-EXEMPLE COMPLET DE TEST
-================================================================================
-
-# 1. Connexion pour obtenir un token
-curl -X POST http://localhost:3333/login \
-  -H 'Content-Type: application/json' \
-  -d '{"uid":"user@example.com","password":"password123"}'
-
-# Réponse: { "token": { "token": "YOUR_TOKEN_HERE", ... } }
-
-# 2. Demander le changement de numéro
+EXEMPLE CURL :
 curl -X POST http://localhost:3333/users/update-phone \
   -H 'Content-Type: application/json' \
   -H 'Authorization: Bearer YOUR_TOKEN_HERE' \
   -d '{"newPhone":"+243999999999"}'
 
-# Réponse: { "message": "Un code de vérification a été envoyé...", "newPhone": "+243999999999", "expiresAt": "..." }
+================================================================================
+4. CHANGER LE MOT DE PASSE
+================================================================================
+POST /users/change-password
+Auth : REQUISE
 
-# 3. Vérifier l'OTP (remplacer 123456 par le code reçu)
-curl -X POST http://localhost:3333/users/verify-phone-otp \
+Description : Change le mot de passe après vérification de l'ancien.
+
+BODY (JSON) :
+{
+  "oldPassword": "AncienMdp@123",
+  "newPassword": "NouveauMdp@456"   // min 8 caractères
+}
+
+RÉPONSE 200 :
+{
+  "message": "Mot de passe modifié avec succès",
+  "status": 200
+}
+
+ERREURS :
+- 400 : champs manquants
+- 400 : ancien et nouveau identiques
+- 400 : nouveau mot de passe < 8 caractères
+- 400 : ancien mot de passe incorrect
+
+EXEMPLE CURL :
+curl -X POST http://localhost:3333/users/change-password \
   -H 'Content-Type: application/json' \
   -H 'Authorization: Bearer YOUR_TOKEN_HERE' \
-  -d '{"otp":"123456","newPhone":"+243999999999"}'
+  -d '{"oldPassword":"AncienMdp@123","newPassword":"NouveauMdp@456"}'
 
-# Réponse: { "message": "Numéro de téléphone mis à jour avec succès", "phone": "+243999999999" }
+================================================================================
+5. PHOTO DE PROFIL
+================================================================================
+POST /users/update-profil
+   OU
+POST /users/profile/image
+Auth : REQUISE
+Content-Type : multipart/form-data
+
+Description : Upload une nouvelle photo de profil (Cloudinary).
+
+BODY (form-data) :
+  avatar  →  fichier image (jpg, jpeg, png) — max 2 Mo
+
+RÉPONSE 200 :
+{
+  "message": "Profil mis à jour avec succès",
+  "status": 200,
+  "avatarUrl": "https://res.cloudinary.com/..."
+}
+
+ERREURS :
+- 400 : fichier manquant, format invalide ou trop lourd
+
+EXEMPLE CURL :
+curl -X POST http://localhost:3333/users/profile/image \
+  -H 'Authorization: Bearer YOUR_TOKEN_HERE' \
+  -F 'avatar=@/chemin/photo.jpg'
+
+
+================================================================================
+6. LOCALISATION DU VENDEUR
+================================================================================
+POST /users/location
+Auth : REQUISE (rôle vendeur uniquement)
+
+Description : Enregistre la latitude et longitude du vendeur.
+
+BODY (JSON) :
+{
+  "latitude":  -4.322447,
+  "longitude": 15.322445
+}
+
+RÉPONSE 200 :
+{
+  "message": "Localisation mise à jour avec succès",
+  "status": 200
+}
+
+---
+
+GET /users/location
+Auth : REQUISE
+
+Description : Récupère la localisation enregistrée du vendeur.
+
+RÉPONSE 200 :
+{
+  "message": "...",
+  "status": 200,
+  "data": { "latitude": ..., "longitude": ... }
+}
+
+
+================================================================================
+7. MOT DE PASSE OUBLIÉ (sans connexion)
+================================================================================
+
+ÉTAPE 1 — Demander le code OTP :
+POST /users/forgot-password
+Auth : NON REQUISE
+
+BODY (JSON) :
+{
+  "phone": "+243826016607"
+}
+
+RÉPONSE 200 :
+{
+  "message": "Un code de réinitialisation a été envoyé à votre téléphone",
+  "status": 200
+}
+
+---
+
+ÉTAPE 2 — Définir le nouveau mot de passe :
+POST /users/reset-password
+Auth : NON REQUISE
+
+BODY (JSON) :
+{
+  "otp":         "123456",
+  "newPassword": "NouveauMdp@456"
+}
+
+RÉPONSE 200 :
+{
+  "message": "Mot de passe réinitialisé avec succès",
+  "status": 200,
+  "accessToken": "...",
+  "userId": ...
+}
+
+ERREURS :
+- 400 : OTP invalide ou expiré
+- 404 : utilisateur introuvable
+
+================================================================================
+RÉSUMÉ RAPIDE
+================================================================================
+  GET  /users/editables-fields/:userId  → champs modifiables
+  POST /users/update/:userId            → modifier nom/prénom
+  POST /users/update-phone              → changer téléphone (direct, sans OTP)
+  POST /users/change-password           → changer mot de passe
+  POST /users/update-profil             → photo de profil
+  POST /users/profile/image             → photo de profil (alias)
+  POST /users/location                  → enregistrer position (vendeur)
+  GET  /users/location                  → lire position
+  POST /users/forgot-password           → demander OTP reset mdp
+  POST /users/reset-password            → confirmer reset mdp
 
 ================================================================================
 FIN DE LA DOCUMENTATION

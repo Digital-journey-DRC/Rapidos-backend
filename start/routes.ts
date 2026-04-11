@@ -291,6 +291,7 @@ router
   .use(middleware.auth({ guards: ['api'] }))
 
   router.post('/users/update-profil', [RegistersController, 'updateUserProfile']).use(middleware.auth({ guards: ['api'] }))
+  router.post('/users/profile/image', [RegistersController, 'updateUserProfile']).use(middleware.auth({ guards: ['api'] }))
 
 // ============================================================
 // NOUVEAU MODULE E-COMMERCE ORDERS (NE PAS TOUCHER)

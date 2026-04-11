@@ -1,0 +1,45 @@
+-- SUPPRIMER L'UTILISATEUR +243823439137
+-- Exécuter dans cet ordre sur DigitalOcean
+-- ==========================================
+
+-- 1. Sessions / tokens
+DELETE FROM auth_access_tokens WHERE tokenable_id = (SELECT id FROM users WHERE phone = '+243823439137');
+
+-- 2. Evaluations
+DELETE FROM evaluations WHERE acheteur_id = (SELECT id FROM users WHERE phone = '+243823439137');
+
+-- 3. Livraisons (en tant que livreur)
+DELETE FROM livraisons WHERE livreur_id = (SELECT id FROM users WHERE phone = '+243823439137');
+
+-- 4. Commande products (pivot)
+DELETE FROM commande_products WHERE commande_id IN (SELECT id FROM commandes WHERE user_id = (SELECT id FROM users WHERE phone = '+243823439137'));
+
+-- 5. Paiements
+DELETE FROM paiements WHERE commande_id IN (SELECT id FROM commandes WHERE user_id = (SELECT id FROM users WHERE phone = '+243823439137'));
+
+-- 6. Commandes
+DELETE FROM commandes WHERE user_id = (SELECT id FROM users WHERE phone = '+243823439137');
+
+-- 7. Commandes express
+DELETE FROM commande_express WHERE client_id = (SELECT id FROM users WHERE phone = '+243823439137') OR vendor_id = (SELECT id FROM users WHERE phone = '+243823439137') OR delivery_person_id = (SELECT id FROM users WHERE phone = '+243823439137');
+
+-- 8. Ecommerce orders
+DELETE FROM ecommerce_orders WHERE client_id = (SELECT id FROM users WHERE phone = '+243823439137') OR vendor_id = (SELECT id FROM users WHERE phone = '+243823439137') OR delivery_person_id = (SELECT id FROM users WHERE phone = '+243823439137');
+
+-- 9. Wallet
+DELETE FROM wallets WHERE user_id = (SELECT id FROM users WHERE phone = '+243823439137');
+
+-- 10. Adresses
+DELETE FROM adresses WHERE user_id = (SELECT id FROM users WHERE phone = '+243823439137');
+
+-- 11. Payment methods (si vendeur)
+DELETE FROM payment_methods WHERE vendeur_id = (SELECT id FROM users WHERE phone = '+243823439137');
+
+-- 12. Horaires ouverture (si vendeur)
+DELETE FROM horaire_ouvertures WHERE vendeur_id = (SELECT id FROM users WHERE phone = '+243823439137');
+
+-- 13. Profil
+DELETE FROM profils WHERE user_id = (SELECT id FROM users WHERE phone = '+243823439137');
+
+-- 14. UTILISATEUR (en dernier)
+DELETE FROM users WHERE phone = '+243823439137';

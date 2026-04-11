@@ -23,5 +23,5 @@ password: 0826016607Makengo@
 
 Admin
 uid : +243999999999
-password : Admin@123456789
+password :  
 

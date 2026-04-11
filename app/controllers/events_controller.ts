@@ -63,7 +63,7 @@ export default class EventsController {
         },
       })
     } catch (error) {
-      if (error.code === 'E_VALIDATION_FAILURE') {
+      if (error.code === 'E_VALIDATION_ERROR') {
         return response.status(422).json({
           message: 'Données invalides',
           errors: error.messages,
@@ -107,7 +107,7 @@ export default class EventsController {
         },
       })
     } catch (error) {
-      if (error.code === 'E_VALIDATION_FAILURE') {
+      if (error.code === 'E_VALIDATION_ERROR') {
         return response.status(422).json({
           message: 'Données invalides',
           errors: error.messages,
@@ -151,7 +151,7 @@ export default class EventsController {
         },
       })
     } catch (error) {
-      if (error.code === 'E_VALIDATION_FAILURE') {
+      if (error.code === 'E_VALIDATION_ERROR') {
         return response.status(422).json({
           message: 'Données invalides',
           errors: error.messages,
@@ -195,7 +195,7 @@ export default class EventsController {
         },
       })
     } catch (error) {
-      if (error.code === 'E_VALIDATION_FAILURE') {
+      if (error.code === 'E_VALIDATION_ERROR') {
         return response.status(422).json({
           message: 'Données invalides',
           errors: error.messages,
@@ -239,7 +239,7 @@ export default class EventsController {
         },
       })
     } catch (error) {
-      if (error.code === 'E_VALIDATION_FAILURE') {
+      if (error.code === 'E_VALIDATION_ERROR') {
         return response.status(422).json({
           message: 'Données invalides',
           errors: error.messages,
@@ -281,7 +281,7 @@ export default class EventsController {
         },
       })
     } catch (error) {
-      if (error.code === 'E_VALIDATION_FAILURE') {
+      if (error.code === 'E_VALIDATION_ERROR') {
         return response.status(422).json({
           message: 'Données invalides',
           errors: error.messages,

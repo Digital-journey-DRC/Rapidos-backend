@@ -19,7 +19,6 @@ import { UserRole } from '../Enum/user_role.js'
 import { UserStatus } from '../Enum/user_status.js'
 import { uploadProfilePicture } from '#services/upload_profil'
 import Media from '#models/media'
-import { WhatsappService } from '#exceptions/whatssapotpservice'
 
 export default class RegistersController {
   async register({ request, response }: HttpContext) {
@@ -201,6 +200,13 @@ export default class RegistersController {
       const targetUser = await User.findOrFail(params.userId)
 
       const isAdmin = ['admin', 'superadmin'].includes(currentUser.role)
+
+      if (!isAdmin && currentUser.id !== targetUser.id) {
+        return response.forbidden({
+          message: "Vous n'êtes pas autorisé à modifier ce compte",
+          status: 403,
+        })
+      }
 
       let validatedPayload
 
@@ -571,9 +577,8 @@ export default class RegistersController {
   }
 
   /**
-   * Endpoint pour demander le changement de numéro de téléphone
+   * Endpoint pour changer le numéro de téléphone directement
    * POST /users/update-phone
-   * Génère un OTP et l'envoie au nouveau numéro de téléphone
    */
   async updatePhone({ request, response, auth }: HttpContext) {
     try {
@@ -586,19 +591,8 @@ export default class RegistersController {
         })
       }
 
-      // Vérifier que l'utilisateur est connecté
-      const user = auth.user
-      if (!user) {
-        return response.unauthorized({
-          message: 'Vous devez être connecté pour modifier votre numéro de téléphone',
-          status: 401,
-        })
-      }
+      const currentUser = await User.findOrFail(auth.user!.id)
 
-      // Charger l'utilisateur avec les dernières données
-      const currentUser = await User.findOrFail(user.id)
-
-      // Vérifier que le nouveau numéro est différent de l'ancien
       if (currentUser.phone === newPhone) {
         return response.badRequest({
           message: 'Le nouveau numéro de téléphone doit être différent de l\'ancien',
@@ -606,7 +600,6 @@ export default class RegistersController {
         })
       }
 
-      // Vérifier que le nouveau numéro n'est pas déjà utilisé par un autre utilisateur
       const existingUser = await User.findBy('phone', newPhone)
       if (existingUser && existingUser.id !== currentUser.id) {
         return response.conflict({
@@ -615,40 +608,13 @@ export default class RegistersController {
         })
       }
 
-      // Générer un OTP
-      const { otpCode, otpExpiredAt } = generateOtp()
-
-      // Stocker l'OTP pour l'utilisateur
-      await createUser.setUserOtp(currentUser, otpCode, otpExpiredAt)
-
-      // Envoyer l'OTP au nouveau numéro
-      try {
-        await smsservice.envoyerSms(newPhone, otpCode)
-      } catch (smsError) {
-        logger.error('Erreur lors de l\'envoi du SMS', {
-          error: smsError.message,
-          phone: newPhone,
-        })
-        // Essayer WhatsApp en cas d'échec SMS
-        try {
-          await WhatsappService.sendOtp(newPhone, otpCode)
-        } catch (whatsappError) {
-          logger.error('Erreur lors de l\'envoi du WhatsApp', {
-            error: whatsappError.message,
-            phone: newPhone,
-          })
-        }
-      }
-
-      // Ne pas changer le numéro maintenant, on le changera après vérification de l'OTP
-      // On stocke juste l'OTP pour l'instant
-      // Le nouveau numéro sera stocké dans verifyPhoneOtp après vérification réussie
+      currentUser.phone = newPhone
+      await currentUser.save()
 
       return response.ok({
-        message: 'Un code de vérification a été envoyé à votre nouveau numéro de téléphone',
+        message: 'Numéro de téléphone mis à jour avec succès',
         status: 200,
-        newPhone: newPhone,
-        expiresAt: otpExpiredAt,
+        phone: currentUser.phone,
       })
     } catch (error) {
       if (error.code === 'E_ROW_NOT_FOUND') {
@@ -657,12 +623,12 @@ export default class RegistersController {
           status: 404,
         })
       }
-      logger.error('Erreur lors de la demande de changement de numéro de téléphone', {
+      logger.error('Erreur lors du changement de numéro de téléphone', {
         message: error.message,
         stack: error.stack,
       })
       return response.internalServerError({
-        message: 'Erreur interne lors de la demande de changement de numéro de téléphone',
+        message: 'Erreur interne lors du changement de numéro de téléphone',
         status: 500,
         error: error.message,
       })
