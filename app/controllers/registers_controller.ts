@@ -19,6 +19,7 @@ import { UserRole } from '../Enum/user_role.js'
 import { UserStatus } from '../Enum/user_status.js'
 import { uploadProfilePicture } from '#services/upload_profil'
 import Media from '#models/media'
+import { WhatsappService } from '#exceptions/whatssapotpservice'
 
 export default class RegistersController {
   async register({ request, response }: HttpContext) {
@@ -577,8 +578,9 @@ export default class RegistersController {
   }
 
   /**
-   * Endpoint pour changer le numéro de téléphone directement
+   * Endpoint pour demander le changement de numéro de téléphone
    * POST /users/update-phone
+   * Génère un OTP et l'envoie au nouveau numéro de téléphone
    */
   async updatePhone({ request, response, auth }: HttpContext) {
     try {
@@ -608,13 +610,29 @@ export default class RegistersController {
         })
       }
 
-      currentUser.phone = newPhone
-      await currentUser.save()
+      const { otpCode, otpExpiredAt } = generateOtp()
+      await createUser.setUserOtp(currentUser, otpCode, otpExpiredAt)
+
+      try {
+        await smsservice.envoyerSms(newPhone, otpCode)
+      } catch (smsError) {
+        logger.error('Erreur lors de l\'envoi du SMS', {
+          error: smsError.message,
+          phone: newPhone,
+        })
+        try {
+          await WhatsappService.sendOtp(newPhone, otpCode)
+        } catch (whatsappError) {
+          logger.error('Erreur lors de l\'envoi du WhatsApp', {
+            error: whatsappError.message,
+            phone: newPhone,
+          })
+        }
+      }
 
       return response.ok({
-        message: 'Numéro de téléphone mis à jour avec succès',
+        message: 'Code OTP envoyé avec succès au nouveau numéro',
         status: 200,
-        phone: currentUser.phone,
       })
     } catch (error) {
       if (error.code === 'E_ROW_NOT_FOUND') {
@@ -623,12 +641,12 @@ export default class RegistersController {
           status: 404,
         })
       }
-      logger.error('Erreur lors du changement de numéro de téléphone', {
+      logger.error('Erreur lors de la demande de changement de numéro de téléphone', {
         message: error.message,
         stack: error.stack,
       })
       return response.internalServerError({
-        message: 'Erreur interne lors du changement de numéro de téléphone',
+        message: 'Erreur interne lors de la demande de changement de numéro de téléphone',
         status: 500,
         error: error.message,
       })

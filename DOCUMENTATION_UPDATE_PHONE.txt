@@ -56,17 +56,51 @@ ERREURS :
 
 
 ================================================================================
-3. CHANGER LE NUMÉRO DE TÉLÉPHONE
+3. CHANGER LE NUMÉRO DE TÉLÉPHONE (FLOW EN 2 ÉTAPES)
 ================================================================================
+
+--- ÉTAPE 1 : Envoyer l'OTP au nouveau numéro ---
 POST /users/update-phone
 Auth : REQUISE
 
-Description : Change le numéro de téléphone directement, sans OTP.
-              Le changement est immédiat.
+Description : Génère un OTP et l'envoie au nouveau numéro via SMS (ou WhatsApp
+              en cas d'échec). Le numéro N'EST PAS encore modifié.
 
 BODY (JSON) :
 {
   "newPhone": "+243999999999"   // format international obligatoire
+}
+
+RÉPONSE 200 :
+{
+  "message": "Code OTP envoyé avec succès au nouveau numéro",
+  "status": 200
+}
+
+ERREURS :
+- 400 : nouveau numéro identique à l'ancien
+- 400 : newPhone manquant
+- 401 : non authentifié
+- 409 : numéro déjà utilisé par un autre utilisateur
+- 500 : erreur serveur
+
+EXEMPLE CURL :
+curl -X POST http://localhost:3333/users/update-phone \
+  -H 'Content-Type: application/json' \
+  -H 'Authorization: Bearer YOUR_TOKEN_HERE' \
+  -d '{"newPhone":"+243999999999"}'
+
+--- ÉTAPE 2 : Vérifier l'OTP et confirmer le changement ---
+POST /users/verify-phone-otp
+Auth : REQUISE
+
+Description : Vérifie le code OTP reçu et met à jour le numéro si valide.
+              L'OTP expire après 50 minutes.
+
+BODY (JSON) :
+{
+  "otp":      "123456",
+  "newPhone": "+243999999999"
 }
 
 RÉPONSE 200 :
@@ -77,15 +111,16 @@ RÉPONSE 200 :
 }
 
 ERREURS :
-- 400 : newPhone manquant
-- 400 : même numéro qu'avant
-- 409 : numéro déjà utilisé par un autre compte
+- 400 : code OTP invalide
+- 400 : code OTP expiré
+- 401 : non authentifié
+- 409 : numéro déjà utilisé par un autre utilisateur
 
 EXEMPLE CURL :
-curl -X POST http://localhost:3333/users/update-phone \
+curl -X POST http://localhost:3333/users/verify-phone-otp \
   -H 'Content-Type: application/json' \
   -H 'Authorization: Bearer YOUR_TOKEN_HERE' \
-  -d '{"newPhone":"+243999999999"}'
+  -d '{"otp":"123456","newPhone":"+243999999999"}'
 
 ================================================================================
 4. CHANGER LE MOT DE PASSE
@@ -232,7 +267,8 @@ RÉSUMÉ RAPIDE
 ================================================================================
   GET  /users/editables-fields/:userId  → champs modifiables
   POST /users/update/:userId            → modifier nom/prénom
-  POST /users/update-phone              → changer téléphone (direct, sans OTP)
+  POST /users/update-phone              → étape 1 : envoyer OTP au nouveau numéro
+  POST /users/verify-phone-otp          → étape 2 : vérifier OTP et confirmer
   POST /users/change-password           → changer mot de passe
   POST /users/update-profil             → photo de profil
   POST /users/profile/image             → photo de profil (alias)
