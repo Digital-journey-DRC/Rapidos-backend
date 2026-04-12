@@ -87,6 +87,58 @@ export default class StatistiquesLivreurController {
       }
 
       // ═══════════════════════════════════════════════════════
+      // 1b. COMPTEURS (Courses Totales, En Route, Livrés)
+      // ═══════════════════════════════════════════════════════
+      let coursesTotalesExpress = 0
+      let coursesTotalesEcommerce = 0
+      let enRouteExpress = 0
+      let enRouteEcommerce = 0
+
+      if (includeExpress) {
+        const ct = await db.rawQuery(
+          `SELECT COUNT(*)::int AS total
+           FROM commande_express
+           WHERE delivery_person_id = ? AND statut NOT IN ('cancelled','rejected') AND ${dateSql()}`,
+          [livreurId]
+        )
+        coursesTotalesExpress = ct.rows[0]?.total || 0
+
+        const er = await db.rawQuery(
+          `SELECT COUNT(*)::int AS total
+           FROM commande_express
+           WHERE delivery_person_id = ? AND statut = 'en_route'`,
+          [livreurId]
+        )
+        enRouteExpress = er.rows[0]?.total || 0
+      }
+
+      if (includeEcommerce) {
+        const ct = await db.rawQuery(
+          `SELECT COUNT(*)::int AS total
+           FROM ecommerce_orders
+           WHERE delivery_person_id = ? AND status NOT IN ('cancelled','rejected') AND ${dateSql()}`,
+          [livreurId]
+        )
+        coursesTotalesEcommerce = ct.rows[0]?.total || 0
+
+        const er = await db.rawQuery(
+          `SELECT COUNT(*)::int AS total
+           FROM ecommerce_orders
+           WHERE delivery_person_id = ? AND status = 'en_route'`,
+          [livreurId]
+        )
+        enRouteEcommerce = er.rows[0]?.total || 0
+      }
+
+      const coursesTotales = coursesTotalesExpress + coursesTotalesEcommerce
+      const enRoute = enRouteExpress + enRouteEcommerce
+      const livresTotal =
+        (expressResume.total_livraisons_effectuees || 0) +
+        (ecommerceResume.total_livraisons_effectuees || 0)
+      const fraisTotal =
+        Number(expressResume.montant_total || 0) + Number(ecommerceResume.montant_total || 0)
+
+      // ═══════════════════════════════════════════════════════
       // 2. LIVRAISONS DÉTAILLÉES (infos client, produits, quantité, total partiel)
       // ═══════════════════════════════════════════════════════
       let livraisons: any[] = []
@@ -384,12 +436,32 @@ export default class StatistiquesLivreurController {
         filtre_label: filtre ? filtreLabels[filtre] : 'Toutes les périodes',
         type,
         data: {
+          compteurs: {
+            courses_totales: coursesTotales,
+            en_route: enRoute,
+            livres: livresTotal,
+            frais_livraison: fraisTotal,
+            detail: {
+              express: {
+                courses_totales: coursesTotalesExpress,
+                en_route: enRouteExpress,
+                livres: expressResume.total_livraisons_effectuees || 0,
+                frais_livraison: Number(expressResume.montant_total || 0),
+              },
+              ecommerce: {
+                courses_totales: coursesTotalesEcommerce,
+                en_route: enRouteEcommerce,
+                livres: ecommerceResume.total_livraisons_effectuees || 0,
+                frais_livraison: Number(ecommerceResume.montant_total || 0),
+              },
+            },
+          },
           resume: {
             express: includeExpress ? expressResume : undefined,
             ecommerce: includeEcommerce ? ecommerceResume : undefined,
             combine: {
-              total_livraisons_effectuees: (expressResume.total_livraisons_effectuees || 0) + (ecommerceResume.total_livraisons_effectuees || 0),
-              montant_total: Number(expressResume.montant_total || 0) + Number(ecommerceResume.montant_total || 0),
+              total_livraisons_effectuees: livresTotal,
+              montant_total: fraisTotal,
             },
           },
           total_general: totalGeneral,
