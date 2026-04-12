@@ -1421,6 +1421,13 @@ export default class EcommerceOrdersController {
         
         await order.save()
         
+        // Décrémenter le stock pour chaque produit de la commande
+        for (const item of order.items as any[]) {
+          await Product.query()
+            .where('id', item.productId)
+            .decrement('stock', item.quantity)
+        }
+        
         // Charger les relations nécessaires
         await order.load('clientUser')
         
@@ -1627,6 +1634,13 @@ export default class EcommerceOrdersController {
             changedByRole: user.role,
             reason: 'Moyen de paiement confirmé (batch)',
           }, { client: trx })
+          
+          // Décrémenter le stock pour chaque produit de la commande
+          for (const item of order.items as any[]) {
+            await Product.query({ client: trx })
+              .where('id', item.productId)
+              .decrement('stock', item.quantity)
+          }
         }
         
         await order.useTransaction(trx).save()
