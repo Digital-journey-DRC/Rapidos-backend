@@ -66,7 +66,7 @@ export default class StatistiquesLivreurController {
         const r = await db.rawQuery(
           `SELECT
              COUNT(*)::int AS total_livraisons_effectuees,
-             COALESCE(SUM(package_value), 0) AS montant_total
+             COALESCE(SUM(delivery_fee), 0) AS montant_total
            FROM commande_express
            WHERE delivery_person_id = ? AND statut = 'delivered' AND ${dateSql()}`,
           [livreurId]
@@ -78,7 +78,7 @@ export default class StatistiquesLivreurController {
         const r = await db.rawQuery(
           `SELECT
              COUNT(*)::int AS total_livraisons_effectuees,
-             COALESCE(SUM(total), 0) AS montant_total
+             COALESCE(SUM(delivery_fee), 0) AS montant_total
            FROM ecommerce_orders
            WHERE delivery_person_id = ? AND status = 'delivered' AND ${dateSql()}`,
           [livreurId]
