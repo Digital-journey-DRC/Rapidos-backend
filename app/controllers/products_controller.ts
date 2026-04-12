@@ -1,6 +1,7 @@
 import Category from '#models/category'
 import Media from '#models/media'
 import Product from '#models/product'
+import Promotion from '#models/promotion'
 import User from '#models/user'
 import ProductEvent from '#models/product_event'
 import { manageUploadProductMedias } from '#services/managemedias'
@@ -183,6 +184,14 @@ export default class ProductsController {
         return response.status(404).json({ message: 'Produit non trouvé' })
       }
 
+      // Récupérer toutes les promos actives en une seule requête
+      const activePromos = await Promotion.query()
+        .whereRaw('delai_promotion > NOW()')
+        .where((q) => {
+          q.whereNull('date_debut_promotion').orWhereRaw('date_debut_promotion <= NOW()')
+        })
+      const promoMap = new Map(activePromos.map((p) => [p.productId, p]))
+
       // Formater exactement comme getAllProducts (même structure)
       const productsFormatted = await Promise.all(
         products.map(async (product) => {
@@ -199,11 +208,12 @@ export default class ProductsController {
 
           // Utiliser serialize() puis extraire uniquement les champs souhaités
           const serialized = product.serialize()
+          const promo = promoMap.get(product.id)
           return {
             id: serialized.id,
             name: serialized.name,
             description: serialized.description,
-            price: serialized.price,
+            price: promo ? promo.nouveauPrix : serialized.price,
             stock: serialized.stock,
             category: serialized.category,
             image: mainImage, // Image principale Cloudinary
@@ -233,6 +243,14 @@ export default class ProductsController {
         return response.status(404).json({ message: 'Produit non trouvé' })
       }
 
+      // Récupérer toutes les promos actives en une seule requête
+      const activePromos = await Promotion.query()
+        .whereRaw('delai_promotion > NOW()')
+        .where((q) => {
+          q.whereNull('date_debut_promotion').orWhereRaw('date_debut_promotion <= NOW()')
+        })
+      const promoMap = new Map(activePromos.map((p) => [p.productId, p]))
+
       // Formater exactement comme dans les promotions (même structure)
       const productsFormatted = await Promise.all(
         products.map(async (product) => {
@@ -249,11 +267,12 @@ export default class ProductsController {
 
           // Utiliser serialize() puis extraire uniquement les champs souhaités
           const serialized = product.serialize()
+          const promo = promoMap.get(product.id)
           return {
             id: serialized.id,
             name: serialized.name,
             description: serialized.description,
-            price: serialized.price,
+            price: promo ? promo.nouveauPrix : serialized.price,
             stock: serialized.stock,
             category: serialized.category,
             image: mainImage, // Image principale
@@ -288,6 +307,14 @@ export default class ProductsController {
         return response.status(404).json({ message: 'Produit non trouvé' })
       }
 
+      // Récupérer toutes les promos actives en une seule requête
+      const activePromos = await Promotion.query()
+        .whereRaw('delai_promotion > NOW()')
+        .where((q) => {
+          q.whereNull('date_debut_promotion').orWhereRaw('date_debut_promotion <= NOW()')
+        })
+      const promoMap = new Map(activePromos.map((p) => [p.productId, p]))
+
       // Formater les produits avec image principale et images secondaires
       const productsFormatted = await Promise.all(
         products.map(async (product) => {
@@ -302,11 +329,12 @@ export default class ProductsController {
           // Tableau des images supplémentaires (toutes sauf la première)
           const images = allMedias.length > 1 ? allMedias.slice(1).map((media) => media.mediaUrl) : []
 
+          const promo = promoMap.get(product.id)
           return {
             id: product.id,
             name: product.name,
             description: product.description,
-            price: product.price,
+            price: promo ? promo.nouveauPrix : product.price,
             stock: product.stock,
             category: product.category,
             image: mainImage,
@@ -343,6 +371,14 @@ export default class ProductsController {
         return response.status(404).json({ message: 'Produit non trouvé' })
       }
 
+      // Récupérer toutes les promos actives en une seule requête
+      const activePromos = await Promotion.query()
+        .whereRaw('delai_promotion > NOW()')
+        .where((q) => {
+          q.whereNull('date_debut_promotion').orWhereRaw('date_debut_promotion <= NOW()')
+        })
+      const promoMap = new Map(activePromos.map((p) => [p.productId, p]))
+
       // Formater les produits avec les images Cloudinary
       const productsFormatted = await Promise.all(
         products.map(async (product) => {
@@ -358,11 +394,12 @@ export default class ProductsController {
           const images = allMedias.length > 1 ? allMedias.slice(1).map((media) => media.mediaUrl) : []
 
           const serialized = product.serialize()
+          const promo = promoMap.get(product.id)
           return {
             id: serialized.id,
             name: serialized.name,
             description: serialized.description,
-            price: serialized.price,
+            price: promo ? promo.nouveauPrix : serialized.price,
             stock: serialized.stock,
             category: serialized.category,
             image: mainImage, // Image principale Cloudinary
@@ -408,13 +445,23 @@ export default class ProductsController {
       // Tableau des images supplémentaires (toutes sauf la première)
       const images = allMedias.length > 1 ? allMedias.slice(1).map((media) => media.mediaUrl) : []
 
+      // Récupérer la promo active pour ce produit
+      const activePromo = await Promotion.query()
+        .where('product_id', product.id)
+        .whereRaw('delai_promotion > NOW()')
+        .where((q) => {
+          q.whereNull('date_debut_promotion').orWhereRaw('date_debut_promotion <= NOW()')
+        })
+        .orderBy('created_at', 'desc')
+        .first()
+
       // Formater le produit avec les images Cloudinary
       const serialized = product.serialize()
       const productFormatted = {
         id: serialized.id,
         name: serialized.name,
         description: serialized.description,
-        price: serialized.price,
+        price: activePromo ? activePromo.nouveauPrix : serialized.price,
         stock: serialized.stock,
         category: serialized.category,
         image: mainImage, // Image principale Cloudinary
@@ -560,11 +607,20 @@ export default class ProductsController {
       const mainImage = allMedias.length > 0 ? allMedias[0].mediaUrl : null
       const images = allMedias.length > 1 ? allMedias.slice(1).map((media) => media.mediaUrl) : []
       
+      const activePromo = await Promotion.query()
+        .where('product_id', product.id)
+        .whereRaw('delai_promotion > NOW()')
+        .where((q) => {
+          q.whereNull('date_debut_promotion').orWhereRaw('date_debut_promotion <= NOW()')
+        })
+        .orderBy('created_at', 'desc')
+        .first()
+
       const productFormatted = {
         id: product.id,
         name: product.name,
         description: product.description,
-        price: product.price,
+        price: activePromo ? activePromo.nouveauPrix : product.price,
         stock: product.stock,
         category: product.category,
         image: mainImage,

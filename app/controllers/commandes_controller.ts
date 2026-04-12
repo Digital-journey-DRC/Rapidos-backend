@@ -7,6 +7,7 @@ import type { HttpContext } from '@adonisjs/core/http'
 import { StatusCommande } from '../Enum/status_commande.js'
 import { sendMessageToBuyers } from '#services/sendnotificationtobuyers'
 import Livraison from '#models/livraison'
+import Promotion from '#models/promotion'
 
 export default class CommandesController {
   async createCommande({ request, response, auth, bouncer }: HttpContext) {
@@ -55,7 +56,15 @@ export default class CommandesController {
         }
 
         const quantity = item.quantity ?? 1
-        const price = product.price
+        const activePromo = await Promotion.query()
+          .where('product_id', product.id)
+          .whereRaw('delai_promotion > NOW()')
+          .where((q) => {
+            q.whereNull('date_debut_promotion').orWhereRaw('date_debut_promotion <= NOW()')
+          })
+          .orderBy('created_at', 'desc')
+          .first()
+        const price = activePromo ? Number(activePromo.nouveauPrix) : product.price
         const totalUnitaire = price * quantity
         productInCommande.push(product)
 

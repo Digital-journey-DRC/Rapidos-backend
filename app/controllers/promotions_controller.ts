@@ -500,6 +500,12 @@ export default class PromotionsController {
           errors: error.messages || error.errors || error.message 
         })
       }
+      if (error.message?.includes('date de début') || error.message?.includes('date de fin')) {
+        return response.status(422).json({
+          message: 'Erreur de validation',
+          errors: [{ message: error.message }],
+        })
+      }
       if (error.code === 'E_ROW_NOT_FOUND') {
         return response.status(404).json({
           message: 'Produit non trouvé',

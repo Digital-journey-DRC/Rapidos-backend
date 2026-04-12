@@ -13,6 +13,7 @@ import { DeliveryFeeCalculator } from '#services/delivery_fee_calculator'
 import Product from '#models/product'
 import User from '#models/user'
 import Media from '#models/media'
+import Promotion from '#models/promotion'
 import { UserRole } from '../Enum/user_role.js'
 import { saveOrderToFirestore, notifyVendors, updateOrderInFirestore, saveLocationToFirestore, admin } from '#services/firebase_service'
 
@@ -907,6 +908,15 @@ export default class EcommerceOrdersController {
       const productIds = payload.products.map(p => p.productId)
       const products = await Product.query().whereIn('id', productIds)
 
+      // Charger les promos actives pour ces produits
+      const activePromos = await Promotion.query()
+        .whereIn('product_id', productIds)
+        .whereRaw('delai_promotion > NOW()')
+        .where((q) => {
+          q.whereNull('date_debut_promotion').orWhereRaw('date_debut_promotion <= NOW()')
+        })
+      const promoMap = new Map(activePromos.map((p) => [p.productId, p]))
+
       // Charger les images de tous les produits
       const allMedias = await Media.query()
         .whereIn('product_id', productIds)
@@ -988,7 +998,7 @@ export default class EcommerceOrdersController {
 
         // Calculer le total des produits
         const totalProduits = vendorProducts.reduce(
-          (sum, { product, quantite }) => sum + product.price * quantite,
+          (sum, { product, quantite }) => sum + (Number(promoMap.get(product.id)?.nouveauPrix) || product.price) * quantite,
           0
         )
 
@@ -1004,7 +1014,7 @@ export default class EcommerceOrdersController {
           items: vendorProducts.map(({ product, quantite }) => ({
             productId: product.id,
             name: product.name,
-            price: product.price,
+            price: Number(promoMap.get(product.id)?.nouveauPrix) || product.price,
             quantity: quantite,
             idVendeur: vendorId,
           })),
@@ -1075,7 +1085,7 @@ export default class EcommerceOrdersController {
             return {
               id: product.id,
               name: product.name,
-              prix: product.price,
+              prix: Number(promoMap.get(product.id)?.nouveauPrix) || product.price,
               quantite: quantite,
               imageUrl: mainImage,
               images: secondaryImages,

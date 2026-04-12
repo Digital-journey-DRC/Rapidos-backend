@@ -13,6 +13,7 @@ import logger from '@adonisjs/core/services/logger'
 import db from '@adonisjs/lucid/services/db'
 import { saveCommandeExpressToFirestore } from '#services/firebase_service'
 import admin from 'firebase-admin'
+import Promotion from '#models/promotion'
 import ecommerceCloudinaryService from '#services/ecommerce_cloudinary_service'
 
 export default class CommandeExpressController {
@@ -136,6 +137,7 @@ export default class CommandeExpressController {
       const stockErrors: any[] = []
       const stockUpdates: any[] = []
       let productMap = new Map()
+      let promoMap = new Map<number, any>()
 
       // Vérifier et gérer le stock uniquement pour les items avec productId
       if (itemsWithProduct.length > 0) {
@@ -148,6 +150,15 @@ export default class CommandeExpressController {
 
         // Créer un map des produits par ID
         productMap = new Map(products.map((p) => [p.id, p]))
+
+        // Créer un map des promos actives par product_id
+        const activePromos = await Promotion.query({ client: trx })
+          .whereIn('product_id', productIds)
+          .whereRaw('delai_promotion > NOW()')
+          .where((q) => {
+            q.whereNull('date_debut_promotion').orWhereRaw('date_debut_promotion <= NOW()')
+          })
+        promoMap = new Map(activePromos.map((p) => [p.productId, p]))
 
         // Vérifier chaque item avec productId
         for (const item of itemsWithProduct) {
@@ -188,11 +199,12 @@ export default class CommandeExpressController {
       const enrichedItems = payload.items.map((item) => {
         if (item.productId && productMap.has(item.productId)) {
           const product = productMap.get(item.productId)!
+          const promo = promoMap.get(item.productId)
           return {
             productId: item.productId,
             name: item.name || product.name,
             description: item.description || product.description || undefined,
-            price: item.price || product.price,
+            price: item.price || (promo ? Number(promo.nouveauPrix) : product.price),
             quantity: item.quantity,
             weight: item.weight || undefined,
             urlProduct: item.urlProduct || product.media?.mediaUrl || undefined,

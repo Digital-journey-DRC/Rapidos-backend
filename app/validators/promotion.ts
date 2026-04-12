@@ -8,14 +8,14 @@ export const createPromotionValidator = vine.compile(
     dateDebutPromotion: vine.string().transform((value) => {
       const date = new Date(value)
       if (isNaN(date.getTime())) {
-        throw new Error('Invalid date format')
+        throw new Error('Le format de la date de début est invalide (ex: 2026-04-12T08:00:00)')
       }
       return date
-    }),
+    }).optional(),
     delaiPromotion: vine.string().transform((value) => {
       const date = new Date(value)
       if (isNaN(date.getTime())) {
-        throw new Error('Invalid date format')
+        throw new Error('Le format de la date de fin est invalide (ex: 2026-05-12T08:00:00)')
       }
       return date
     }),

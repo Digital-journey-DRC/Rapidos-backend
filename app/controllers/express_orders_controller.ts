@@ -18,6 +18,7 @@ import Product from '#models/product'
 import db from '@adonisjs/lucid/services/db'
 import { saveCommandeExpressToFirestore } from '#services/firebase_service'
 import admin from 'firebase-admin'
+import Promotion from '#models/promotion'
 
 export default class ExpressOrdersController {
   /**
@@ -151,6 +152,7 @@ export default class ExpressOrdersController {
         const stockErrors: any[] = []
         const stockUpdates: any[] = []
         let productMap = new Map<number, any>()
+        let promoMap = new Map<number, any>()
 
         // Charger les produits et vérifier le stock
         if (itemsWithProduct.length > 0) {
@@ -162,6 +164,15 @@ export default class ExpressOrdersController {
             .forUpdate() // Lock pour éviter les race conditions
 
           productMap = new Map(products.map((p) => [p.id, p]))
+
+          // Créer un map des promos actives par product_id
+          const activePromos = await Promotion.query({ client: trx })
+            .whereIn('product_id', productIds)
+            .whereRaw('delai_promotion > NOW()')
+            .where((q) => {
+              q.whereNull('date_debut_promotion').orWhereRaw('date_debut_promotion <= NOW()')
+            })
+          promoMap = new Map(activePromos.map((p) => [p.productId, p]))
 
           // Vérifier le stock pour chaque item
           for (const item of itemsWithProduct) {
@@ -202,11 +213,12 @@ export default class ExpressOrdersController {
         const enrichedItems = payload.items.map((item) => {
           if (item.productId && productMap.has(item.productId)) {
             const product = productMap.get(item.productId)!
+            const promo = promoMap.get(item.productId)
             return {
               productId: item.productId,
               name: item.name || product.name,
               description: item.description || product.description || null,
-              price: item.price || product.price,
+              price: item.price || (promo ? Number(promo.nouveauPrix) : product.price),
               quantity: item.quantity,
               weight: item.weight || null,
               urlProduct: item.urlProduct || product.media?.mediaUrl || null,
