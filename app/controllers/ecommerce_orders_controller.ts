@@ -858,7 +858,7 @@ export default class EcommerceOrdersController {
       },
       [EcommerceOrderStatus.EN_ROUTE]: {
         [EcommerceOrderStatus.DELIVERED]: ['livreur'],
-        [EcommerceOrderStatus.CANCELLED]: ['livreur'],
+        [EcommerceOrderStatus.CANCELLED]: ['livreur', 'vendeur'],
       },
     }
 
