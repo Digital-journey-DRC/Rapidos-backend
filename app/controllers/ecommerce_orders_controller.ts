@@ -257,6 +257,15 @@ export default class EcommerceOrdersController {
       const templates = await PaymentMethodTemplate.query()
       const templatesMap = new Map(templates.map(t => [t.type, t]))
 
+      // Charger les livreurs assignés pour récupérer leur position GPS
+      const deliveryPersonIds = [...new Set(
+        orders.map(o => o.deliveryPersonId).filter((id): id is number => id !== null && id !== undefined)
+      )]
+      const livreurs = deliveryPersonIds.length > 0
+        ? await User.query().whereIn('id', deliveryPersonIds).select('id', 'latitude', 'longitude')
+        : []
+      const livreursMap = new Map(livreurs.map(l => [l.id, l]))
+
       // Formater les commandes pour inclure le type de moyen de paiement avec image
       const formattedOrders = orders.map((order) => {
         const serialized = order.serialize()
@@ -285,9 +294,13 @@ export default class EcommerceOrdersController {
               name: null,
             }
 
+        const livreur = order.deliveryPersonId ? livreursMap.get(order.deliveryPersonId) : null
+
         return {
           ...serialized,
           paymentMethod,
+          livreurLatitude: livreur?.latitude ?? null,
+          livreurLongitude: livreur?.longitude ?? null,
         }
       })
 
