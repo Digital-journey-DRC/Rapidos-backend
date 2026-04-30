@@ -34,7 +34,9 @@ export default class RegistersController {
         lastName: payload.lastName,
         phone: payload.phone,
         role: payload.role,
-        userStatus: UserRole.Livreur ? UserStatus.PENDING : UserStatus.ACTIVE,
+        userStatus: (payload.role === UserRole.Vendeur || payload.role === UserRole.Livreur) 
+          ? UserStatus.PENDING 
+          : UserStatus.ACTIVE,
         termsAccepted: payload.termsAccepted,
       })
 
@@ -447,10 +449,11 @@ export default class RegistersController {
     }
   }
 
-  async activeUserAcount({ params, response, bouncer }: HttpContext) {
-    const { id } = params
+  async activeUserAcount({ params, response, auth }: HttpContext) {
+    const id = params.userId || params.id
     try {
-      if (await bouncer.denies('canActiveUserAccount')) {
+      const currentUser = auth.user!
+      if (currentUser.role !== 'admin') {
         return response.forbidden({
           message: "Vous n'êtes pas autorisé à activer ce compte",
           status: 403,
@@ -481,6 +484,7 @@ export default class RegistersController {
         return response.forbidden({
           message: "Vous n'êtes pas autorisé à activer ce compte",
           status: 403,
+          error: 'Vous devez être administrateur pour activer ce compte',
         })
       }
       logger.error('Erreur lors de l’activation du compte utilisateur', {
@@ -490,6 +494,7 @@ export default class RegistersController {
       return response.internalServerError({
         message: 'Erreur interne lors de l’activation du compte utilisateur',
         status: 500,
+        error: error.message,
       })
     }
   }

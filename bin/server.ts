@@ -11,6 +11,9 @@
 
 import 'reflect-metadata'
 import { Ignitor, prettyPrintError } from '@adonisjs/core'
+import { Settings } from 'luxon'
+
+Settings.defaultZone = 'Africa/Kinshasa'
 
 /**
  * URL to the application root. AdonisJS need it to resolve

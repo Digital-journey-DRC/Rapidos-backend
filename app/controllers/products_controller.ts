@@ -7,6 +7,7 @@ import ProductEvent from '#models/product_event'
 import { manageUploadProductMedias } from '#services/managemedias'
 import { manageUploadProductImages } from '#services/manageproductimages'
 import { categoryValidator } from '#validators/category'
+import { UserStatus } from '../Enum/user_status.js'
 
 import { createProductValidator, validateProductStock } from '#validators/products'
 
@@ -236,6 +237,9 @@ export default class ProductsController {
   async getAllProducts({ response }: HttpContext) {
     try {
       const products = await Product.query()
+        .whereHas('vendeur', (query) => {
+          query.where('userStatus', UserStatus.ACTIVE)
+        })
         .preload('category')
         .preload('vendeur')
 
@@ -363,6 +367,9 @@ export default class ProductsController {
       }
       const products = await Product.query()
         .where('categorieId', categoryId)
+        .whereHas('vendeur', (query) => {
+          query.where('userStatus', UserStatus.ACTIVE)
+        })
         .preload('category')
         .preload('vendeur')
         .preload('commandes')
@@ -1023,6 +1030,9 @@ export default class ProductsController {
           .where('categorieId', categoryId)
           .whereNotIn('id', excludedIds)
           .where('stock', '>', 0)
+          .whereHas('vendeur', (query) => {
+            query.where('userStatus', UserStatus.ACTIVE)
+          })
           .preload('category')
           .preload('vendeur')
           .orderBy('created_at', 'desc')
@@ -1040,6 +1050,9 @@ export default class ProductsController {
         const additionalProducts = await Product.query()
           .whereNotIn('id', excludedIds)
           .where('stock', '>', 0)
+          .whereHas('vendeur', (query) => {
+            query.where('userStatus', UserStatus.ACTIVE)
+          })
           .preload('category')
           .preload('vendeur')
           .orderBy('created_at', 'desc')
@@ -1243,6 +1256,9 @@ export default class ProductsController {
       const products = await Product.query()
         .where('categorieId', category.id)
         .where('stock', '>', 0)
+        .whereHas('vendeur', (query) => {
+          query.where('userStatus', UserStatus.ACTIVE)
+        })
         .preload('category')
         .preload('vendeur')
 
