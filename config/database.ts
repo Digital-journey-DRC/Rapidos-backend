@@ -25,6 +25,11 @@ const dbConfig = defineConfig({
         idleTimeoutMillis: 10000,
         reapIntervalMillis: 1000,
         createRetryIntervalMillis: 200,
+        afterCreate: (conn: any, done: Function) => {
+          conn.query("SET timezone = 'Africa/Kinshasa';", (err: any) => {
+            done(err, conn)
+          })
+        },
       },
 
       migrations: {
