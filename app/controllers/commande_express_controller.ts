@@ -221,6 +221,19 @@ export default class CommandeExpressController {
         }
       })
 
+      // Extraire la commune depuis deliveryAddress (format: "rue, COMMUNE, ville, pays")
+      let addressData: any = null
+      if (payload.deliveryAddress) {
+        const addressParts = payload.deliveryAddress.split(',').map((part) => part.trim())
+        if (addressParts.length >= 2) {
+          addressData = {
+            commune: addressParts[1] || null,
+            ville: addressParts[2] || null,
+            pays: addressParts[3] || null,
+          }
+        }
+      }
+
       // Créer la commande express
       const commandeExpress = await CommandeExpress.create(
         {
@@ -239,6 +252,7 @@ export default class CommandeExpressController {
           statut: (payload.statut as CommandeExpressStatus) || CommandeExpressStatus.PENDING,
           items: enrichedItems,
           deliveryPersonId: null,
+          address: addressData,
         },
         { client: trx }
       )
