@@ -391,15 +391,28 @@ export default class EcommerceOrdersController {
    * GET /ecommerce/livraison/ma-liste
    * Récupérer les livraisons disponibles et en cours pour un livreur
    */
-  async getDeliveriesList({ response }: HttpContext) {
+  async getDeliveriesList({ response, auth }: HttpContext) {
     try {
-      const deliveries = await EcommerceOrder.query()
+      const user = auth.user!
+
+      let deliveriesQuery = EcommerceOrder.query()
         .whereIn('status', [
           EcommerceOrderStatus.PRET_A_EXPEDIER,
           EcommerceOrderStatus.ACCEPTE_LIVREUR,
           EcommerceOrderStatus.EN_ROUTE,
           EcommerceOrderStatus.DELIVERED,
         ])
+
+      // Filtrer par communes si le livreur a des zones assignées
+      if (user.communes && user.communes.length > 0) {
+        deliveriesQuery = deliveriesQuery.where((builder) => {
+          builder
+            .whereIn(db.raw("address->>'commune'"), user.communes)
+            .orWhereRaw("(address->>'commune') IS NULL")
+        })
+      }
+
+      const deliveries = await deliveriesQuery
         .preload('paymentMethod')
         .preload('vendor')
         .preload('clientUser')
