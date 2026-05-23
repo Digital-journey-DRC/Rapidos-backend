@@ -325,6 +325,9 @@ router
   .patch('/ecommerce/commandes/batch-update-payment-methods', [EcommerceOrdersController, 'batchUpdatePaymentMethods'])
   .use(middleware.auth({ guards: ['api'] }))
 
+// Webhook callback Flexpay (paiement mobile non-cash)
+router.post('/webhooks/flexpay/payment-status', [EcommerceOrdersController, 'flexpayCallback'])
+
 // Voir ses commandes (acheteur)
 router
   .get('/ecommerce/commandes/acheteur', [EcommerceOrdersController, 'getOrdersByBuyer'])

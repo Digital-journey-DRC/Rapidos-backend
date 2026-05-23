@@ -116,6 +116,9 @@ export default class EcommerceOrder extends BaseModel {
   declare numeroPayment: string | null
 
   @column()
+  declare currency: string | null
+
+  @column()
   declare latitude: number | null
 
   @column()

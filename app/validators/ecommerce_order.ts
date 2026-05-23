@@ -76,6 +76,7 @@ export const updatePaymentMethodValidator = vine.compile(
   vine.object({
     paymentMethodId: vine.number().positive(),
     numeroPayment: vine.string().trim().optional(),
+    devise: vine.string().trim().maxLength(10).optional(),
   })
 )
 
@@ -89,6 +90,7 @@ export const batchUpdatePaymentMethodsValidator = vine.compile(
         commandeId: vine.number().positive(),
         paymentMethodId: vine.number().positive(),
         numeroPayment: vine.string().trim().optional(),
+        devise: vine.string().trim().maxLength(10).optional(),
       })
     ).minLength(1),
   })

@@ -16,6 +16,8 @@ import Media from '#models/media'
 import Promotion from '#models/promotion'
 import { UserRole } from '../Enum/user_role.js'
 import { saveOrderToFirestore, notifyVendors, updateOrderInFirestore, saveLocationToFirestore, admin } from '#services/firebase_service'
+import { Modepaiement } from '../Enum/mode_paiement.js'
+import { FlexpayService } from '#services/flexpay_service'
 
 export default class EcommerceOrdersController {
   /**
@@ -1417,103 +1419,137 @@ export default class EcommerceOrdersController {
         })
       }
 
-      // Sauvegarder l'ancien statut et payment method ID pour détecter le premier ajout
-      const oldStatus = order.status
-      const oldPaymentMethodId = order.paymentMethodId
-
       // Mettre à jour le moyen de paiement
       order.paymentMethodId = newPaymentMethod.id
-      
+
       // Sauvegarder le numéro de paiement si fourni
       if (payload.numeroPayment) {
-        order.numeroPayment = payload.numeroPayment
+        order.numeroPayment = payload.numeroPayment.trim()
       }
-      
-      // LOGIQUE SPÉCIALE : Si c'est le premier ajout de payment method, passer automatiquement à pending
-      let firebaseOrderId: string | null = null
-      if (oldStatus === EcommerceOrderStatus.PENDING_PAYMENT && oldPaymentMethodId === null) {
-        order.status = EcommerceOrderStatus.PENDING
-        
-        // Logger le changement de statut
-        await EcommerceOrderLog.create({
-          logId: randomUUID(),
-          orderId: order.orderId,
-          oldStatus: EcommerceOrderStatus.PENDING_PAYMENT,
-          newStatus: EcommerceOrderStatus.PENDING,
-          changedBy: user.id,
-          changedByRole: user.role,
-          reason: 'Moyen de paiement confirmé',
+
+      // Devise optionnelle (backward compatible)
+      if (payload.devise) {
+        order.currency = payload.devise.trim().toUpperCase()
+      }
+
+      // Si la commande n'est plus en pending_payment, on garde juste la mise à jour du moyen de paiement
+      if (order.status !== EcommerceOrderStatus.PENDING_PAYMENT) {
+        await order.save()
+        await order.load('paymentMethod')
+        const template = await PaymentMethodTemplate.query()
+          .where('type', order.paymentMethod!.type)
+          .first()
+
+        return response.status(200).json({
+          success: true,
+          message: 'Moyen de paiement mis à jour avec succès',
+          order: {
+            id: order.id,
+            orderId: order.orderId,
+            vendeurId: order.vendorId,
+            totalAvecLivraison: order.deliveryFee ? order.total + order.deliveryFee : order.total,
+            status: order.status,
+            paymentMethod: {
+              id: order.paymentMethod!.id,
+              type: order.paymentMethod!.type,
+              name: template?.name || order.paymentMethod!.type,
+              imageUrl: template?.imageUrl || null,
+              numeroCompte: order.paymentMethod!.numeroCompte,
+            },
+            currency: order.currency,
+            updatedAt: order.updatedAt,
+          },
         })
-        
-        await order.save()
-        
-        // Décrémenter le stock pour chaque produit de la commande
-        for (const item of order.items as any[]) {
-          await Product.query()
-            .where('id', item.productId)
-            .decrement('stock', item.quantity)
-        }
-        
-        // Charger les relations nécessaires
-        await order.load('clientUser')
-        
-        // Récupérer les infos des produits pour les items
-        const enrichedItems = await Promise.all(
-          order.items.map(async (item: any) => {
-            const product = await Product.query()
-              .where('id', item.productId)
-              .preload('media')
-              .preload('category')
-              .first()
-            
-            return {
-              id: item.productId,
-              name: item.name,
-              category: product?.category?.name || 'Non catégorisé',
-              price: Number(item.price),
-              imagePath: product?.media?.mediaUrl || '',
-              quantity: item.quantity,
-              stock: product?.stock || 0,
-              idVendeur: String(item.idVendeur),
-              description: product?.description || null,
-            }
-          })
+      }
+
+      let firebaseOrderId: string | null = null
+      const isCashPayment = newPaymentMethod.type === Modepaiement.CASH
+
+      if (isCashPayment) {
+        firebaseOrderId = await this.confirmOrderPayment(
+          order,
+          user.id,
+          user.role,
+          'Moyen de paiement cash confirmé'
         )
-        
-        // Formater l'adresse complète
-        const addr = order.address
-        const adresseComplete = `${addr.avenue}, ${addr.numero}, ${addr.quartier}, ${addr.ville}, ${addr.pays}`
-        
-        // Enregistrer dans Firestore (backup + notifications)
-        const cartOrder = {
-          timestamp: admin.firestore.FieldValue.serverTimestamp(),
-          status: 'pending' as const,
-          phone: order.phone,
-          client: order.client,
-          idClient: String(order.clientId),
-          adresse: adresseComplete,
-          ville: addr.ville || '',
-          commune: addr.commune || '',
-          quartier: addr.quartier || '',
-          avenue: addr.avenue || '',
-          numero: addr.numero || '',
-          pays: addr.pays || '',
-          longitude: order.longitude || 0,
-          latitude: order.latitude || 0,
-          total: Number(order.total),
-          items: enrichedItems,
-        }
-        
-        firebaseOrderId = await saveOrderToFirestore(cartOrder)
-        
-        // Stocker la référence Firebase dans PostgreSQL
-        order.firebaseOrderId = firebaseOrderId
-        await order.save()
-        
-        // Envoyer les notifications push aux vendeurs
-        await notifyVendors(enrichedItems, order.client, firebaseOrderId)
       } else {
+        const rawReference = order.numeroPayment?.trim() || order.orderId
+        const reference = await this.generateUniquePaymentReference(rawReference, order.id)
+        const currency = payload.devise?.trim().toUpperCase() || order.currency || 'CDF'
+
+        order.numeroPayment = reference
+        order.currency = currency
         await order.save()
+
+        try {
+          const paymentResponse = await FlexpayService.initiateMobilePayment({
+            phone: order.phone,
+            reference,
+            amount: String(order.total),
+            currency,
+          })
+
+          const isAccepted = String(paymentResponse?.code ?? '') === '0'
+
+          if (!isAccepted) {
+            return response.status(400).json({
+              success: false,
+              message: paymentResponse?.message || 'Paiement mobile non accepté',
+              status: order.status,
+              paymentConfirmed: false,
+              callbackPending: true,
+            })
+          }
+
+          await order.load('paymentMethod')
+          const template = await PaymentMethodTemplate.query()
+            .where('type', order.paymentMethod!.type)
+            .first()
+
+          return response.status(200).json({
+            success: true,
+            message: 'Demande de paiement envoyée. En attente de confirmation callback.',
+            paymentConfirmed: false,
+            callbackPending: true,
+            provider: {
+              code: paymentResponse?.code ?? null,
+              message: paymentResponse?.message ?? null,
+              orderNumber: paymentResponse?.orderNumber ?? null,
+              reference,
+            },
+            order: {
+              id: order.id,
+              orderId: order.orderId,
+              vendeurId: order.vendorId,
+              totalAvecLivraison: order.deliveryFee ? order.total + order.deliveryFee : order.total,
+              status: order.status,
+              paymentMethod: {
+                id: order.paymentMethod!.id,
+                type: order.paymentMethod!.type,
+                name: template?.name || order.paymentMethod!.type,
+                imageUrl: template?.imageUrl || null,
+                numeroCompte: order.paymentMethod!.numeroCompte,
+              },
+              numeroPayment: order.numeroPayment,
+              currency: order.currency,
+              updatedAt: order.updatedAt,
+            },
+          })
+        } catch (error) {
+          logger.error('Erreur appel Flexpay', {
+            error: error.message,
+            stack: error.stack,
+            orderId: order.orderId,
+          })
+
+          return response.status(502).json({
+            success: false,
+            message: 'Paiement mobile indisponible, réessayez plus tard',
+            status: order.status,
+            paymentConfirmed: false,
+            callbackPending: true,
+          })
+        }
       }
 
       // Charger le moyen de paiement avec son template
@@ -1539,6 +1575,8 @@ export default class EcommerceOrdersController {
             imageUrl: template?.imageUrl || null,
             numeroCompte: order.paymentMethod!.numeroCompte,
           },
+          numeroPayment: order.numeroPayment,
+          currency: order.currency,
           updatedAt: order.updatedAt,
         },
       })
@@ -1966,6 +2004,245 @@ export default class EcommerceOrdersController {
         error: error.message,
       })
     }
+  }
+
+  /**
+   * POST /webhooks/flexpay/payment-status
+   * Callback Flexpay pour confirmer le paiement mobile
+   */
+  async flexpayCallback({ request, response }: HttpContext) {
+    try {
+      const body = request.body()
+      const paymentCode = String(body?.code ?? '')
+      const reference = String(body?.reference ?? '').trim()
+      const callbackCurrency = body?.currency ? String(body.currency).trim().toUpperCase() : null
+
+      if (!reference) {
+        logger.warn('Callback Flexpay ignoré: reference manquante', { body })
+        return response.status(200).json({
+          received: true,
+          processed: false,
+          message: 'Reference manquante',
+        })
+      }
+
+      const order = await EcommerceOrder.query()
+        .where('numero_payment', reference)
+        .orWhere('order_id', reference)
+        .first()
+
+      if (!order) {
+        logger.warn('Callback Flexpay: commande introuvable', { reference, body })
+        return response.status(200).json({
+          received: true,
+          processed: false,
+          message: 'Commande introuvable',
+          reference,
+        })
+      }
+
+      if (callbackCurrency) {
+        order.currency = callbackCurrency
+      }
+
+      if (paymentCode === '0') {
+        if (order.status === EcommerceOrderStatus.PENDING) {
+          await order.save()
+          return response.status(200).json({
+            received: true,
+            processed: true,
+            message: 'Paiement déjà confirmé',
+            orderId: order.orderId,
+            status: order.status,
+          })
+        }
+
+        if (order.status !== EcommerceOrderStatus.PENDING_PAYMENT) {
+          await order.save()
+          return response.status(200).json({
+            received: true,
+            processed: false,
+            message: `Statut non modifiable depuis callback (${order.status})`,
+            orderId: order.orderId,
+            status: order.status,
+          })
+        }
+
+        const firebaseOrderId = await this.confirmOrderPayment(
+          order,
+          0,
+          'system',
+          'Paiement mobile confirmé via callback Flexpay'
+        )
+
+        return response.status(200).json({
+          received: true,
+          processed: true,
+          message: 'Paiement confirmé, commande passée en pending',
+          orderId: order.orderId,
+          status: order.status,
+          firebaseOrderId,
+        })
+      }
+
+      // code != 0 => paiement échoué/non validé => rester en pending_payment
+      if (order.status === EcommerceOrderStatus.PENDING_PAYMENT) {
+        await order.save()
+      }
+
+      return response.status(200).json({
+        received: true,
+        processed: true,
+        message: 'Paiement non confirmé, commande conservée en pending_payment',
+        orderId: order.orderId,
+        status: order.status,
+      })
+    } catch (error) {
+      logger.error('Erreur callback Flexpay', {
+        error: error.message,
+        stack: error.stack,
+      })
+      return response.status(200).json({
+        received: true,
+        processed: false,
+        message: 'Erreur interne callback',
+      })
+    }
+  }
+
+  private async confirmOrderPayment(
+    order: EcommerceOrder,
+    changedBy: number,
+    changedByRole: string,
+    reason: string
+  ): Promise<string | null> {
+    if (order.status !== EcommerceOrderStatus.PENDING_PAYMENT) {
+      return order.firebaseOrderId
+    }
+
+    order.status = EcommerceOrderStatus.PENDING
+
+    await EcommerceOrderLog.create({
+      logId: randomUUID(),
+      orderId: order.orderId,
+      oldStatus: EcommerceOrderStatus.PENDING_PAYMENT,
+      newStatus: EcommerceOrderStatus.PENDING,
+      changedBy,
+      changedByRole,
+      reason,
+    })
+
+    await order.save()
+
+    // Décrémenter le stock pour chaque produit de la commande
+    for (const item of order.items as any[]) {
+      await Product.query().where('id', item.productId).decrement('stock', item.quantity)
+    }
+
+    // Charger les relations nécessaires
+    await order.load('clientUser')
+
+    // Récupérer les infos des produits pour les items
+    const enrichedItems = await Promise.all(
+      order.items.map(async (item: any) => {
+        const product = await Product.query()
+          .where('id', item.productId)
+          .preload('media')
+          .preload('category')
+          .first()
+
+        return {
+          id: item.productId,
+          name: item.name,
+          category: product?.category?.name || 'Non catégorisé',
+          price: Number(item.price),
+          imagePath: product?.media?.mediaUrl || '',
+          quantity: item.quantity,
+          stock: product?.stock || 0,
+          idVendeur: String(item.idVendeur),
+          description: product?.description || null,
+        }
+      })
+    )
+
+    // Formater l'adresse complète
+    const addr = order.address
+    const adresseComplete = `${addr.avenue}, ${addr.numero}, ${addr.quartier}, ${addr.ville}, ${addr.pays}`
+
+    // Enregistrer dans Firestore (backup + notifications)
+    const cartOrder = {
+      timestamp: admin.firestore.FieldValue.serverTimestamp(),
+      status: 'pending' as const,
+      phone: order.phone,
+      client: order.client,
+      idClient: String(order.clientId),
+      adresse: adresseComplete,
+      ville: addr.ville || '',
+      commune: addr.commune || '',
+      quartier: addr.quartier || '',
+      avenue: addr.avenue || '',
+      numero: addr.numero || '',
+      pays: addr.pays || '',
+      longitude: order.longitude || 0,
+      latitude: order.latitude || 0,
+      total: Number(order.total),
+      items: enrichedItems,
+    }
+
+    const firebaseOrderId = await saveOrderToFirestore(cartOrder)
+
+    // Stocker la référence Firebase dans PostgreSQL
+    order.firebaseOrderId = firebaseOrderId
+    await order.save()
+
+    // Envoyer les notifications push aux vendeurs
+    await notifyVendors(enrichedItems, order.client, firebaseOrderId)
+
+    return firebaseOrderId
+  }
+
+  /**
+   * Génère une référence de paiement unique et stable pour le provider
+   */
+  private async generateUniquePaymentReference(rawReference: string, currentOrderId: number): Promise<string> {
+    const cleanedReference = String(rawReference || '')
+      .replace(/SCENARIO-[A-Z0-9_-]*/gi, '')
+      .replace(/[^a-zA-Z0-9-]/g, '-')
+      .replace(/-+/g, '-')
+      .replace(/^-|-$/g, '')
+
+    const compactSeed = (cleanedReference || randomUUID())
+      .replace(/[^a-zA-Z0-9]/g, '')
+      .toUpperCase()
+
+    // Format court: RPD-XXXXXX (6 caractères alphanumériques)
+    // Forcer au moins une lettre pour rester lisible côté provider.
+    const baseToken = compactSeed.slice(-6).padStart(6, 'X')
+    const tokenWithLetter = /[A-Z]/.test(baseToken) ? baseToken : `P${baseToken.slice(1)}`
+    const normalizedBase = `RPD-${tokenWithLetter}`
+
+    let candidate = normalizedBase
+    let attempts = 0
+    const maxAttempts = 30
+
+    while (attempts < maxAttempts) {
+      const existing = await EcommerceOrder.query()
+        .where('numero_payment', candidate)
+        .whereNot('id', currentOrderId)
+        .first()
+
+      if (!existing) {
+        return candidate
+      }
+
+      // Collision rare: suffixe court 4 chars
+      const suffix = randomUUID().replace(/-/g, '').slice(0, 4).toUpperCase()
+      candidate = `${normalizedBase}-${suffix}`
+      attempts++
+    }
+
+    // Fallback ultra défensif
+    return `${normalizedBase}-${Date.now()}`
   }
 
   /**
