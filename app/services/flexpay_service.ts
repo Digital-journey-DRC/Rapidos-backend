@@ -17,7 +17,7 @@ const FLEXPAY_BASE_URL = 'https://backend.flexpay.cd/api/rest/v1/paymentService'
 const FLEXPAY_BEARER_TOKEN =
   'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiIvbG9naW4iLCJyb2xlcyI6WyJNRVJDSEFOVCJdLCJleHAiOjE4NDE5MTI3NjQsInN1YiI6IjJmYTc4ZGVkOTM0NmI0MGY4YTQ0ZTk4ZjYwMjRiMjk0In0.m6YaY-6Ni9catYnB4NjXSoHQoqSIFlP_WxXbk-Vq0aw'
 const FLEXPAY_MERCHANT = 'RPD'
-const FLEXPAY_CALLBACK_URL = 'https://webhook.site/4a416adf-2bf5-4071-bf3b-d184799c54e1'
+const FLEXPAY_CALLBACK_URL = 'https://www.geniusmessage.site/webhooks/flexpay/payment-status'
 const FLEXPAY_PAYMENT_TYPE = '1'
 
 function formatPhoneForFlexpay(rawPhone: string): string {
