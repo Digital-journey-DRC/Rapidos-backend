@@ -1473,9 +1473,11 @@ export default class EcommerceOrdersController {
           'Moyen de paiement cash confirmé'
         )
       } else {
-        const rawReference = order.numeroPayment?.trim() || order.orderId
+        const providedPaymentPhone = payload.numeroPayment?.trim()
+        const rawReference = providedPaymentPhone || order.numeroPayment?.trim() || order.orderId
         const reference = await this.generateUniquePaymentReference(rawReference, order.id)
         const currency = payload.devise?.trim().toUpperCase() || order.currency || 'CDF'
+        const phoneForPush = providedPaymentPhone || order.phone
 
         order.numeroPayment = reference
         order.currency = currency
@@ -1483,7 +1485,7 @@ export default class EcommerceOrdersController {
 
         try {
           const paymentResponse = await FlexpayService.initiateMobilePayment({
-            phone: order.phone,
+            phone: phoneForPush,
             reference,
             amount: String(order.total),
             currency,
