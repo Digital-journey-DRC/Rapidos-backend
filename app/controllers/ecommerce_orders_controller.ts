@@ -1484,10 +1484,11 @@ export default class EcommerceOrdersController {
         await order.save()
 
         try {
+          const amountForPayment = await this.resolveAmountForPayment(order.total, currency)
           const paymentResponse = await FlexpayService.initiateMobilePayment({
             phone: phoneForPush,
             reference,
-            amount: String(order.total),
+            amount: amountForPayment,
             currency,
           })
 
@@ -1538,6 +1539,16 @@ export default class EcommerceOrdersController {
             },
           })
         } catch (error) {
+          if (error.message?.includes('Taux de conversion') || error.message?.includes('Montant')) {
+            return response.status(400).json({
+              success: false,
+              message: error.message,
+              status: order.status,
+              paymentConfirmed: false,
+              callbackPending: false,
+            })
+          }
+
           logger.error('Erreur appel Flexpay', {
             error: error.message,
             stack: error.stack,
@@ -2245,6 +2256,44 @@ export default class EcommerceOrdersController {
 
     // Fallback ultra défensif
     return `${normalizedBase}-${Date.now()}`
+  }
+
+  /**
+   * Détermine le montant à envoyer au provider selon la devise demandée.
+   * - CDF: montant inchangé
+   * - USD: conversion depuis CDF via le taux actif en base (pair CDF_USD)
+   */
+  private async resolveAmountForPayment(orderTotal: number, currency: string): Promise<string> {
+    const normalizedCurrency = String(currency || '').trim().toUpperCase()
+    const totalCdf = Number(orderTotal)
+
+    if (!Number.isFinite(totalCdf) || totalCdf <= 0) {
+      throw new Error('Montant de commande invalide')
+    }
+
+    if (normalizedCurrency !== 'USD') {
+      return String(totalCdf)
+    }
+
+    const rateRow = await db
+      .from('exchange_rates')
+      .select('rate')
+      .where('pair', 'CDF_USD')
+      .andWhere('is_active', true)
+      .orderBy('updated_at', 'desc')
+      .first()
+
+    const rate = Number(rateRow?.rate)
+    if (!Number.isFinite(rate) || rate <= 0) {
+      throw new Error('Taux de conversion CDF_USD indisponible')
+    }
+
+    const amountUsd = totalCdf / rate
+    if (!Number.isFinite(amountUsd) || amountUsd <= 0) {
+      throw new Error('Montant USD invalide après conversion')
+    }
+
+    return amountUsd.toFixed(2)
   }
 
   /**
