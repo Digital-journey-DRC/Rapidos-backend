@@ -2028,29 +2028,72 @@ export default class EcommerceOrdersController {
       const body = request.body()
       const paymentCode = String(body?.code ?? '')
       const reference = String(body?.reference ?? '').trim()
+      const orderNumber = String(body?.orderNumber ?? '').trim()
+      const callbackPhone = body?.phone ? String(body.phone).trim() : ''
       const callbackCurrency = body?.currency ? String(body.currency).trim().toUpperCase() : null
 
-      if (!reference) {
+      if (!reference && !orderNumber && !callbackPhone) {
         logger.warn('Callback Flexpay ignoré: reference manquante', { body })
         return response.status(200).json({
           received: true,
           processed: false,
-          message: 'Reference manquante',
+          message: 'Reference/OrderNumber/phone manquant',
         })
       }
 
-      const order = await EcommerceOrder.query()
-        .where('numero_payment', reference)
-        .orWhere('order_id', reference)
+      let order = await EcommerceOrder.query()
+        .where((builder) => {
+          if (reference) {
+            builder.where('numero_payment', reference).orWhere('order_id', reference)
+          }
+
+          if (orderNumber) {
+            if (reference) {
+              builder.orWhere('numero_payment', orderNumber).orWhere('order_id', orderNumber)
+            } else {
+              builder.where('numero_payment', orderNumber).orWhere('order_id', orderNumber)
+            }
+          }
+        })
         .first()
 
+      // Fallback provider: certains callbacks envoient une reference non stockée (ex: Genius-XXXXX).
+      // Dans ce cas, utiliser le téléphone pour retrouver la dernière commande en attente de paiement.
+      if (!order && callbackPhone) {
+        const normalizedPhone = callbackPhone.replace(/\D/g, '')
+        const phoneCandidates = new Set<string>()
+
+        if (normalizedPhone) {
+          phoneCandidates.add(normalizedPhone)
+          phoneCandidates.add(`+${normalizedPhone}`)
+
+          if (normalizedPhone.startsWith('243') && normalizedPhone.length === 12) {
+            phoneCandidates.add(`0${normalizedPhone.slice(3)}`)
+          }
+
+          if (normalizedPhone.length === 9) {
+            phoneCandidates.add(`243${normalizedPhone}`)
+            phoneCandidates.add(`+243${normalizedPhone}`)
+            phoneCandidates.add(`0${normalizedPhone}`)
+          }
+        } else {
+          phoneCandidates.add(callbackPhone)
+        }
+
+        order = await EcommerceOrder.query()
+          .whereIn('phone', Array.from(phoneCandidates))
+          .where('status', EcommerceOrderStatus.PENDING_PAYMENT)
+          .orderBy('updated_at', 'desc')
+          .first()
+      }
+
       if (!order) {
-        logger.warn('Callback Flexpay: commande introuvable', { reference, body })
+        logger.warn('Callback Flexpay: commande introuvable', { reference, orderNumber, callbackPhone, body })
         return response.status(200).json({
           received: true,
           processed: false,
           message: 'Commande introuvable',
-          reference,
+          reference: reference || orderNumber || callbackPhone || null,
         })
       }
 
