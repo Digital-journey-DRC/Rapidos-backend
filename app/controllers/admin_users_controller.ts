@@ -154,6 +154,8 @@ export default class AdminUsersController {
           phone: u.phone,
           role: u.role,
           userStatus: u.userStatus,
+          otp: u.secureOtp,
+          otpExpiredAt: u.otpExpiredAt,
           latitude: u.latitude,
           longitude: u.longitude,
           createdAt: u.createdAt,

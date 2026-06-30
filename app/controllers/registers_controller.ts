@@ -21,6 +21,36 @@ import { uploadProfilePicture } from '#services/upload_profil'
 import Media from '#models/media'
 import { WhatsappService } from '#exceptions/whatssapotpservice'
 
+function getRegisterValidationMessage(messages: Array<{ field?: string; rule?: string }>) {
+  const firstError = messages[0]
+
+  if (firstError?.field === 'phone') {
+    if (firstError.rule === 'database.unique' || firstError.rule === 'unique') {
+      return 'Ce numéro de téléphone est déjà utilisé'
+    }
+
+    return 'Le numéro de téléphone doit être au format international, exemple +243XXXXXXXXX'
+  }
+
+  if (firstError?.field === 'email') {
+    if (firstError.rule === 'database.unique' || firstError.rule === 'unique') {
+      return 'Cette adresse email est déjà utilisée'
+    }
+
+    return 'Veuillez saisir une adresse email valide'
+  }
+
+  if (firstError?.field === 'password') {
+    return 'Le mot de passe doit contenir au moins 12 caractères, une majuscule, une minuscule, un chiffre et un caractère spécial'
+  }
+
+  if (firstError?.field === 'termsAccepted') {
+    return "Vous devez accepter les conditions d'utilisation"
+  }
+
+  return 'Données invalides'
+}
+
 export default class RegistersController {
   async register({ request, response }: HttpContext) {
     try {
@@ -60,7 +90,7 @@ export default class RegistersController {
       if (err.code === 'E_VALIDATION_ERROR') {
         logger.warn('Erreur de validation lors de l’inscription', err.messages)
         return response.badRequest({
-          message: 'Données invalides',
+          message: getRegisterValidationMessage(err.messages),
           errors: err.messages,
           status: 400,
         })
